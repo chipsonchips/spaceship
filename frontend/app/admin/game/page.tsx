@@ -1,0 +1,315 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { getAdminPlayers, getGameStatistics } from "@/lib/api-auth";
+import Link from "next/link";
+import { Search, Users, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+
+interface Player {
+  id: string;
+  address: string;
+  username: string;
+  displayName: string;
+  totalBets: number;
+  totalBetAmount: string;
+  totalPayouts: string;
+  cashoutCount: number;
+  createdAt: string;
+}
+
+interface GameStats {
+  totalRounds: number;
+  settledRounds: number;
+  totalBets: number;
+  totalPlayers: number;
+  totalBetAmount: string;
+  totalPayouts: string;
+  houseProfit: string;
+  averageCrashMultiplier: string;
+}
+
+export default function GameAdminPage() {
+  const { isAdmin, user } = useAuthUser();
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  if (!isAdmin()) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-red-900 mb-2">
+              Access Denied
+            </h1>
+            <p className="text-red-700">
+              You need admin privileges to access this page.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [playersData, statsData] = await Promise.all([
+        getAdminPlayers(50, currentPage * 50, search),
+        getGameStatistics(),
+      ]);
+
+      setPlayers(playersData.players || []);
+      setStats(statsData.statistics || null);
+      setTotalPages(playersData.pagination?.pages || 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(0);
+    loadData();
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+      loadData();
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+      loadData();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Game Administration
+          </h1>
+          <p className="text-gray-600">Monitor players and game activity</p>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
+        {/* Statistics Cards */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">
+                    Total Rounds
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {stats.totalRounds}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-blue-500 opacity-20" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">
+                    Total Players
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {stats.totalPlayers}
+                  </p>
+                </div>
+                <Users className="w-8 h-8 text-purple-500 opacity-20" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">
+                    Total Bets
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {stats.totalBets}
+                  </p>
+                </div>
+                <DollarSign className="w-8 h-8 text-orange-500 opacity-20" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">
+                    House Profit
+                  </p>
+                  <p className="text-3xl font-bold text-green-600 mt-2">
+                    {parseFloat(stats.houseProfit).toFixed(2)}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-green-500 opacity-20" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Players List */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Players</h2>
+
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by username or address..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Search
+              </button>
+            </form>
+          </div>
+
+          {loading ? (
+            <div className="p-12 text-center">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">Loading players...</p>
+            </div>
+          ) : players.length === 0 ? (
+            <div className="p-12 text-center">
+              <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600">No players found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        Player
+                      </th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        Address
+                      </th>
+                      <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                        Total Bets
+                      </th>
+                      <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                        Bet Amount
+                      </th>
+                      <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                        Payouts
+                      </th>
+                      <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players.map((player) => (
+                      <tr
+                        key={player.id}
+                        className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {player.displayName ||
+                                player.username ||
+                                "Unknown"}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {player.username}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+                          {player.address
+                            ? `${player.address.slice(0, 6)}...${player.address.slice(-4)}`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-900 font-medium">
+                          {player.totalBets}
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-900">
+                          {parseFloat(player.totalBetAmount).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm text-gray-900">
+                          {parseFloat(player.totalPayouts).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Link
+                            href={`/admin/game/players/${player.id}`}
+                            className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                          >
+                            View Details
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Page {currentPage + 1} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 0}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages - 1}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
