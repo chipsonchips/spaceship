@@ -121,7 +121,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -143,7 +143,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -167,7 +167,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -192,7 +192,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -218,7 +218,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -244,7 +244,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -270,7 +270,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -295,7 +295,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
@@ -321,7 +321,7 @@ describe('LeaderboardService', () => {
       };
 
       mockRepo.findOneBy.mockResolvedValue(entry);
-      mockRepo.save.mockImplementation((e) => Promise.resolve(e));
+      mockRepo.save.mockImplementation((e: any) => Promise.resolve(e));
 
       const result = await leaderboardService.updateFromBet(bet);
 
