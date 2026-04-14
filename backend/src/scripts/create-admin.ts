@@ -1,7 +1,7 @@
-import { AppDataSource } from '../config/database';
-import { userService } from '../services/user.service';
-import { logger } from '../utils/logger';
-import { generateSecureToken } from '../utils/auth';
+import { AppDataSource } from '../config/database.js';
+import { userService } from '../services/user.service.js';
+import { logger } from '../utils/logger.js';
+import { generateSecureToken } from '../utils/auth.js';
 
 /**
  * Bootstrap script to create the first admin user

@@ -86,7 +86,7 @@ router.get('/admin/:adminId', async (req: Request, res: Response) => {
         const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
         const offset = parseInt(req.query.offset as string) || 0;
 
-        const { logs, total } = await auditLogService.getAdminLogs(req.params.adminId, limit, offset);
+        const { logs, total } = await auditLogService.getAdminLogs(req.params.adminId as string, limit, offset);
 
         res.json({
             success: true,
@@ -162,7 +162,7 @@ router.get('/action/:actionType', async (req: Request, res: Response) => {
  */
 router.get('/chain/:chainId', async (req: Request, res: Response) => {
     try {
-        const chainId = parseInt(req.params.chainId);
+        const chainId = parseInt(req.params.chainId as string);
         const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
         const offset = parseInt(req.query.offset as string) || 0;
 

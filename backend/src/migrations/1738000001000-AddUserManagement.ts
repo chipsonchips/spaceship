@@ -17,7 +17,7 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'address',
                         type: 'varchar',
-                        length: 64,
+                        length: '64',
                         isNullable: true,
                     },
                     {
@@ -28,19 +28,19 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'email',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
                         name: 'username',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
                         name: 'displayName',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
@@ -51,19 +51,19 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'avatarUrl',
                         type: 'varchar',
-                        length: 500,
+                        length: '500',
                         isNullable: true,
                     },
                     {
                         name: 'farcasterUsername',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
                         name: 'role',
                         type: 'varchar',
-                        length: 50,
+                        length: '50',
                         default: "'player'",
                     },
                     {
@@ -74,7 +74,7 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'source',
                         type: 'varchar',
-                        length: 50,
+                        length: '50',
                         default: "'wallet'",
                     },
                     {
@@ -90,13 +90,13 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'verificationToken',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
                         name: 'adminNotes',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
@@ -149,12 +149,12 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'actionType',
                         type: 'varchar',
-                        length: 100,
+                        length: '100',
                     },
                     {
                         name: 'description',
                         type: 'varchar',
-                        length: 255,
+                        length: '255',
                         isNullable: true,
                     },
                     {
@@ -165,7 +165,7 @@ export class AddUserManagement1738000001000 implements MigrationInterface {
                     {
                         name: 'ipAddress',
                         type: 'varchar',
-                        length: 45,
+                        length: '45',
                         isNullable: true,
                     },
                     {

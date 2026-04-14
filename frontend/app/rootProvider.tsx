@@ -12,23 +12,25 @@ import {
 import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
 import "@coinbase/onchainkit/styles.css";
 import { SUPPORTED_CHAINS, CHAIN_CONFIGS } from "@/lib/chains";
+import { AuthProvider } from "@/context/AuthContext";
 
 const queryClient = new QueryClient();
 
-const isMiniPay = typeof window !== "undefined" && window.ethereum && (window.ethereum as any).isMiniPay;
+const isMiniPay =
+  typeof window !== "undefined" &&
+  window.ethereum &&
+  (window.ethereum as any).isMiniPay;
 
-const connectors: CreateConnectorFn[] = [
-  injected({ target: "metaMask" }),
-];
+const connectors: CreateConnectorFn[] = [injected({ target: "metaMask" })];
 
 if (!isMiniPay) {
   connectors.push(
     coinbaseWallet({
       appName: "Aviator",
       preference: "all",
-    })
+    }),
   );
-  
+
   if (typeof window !== "undefined") {
     connectors.push(
       walletConnect({
@@ -68,7 +70,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
     return (
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </QueryClientProvider>
       </WagmiProvider>
     );
@@ -90,7 +92,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
