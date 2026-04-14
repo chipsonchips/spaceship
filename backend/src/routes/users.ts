@@ -14,7 +14,7 @@ const router = Router();
  */
 router.get('/:userId', async (req: Request, res: Response) => {
     try {
-        const user = await userService.getUserById(req.params.userId);
+        const user = await userService.getUserById(req.params.userId as string);
 
         if (!user) {
             return res.status(404).json({
@@ -51,7 +51,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
  */
 router.get('/address/:address', async (req: Request, res: Response) => {
     try {
-        const user = await userService.getUserByAddress(req.params.address);
+        const user = await userService.getUserByAddress(req.params.address as string);
 
         if (!user) {
             return res.status(404).json({
@@ -90,9 +90,6 @@ router.get('/address/:address', async (req: Request, res: Response) => {
  */
 router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
     try {
-        const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
-        const offset = parseInt(req.query.offset as string) || 0;
-
         const users = await userService.getAllAdmins();
 
         res.json({
@@ -136,7 +133,7 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req: Reques
         const admin = await userService.createAdmin(address || null, email || null, username, permissions || []);
 
         await auditLogService.logAction(
-            req.userId,
+            req.userId || null,
             AdminActionType.ADMIN_CREATED,
             `Created admin user: ${username}`,
             { adminId: admin.id, username, permissions },
@@ -155,7 +152,7 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req: Reques
     } catch (error) {
         const errorMsg = (error as Error).message;
         await auditLogService.logAction(
-            req.userId,
+            req.userId || null,
             AdminActionType.ADMIN_CREATED,
             'Failed to create admin',
             { username: req.body.username },
@@ -188,10 +185,10 @@ router.put('/:userId/role', authenticateToken, requireAdmin, async (req: Request
             });
         }
 
-        const user = await userService.updateUserRole(req.params.userId, role, permissions || []);
+        const user = await userService.updateUserRole(req.params.userId as string, role, permissions || []);
 
         await auditLogService.logAction(
-            req.userId,
+            req.userId || null,
             AdminActionType.USER_ROLE_CHANGED,
             `Changed user ${user.id} role to ${role}`,
             { userId: user.id, role, permissions },
@@ -221,10 +218,10 @@ router.put('/:userId/role', authenticateToken, requireAdmin, async (req: Request
  */
 router.put('/:userId/deactivate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
     try {
-        const user = await userService.deactivateUser(req.params.userId);
+        const user = await userService.deactivateUser(req.params.userId as string);
 
         await auditLogService.logAction(
-            req.userId,
+            req.userId || null,
             AdminActionType.USER_UPDATED,
             `Deactivated user ${user.id}`,
             { userId: user.id },
@@ -253,10 +250,10 @@ router.put('/:userId/deactivate', authenticateToken, requireAdmin, async (req: R
  */
 router.put('/:userId/activate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
     try {
-        const user = await userService.activateUser(req.params.userId);
+        const user = await userService.activateUser(req.params.userId as string);
 
         await auditLogService.logAction(
-            req.userId,
+            req.userId || null,
             AdminActionType.USER_UPDATED,
             `Activated user ${user.id}`,
             { userId: user.id },

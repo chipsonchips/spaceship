@@ -1,16 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { userService } from '../services/user.service.js';
-import { auditLogService } from '../services/audit-log.service.js';
 import {
     generateTokens,
     verifyRefreshToken,
     generateAccessToken,
-    extractTokenFromHeader,
-    verifyToken,
 } from '../utils/auth.js';
 import { authenticateToken, optionalAuth } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
-import { AdminActionType } from '../entities/admin-log.entity.js';
 
 const router = Router();
 

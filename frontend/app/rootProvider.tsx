@@ -12,32 +12,40 @@ import {
 import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
 import "@coinbase/onchainkit/styles.css";
 import { SUPPORTED_CHAINS, CHAIN_CONFIGS } from "@/lib/chains";
+import { AuthProvider } from "@/context/AuthContext";
 
 const queryClient = new QueryClient();
 
-const connectors: CreateConnectorFn[] = [
-  injected({ target: "metaMask" }),
-  coinbaseWallet({
-    appName: "Aviator",
-    preference: "all",
-  }),
-];
+const isMiniPay =
+  typeof window !== "undefined" &&
+  window.ethereum &&
+  (window.ethereum as any).isMiniPay;
 
-// Only add WalletConnect on the client side to avoid indexedDB errors during SSR/Build
-if (typeof window !== "undefined") {
+const connectors: CreateConnectorFn[] = [injected({ target: "metaMask" })];
+
+if (!isMiniPay) {
   connectors.push(
-    walletConnect({
-      projectId:
-        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
-      metadata: {
-        name: "Aviator",
-        description: "Aviator - Multiply your fund with fun",
-        url: process.env.NEXT_PUBLIC_URL || "https://aviator-sand.vercel.app",
-        icons: ["https://aviator-sand.vercel.app/logo.png"],
-      },
-      showQrModal: true,
+    coinbaseWallet({
+      appName: "Aviator",
+      preference: "all",
     }),
   );
+
+  if (typeof window !== "undefined") {
+    connectors.push(
+      walletConnect({
+        projectId:
+          process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
+        metadata: {
+          name: "Aviator",
+          description: "Aviator - Multiply your fund with fun",
+          url: process.env.NEXT_PUBLIC_URL || "https://aviator-sand.vercel.app",
+          icons: ["https://aviator-sand.vercel.app/logo.png"],
+        },
+        showQrModal: true,
+      }),
+    );
+  }
 }
 
 // Build transports map from all supported chains
@@ -56,6 +64,18 @@ const wagmiConfig = createConfig({
 });
 
 export function RootProvider({ children }: { children: ReactNode }) {
+  // If we are in minipay, we can skip the OnchainKitProvider wrapper to satisfy requirement
+  // without breaking hydration as MiniPay renders strictly client-side within the wallet browser.
+  if (isMiniPay) {
+    return (
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    );
+  }
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
@@ -72,7 +92,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

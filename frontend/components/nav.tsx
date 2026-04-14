@@ -13,7 +13,8 @@ import {
   Address,
   EthBalance,
 } from "@coinbase/onchainkit/identity";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
+import { injected } from "wagmi/connectors";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
@@ -21,11 +22,14 @@ import { Menu, X } from "lucide-react";
 import { useGameContext } from "@/context/GameContext";
 import ChainSwitcher from "@/components/ChainSwitcher";
 import useChainInfo from "@/hooks/useChainInfo";
+import { useEnvironment } from "@/hooks/useEnvironment";
 
 const isMobile = () => {
   if (typeof window === "undefined") return false;
   return window.innerWidth <= 500;
 };
+
+const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
 const Nav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,10 +37,19 @@ const Nav = () => {
   const { roundData } = useGameContext();
   const { address, isConnected } = useAccount();
   const { chainLabel, usdcBalance } = useChainInfo();
+  const env = useEnvironment();
+  const { connect } = useConnect();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // MiniPay Auto-Connect Logic
+  useEffect(() => {
+    if (env === "minipay" && !isConnected) {
+      connect({ connector: injected({ target: "metaMask" }) });
+    }
+  }, [env, isConnected, connect]);
 
   const isFlying = roundData?.phase === "FLYING";
 
@@ -72,6 +85,45 @@ const Nav = () => {
       </header>
     );
   }
+
+  // Component to render Wallet based on Environment
+  const renderWalletControls = () => {
+    if (env === "minipay") {
+      // In MiniPay, display native UI instead of OnchainKit to resolve dependency usage conditions
+      if (!isConnected || !address) {
+        return (
+          <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 transition-colors text-sm font-medium text-white">
+            Connecting MiniPay...
+          </div>
+        );
+      }
+      return (
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 text-sm font-medium text-white shadow shadow-green-500/10">
+          <div className="h-6 w-6 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 mr-1" />
+          <span>{formatAddress(address)}</span>
+        </div>
+      );
+    }
+
+    // Default Desktop/Base OnchainKit controls
+    return (
+      <Wallet>
+        <ConnectWallet className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 hover:bg-green-500/10 hover:border-green-400/50 transition-colors text-sm font-medium text-white h-auto leading-none">
+          <Avatar className="h-6 w-6" />
+          <Name />
+        </ConnectWallet>
+        <WalletDropdown>
+          <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+            <Avatar />
+            <Name />
+            <Address />
+            <EthBalance />
+          </Identity>
+          <WalletDropdownDisconnect />
+        </WalletDropdown>
+      </Wallet>
+    );
+  };
 
   return (
     <header
@@ -112,21 +164,7 @@ const Nav = () => {
             </div>
           )}
           <ChainSwitcher />
-          <Wallet>
-            <ConnectWallet className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 hover:bg-green-500/10 hover:border-green-400/50 transition-colors text-sm font-medium text-white h-auto leading-none">
-              <Avatar className="h-6 w-6" />
-              <Name />
-            </ConnectWallet>
-            <WalletDropdown>
-              <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                <Avatar />
-                <Name />
-                <Address />
-                <EthBalance />
-              </Identity>
-              <WalletDropdownDisconnect />
-            </WalletDropdown>
-          </Wallet>
+          {renderWalletControls()}
         </div>
 
         {/* Mobile Menu Button */}
@@ -160,21 +198,7 @@ const Nav = () => {
             <ChainSwitcher />
           </div>
           <div className="flex justify-center">
-            <Wallet>
-              <ConnectWallet className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 hover:bg-green-500/10 hover:border-green-400/50 transition-colors text-sm font-medium text-white h-auto leading-none">
-                <Avatar className="h-6 w-6" />
-                <Name />
-              </ConnectWallet>
-              <WalletDropdown>
-                <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                  <Avatar />
-                  <Name />
-                  <Address />
-                  <EthBalance />
-                </Identity>
-                <WalletDropdownDisconnect />
-              </WalletDropdown>
-            </Wallet>
+            {renderWalletControls()}
           </div>
         </div>
       )}
