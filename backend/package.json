@@ -15,7 +15,10 @@
     "migration:run": "npx tsx src/scripts/run-migrations.ts",
     "migration:revert": "npx tsx src/scripts/revert-migration.ts",
     "migration:show": "npx tsx src/scripts/show-migrations.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "type": "module",
   "keywords": [],
