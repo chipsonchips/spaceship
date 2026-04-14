@@ -44,7 +44,8 @@ export default function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
     try {
       setIsLoading(true);
       await updateProfile({ username: username.trim() });
-      onClose();
+      setUsername("");
+      // Modal will auto-close when user.username is updated in AuthContext
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set username");
     } finally {
@@ -57,13 +58,10 @@ export default function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-auto">
       {/* Transparent backdrop with subtle blur effect */}
-      <div
-        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-none" />
 
       {/* Modal Card */}
-      <div className="relative max-w-md w-full mx-4 pointer-events-auto">
+      <div className="relative max-w-md w-full mx-4 pointer-events-auto z-10">
         {/* Outer glow effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-green-500/20 rounded-lg blur-xl" />
 

@@ -13,11 +13,6 @@ export function useWalletAuth() {
     const { user, loginWithWallet, isLoading } = useAuth();
 
     useEffect(() => {
-        // Only login if:
-        // 1. Wallet is connected
-        // 2. We have an address
-        // 3. User is not already authenticated
-        // 4. We're not already loading
         if (isConnected && address && !user && !isLoading) {
             loginWithWallet(address).catch((error) => {
                 console.error("Wallet login failed:", error);
