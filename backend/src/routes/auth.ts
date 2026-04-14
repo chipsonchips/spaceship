@@ -20,16 +20,20 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
         const { address } = req.body;
 
         if (!address || typeof address !== 'string') {
+            logger.warn('Wallet login attempt without address');
             return res.status(400).json({
                 success: false,
                 error: 'Wallet address required',
             });
         }
 
+        logger.info(`Wallet login attempt for address: ${address}`);
+
         // Get or create user from wallet
         const user = await userService.getOrCreatePlayerFromWallet(address);
 
         if (!user.isActive) {
+            logger.warn(`Login attempt for inactive user: ${user.id}`);
             return res.status(403).json({
                 success: false,
                 error: 'Account is deactivated',
@@ -42,6 +46,8 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
         // Generate tokens
         const tokens = generateTokens(user);
 
+        logger.info(`User logged in successfully: ${user.id} (${address}), username: ${user.username || 'not set'}`);
+
         res.json({
             success: true,
             user: {
@@ -50,6 +56,9 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
                 username: user.username,
                 displayName: user.displayName,
                 role: user.role,
+                permissions: user.permissions || [],
+                isActive: user.isActive,
+                createdAt: user.createdAt,
             },
             ...tokens,
         });
@@ -71,16 +80,20 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
         const { farcasterId, username, displayName, avatarUrl, bio, address } = req.body;
 
         if (!farcasterId || !username) {
+            logger.warn('Farcaster login attempt without required fields');
             return res.status(400).json({
                 success: false,
                 error: 'Farcaster ID and username required',
             });
         }
 
+        logger.info(`Farcaster login attempt for user: ${username} (FID: ${farcasterId})`);
+
         let user = await userService.getUserByFarcasterId(farcasterId);
 
         if (!user) {
             // Create new user from Farcaster
+            logger.info(`Creating new Farcaster user: ${username}`);
             user = await userService.getOrCreatePlayerFromFarcaster(
                 farcasterId,
                 username,
@@ -90,6 +103,7 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
             );
         } else {
             // Update profile if needed
+            logger.info(`Updating existing Farcaster user: ${user.id}`);
             user = await userService.updateUserProfile(user.id, {
                 displayName,
                 avatarUrl,
@@ -99,6 +113,7 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
 
         // Link wallet if provided
         if (address && !user.address) {
+            logger.info(`Linking wallet ${address} to Farcaster user ${user.id}`);
             user = await userService.linkFarcasterToWallet(
                 address,
                 farcasterId,
@@ -109,6 +124,7 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
         }
 
         if (!user.isActive) {
+            logger.warn(`Login attempt for inactive Farcaster user: ${user.id}`);
             return res.status(403).json({
                 success: false,
                 error: 'Account is deactivated',
@@ -121,6 +137,8 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
         // Generate tokens
         const tokens = generateTokens(user);
 
+        logger.info(`Farcaster user logged in successfully: ${user.id} (${username})`);
+
         res.json({
             success: true,
             user: {
@@ -131,6 +149,9 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
                 displayName: user.displayName,
                 avatarUrl: user.avatarUrl,
                 role: user.role,
+                permissions: user.permissions || [],
+                isActive: user.isActive,
+                createdAt: user.createdAt,
             },
             ...tokens,
         });
@@ -195,9 +216,12 @@ router.post('/refresh', async (req: Request, res: Response) => {
  */
 router.get('/me', authenticateToken, async (req: Request, res: Response) => {
     try {
+        logger.info(`Fetching profile for user: ${req.userId}`);
+
         const user = await userService.getUserById(req.userId!);
 
         if (!user) {
+            logger.warn(`User not found: ${req.userId}`);
             return res.status(404).json({
                 success: false,
                 error: 'User not found',
@@ -237,12 +261,16 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     try {
         const { displayName, bio, preferences, username } = req.body;
 
+        logger.info(`Updating profile for user: ${req.userId}`, { displayName, username });
+
         const user = await userService.updateUserProfile(req.userId!, {
             displayName,
             bio,
             preferences,
             username,
         });
+
+        logger.info(`Profile updated successfully for user: ${user.id}`, { username: user.username });
 
         res.json({
             success: true,
@@ -269,8 +297,12 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
  */
 router.post('/logout', authenticateToken, async (req: Request, res: Response) => {
     try {
+        logger.info(`User logging out: ${req.userId}`);
+
         // Update last activity
         await userService.updateLastActivity(req.userId!);
+
+        logger.info(`User logged out successfully: ${req.userId}`);
 
         res.json({
             success: true,

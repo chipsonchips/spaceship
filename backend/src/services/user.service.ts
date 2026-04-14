@@ -17,6 +17,7 @@ export class UserService {
                 role: UserRole.PLAYER,
                 source: UserSource.WALLET,
                 isActive: true,
+                permissions: [],
             });
             await this.userRepo.save(user);
             logger.info(`Created new player from wallet: ${address}`);
