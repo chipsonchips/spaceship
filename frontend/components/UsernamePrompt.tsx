@@ -7,20 +7,44 @@ import UsernameModal from "./UsernameModal";
 export default function UsernamePrompt() {
   const { user, isAuthenticated } = useAuth();
   const [showModal, setShowModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Show modal if user is authenticated but doesn't have a username
-    if (isAuthenticated && user && !user.username) {
+    setMounted(true);
+    console.log("UsernamePrompt mounted");
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const needsUsername =
+      isAuthenticated &&
+      user &&
+      (user.username === null ||
+        user.username === undefined ||
+        user.username.trim() === "");
+
+    console.log("UsernamePrompt state check:", {
+      isAuthenticated,
+      userId: user?.id,
+      username: user?.username,
+      needsUsername,
+    });
+
+    if (needsUsername) {
+      console.log("Showing username modal");
       setShowModal(true);
     } else {
+      console.log("Hiding username modal");
       setShowModal(false);
     }
-  }, [isAuthenticated, user, user?.username]);
+  }, [mounted, isAuthenticated, user]);
 
   const handleClose = () => {
-    // Don't close the modal - user must set a username
-    // Only close when username is actually set (handled by parent via user update)
+    // User must set a username, cannot close manually
   };
+
+  if (!mounted) return null;
 
   return <UsernameModal isOpen={showModal} onClose={handleClose} />;
 }

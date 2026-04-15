@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 
 interface UsernameModalProps {
@@ -13,6 +14,11 @@ export default function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,10 +59,12 @@ export default function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
     }
   };
 
-  if (!isOpen) return null;
+  console.log("UsernameModal rendered:", { isOpen, mounted });
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-auto">
+  if (!isOpen || !mounted) return null;
+
+  const modalContent = (
+    <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-auto">
       {/* Transparent backdrop with subtle blur effect */}
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-none" />
 
@@ -120,4 +128,6 @@ export default function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
