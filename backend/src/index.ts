@@ -17,6 +17,7 @@ import { createRoundsRouter } from './routes/rounds.js';
 import leaderboardRouter from './routes/leaderboard.js';
 import historyRouter from './routes/history.js';
 import adminRouter from './routes/admin.js';
+import authRouter from './routes/auth.js';
 import { AppDataSource } from './config/database.js';
 
 config();
@@ -76,6 +77,7 @@ const io = new Server(server, {
 const gameEngine = new GameEngine(io);
 
 // Routes with dependency injection
+app.use('/api/auth', authRouter);
 app.use('/api/rounds', createRoundsRouter(gameEngine));
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/history', historyRouter);
