@@ -317,8 +317,8 @@ describe("UsernamePrompt", () => {
 
       render(<UsernamePrompt />);
 
-      // Whitespace-only username is truthy, so modal should not show
-      expect(screen.queryByTestId("username-modal")).not.toBeInTheDocument();
+      // Whitespace-only username should be treated as missing, so modal should show
+      expect(screen.getByTestId("username-modal")).toBeInTheDocument();
     });
 
     it("should handle user object with missing fields", () => {
