@@ -104,7 +104,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
             <WalletAuthManager />
             {children}
             <UsernamePrompt />
-            <AuthDebugger />
+            {/* <AuthDebugger /> */}
           </AuthProvider>
         </OnchainKitProvider>
       </QueryClientProvider>

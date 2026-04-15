@@ -29,7 +29,8 @@ const isMobile = () => {
   return window.innerWidth <= 500;
 };
 
-const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+const formatAddress = (addr: string) =>
+  `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
 const Nav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -197,9 +198,7 @@ const Nav = () => {
           <div className="flex justify-center">
             <ChainSwitcher />
           </div>
-          <div className="flex justify-center">
-            {renderWalletControls()}
-          </div>
+          <div className="flex justify-center">{renderWalletControls()}</div>
         </div>
       )}
     </header>
