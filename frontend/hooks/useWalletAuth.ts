@@ -13,7 +13,15 @@ export function useWalletAuth() {
     const { user, loginWithWallet, isLoading } = useAuth();
 
     useEffect(() => {
+        console.log("useWalletAuth effect:", {
+            isConnected,
+            address,
+            hasUser: !!user,
+            isLoading,
+        });
+
         if (isConnected && address && !user && !isLoading) {
+            console.log("Calling loginWithWallet for address:", address);
             loginWithWallet(address).catch((error) => {
                 console.error("Wallet login failed:", error);
             });
