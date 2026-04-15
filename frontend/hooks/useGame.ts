@@ -90,13 +90,27 @@ export function useGame(options: { wsUrl?: string } = {}) {
         const round = await r.fetchCurrentRound();
         if (round) setRoundData(round);
         const lb = await r.fetchLeaderboard();
+        console.log("Fetched leaderboard:", lb);
         setLeaderboard(lb);
       } catch (e) {
+        console.error("Failed to fetch leaderboard:", e);
         // ignore; socket will update state when ready
       }
     })();
 
+    // Refresh leaderboard every 10 seconds
+    const leaderboardInterval = setInterval(async () => {
+      try {
+        const r = await import("@/lib/api");
+        const lb = await r.fetchLeaderboard();
+        setLeaderboard(lb);
+      } catch (e) {
+        console.error("Failed to refresh leaderboard:", e);
+      }
+    }, 10000);
+
     return () => {
+      clearInterval(leaderboardInterval);
       // unsubscribe();
     };
   }, [wsUrl]);
