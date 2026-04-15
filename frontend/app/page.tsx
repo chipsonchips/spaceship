@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import AviatorGameScreen from "../components/gameScreen";
 import { isFarcasterContext } from "@/lib/utils";
-import { useWalletAuth } from "@/hooks/useWalletAuth";
 
 export default function Home() {
   const [isMiniPay, setIsMiniPay] = useState(false);
-  useWalletAuth(); // Automatically authenticate when wallet connects
 
   useEffect(() => {
     const minipay =
