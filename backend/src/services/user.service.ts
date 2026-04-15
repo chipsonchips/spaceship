@@ -1,9 +1,11 @@
 import { AppDataSource } from '../config/database.js';
 import { User, UserRole, UserSource } from '../entities/user.entity.js';
+import { LeaderboardService } from './leaderboard.service.js';
 import { logger } from '../utils/logger.js';
 
 export class UserService {
     private userRepo = AppDataSource.getRepository(User);
+    private leaderboardService = new LeaderboardService();
 
     /**
      * Get or create a player from wallet address
@@ -134,6 +136,11 @@ export class UserService {
 
         Object.assign(user, updates);
         await this.userRepo.save(user);
+
+        // Update leaderboard if username changed
+        if (updates.username && user.address) {
+            await this.leaderboardService.updateUsername(user.address, updates.username);
+        }
 
         return user;
     }
