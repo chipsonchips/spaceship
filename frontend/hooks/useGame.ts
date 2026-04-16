@@ -117,11 +117,12 @@ export function useGame(options: { wsUrl?: string } = {}) {
 
   const placeBet = useCallback(
     async (address: string, amount: number, useFreeBet: boolean = false) => {
-      if (!walletClient?.account?.address) {
+      // For free bets, we don't need wallet connection
+      if (!useFreeBet && !walletClient?.account?.address) {
         return { success: false, error: 'Wallet not connected' };
       }
 
-      if (!publicClient) {
+      if (!useFreeBet && !publicClient) {
         return { success: false, error: 'Public client not available' };
       }
 
