@@ -14,18 +14,63 @@ const BetControls: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [freeBetsRemaining, setFreeBetsRemaining] = useState<number>(0);
+  const [freeBetMaxAmount, setFreeBetMaxAmount] = useState<number>(0.1);
+  const [useFreeBet, setUseFreeBet] = useState(false);
 
   const betValidation = useBetValidation(betAmount, walletBalance || 0);
+
+  // Fetch free bets info when wallet address changes
+  useEffect(() => {
+    if (walletAddress) {
+      fetchFreeBetsInfo();
+    }
+  }, [walletAddress]);
+
+  const fetchFreeBetsInfo = async () => {
+    try {
+      // Get user ID from wallet address
+      const userRes = await fetch(`/api/users/address/${walletAddress}`);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData.user?.id) {
+          const freeBetsRes = await fetch(
+            `/api/free-bets/user/${userData.user.id}`,
+          );
+          if (freeBetsRes.ok) {
+            const freeBetsData = await freeBetsRes.json();
+            setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
+            setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch free bets info:", err);
+    }
+  };
 
   const handlePlaceBet = async () => {
     if (!walletAddress) {
       setError("Please connect your wallet to place bets");
       return;
     }
-    if (!walletBalance || walletBalance <= 0) {
-      setError("Insufficient USDC balance");
-      return;
+
+    if (useFreeBet) {
+      if (freeBetsRemaining <= 0) {
+        setError("No free bets remaining");
+        return;
+      }
+      if (parseFloat(betAmount) > freeBetMaxAmount) {
+        setError(`Free bet amount exceeds maximum of ${freeBetMaxAmount} USDC`);
+        return;
+      }
+    } else {
+      if (!walletBalance || walletBalance <= 0) {
+        setError("Insufficient USDC balance");
+        return;
+      }
     }
+
     if (!betValidation.isValid) {
       setError(betValidation.error);
       return;
@@ -35,11 +80,20 @@ const BetControls: React.FC = () => {
     setTxHash(null);
     setError(null);
     try {
-      const res = await placeBet(walletAddress, parseFloat(betAmount));
-      await refreshBalance();
+      const res = await placeBet(
+        walletAddress,
+        parseFloat(betAmount),
+        useFreeBet,
+      );
+      if (!useFreeBet) {
+        await refreshBalance();
+      }
       if (res?.success) {
         setTxHash(res.txHash || null);
         setBetAmount("0.10");
+        setUseFreeBet(false);
+        // Refresh free bets info
+        await fetchFreeBetsInfo();
       } else {
         setError(res.error || "Failed to place bet");
       }
@@ -83,28 +137,23 @@ const BetControls: React.FC = () => {
   const isConnected = mounted && !!walletAddress;
   const canPlaceBet =
     isConnected &&
-    walletBalance &&
-    walletBalance > 0 &&
     roundData?.phase === "BETTING" &&
-    !myBet;
-
-  // Debug log for checking cashout visibility
-  // console.log("Render BetControls:", {
-  //   phase: roundData?.phase,
-  //   roundData: roundData,
-  //   hasMyBet: !!myBet,
-  //   cashedOut: myBet?.cashedOut,
-  //   wallet: walletAddress,
-  //   myBet: myBet,
-  //   isConnected: isConnected,
-  //   canPlaceBet: canPlaceBet,
-  // });
+    !myBet &&
+    ((useFreeBet && freeBetsRemaining > 0) ||
+      (!useFreeBet && walletBalance && walletBalance > 0));
 
   return (
     <div className="bg-black/50 backdrop-blur-sm border-t border-green-500/30 p-4 space-y-3">
       <div className="flex items-center justify-between text-xs text-gray-400 mb-2 font-courier">
         <span>Playing on {chainLabel}</span>
-        <span>USDC Balance: {walletBalance?.toFixed(2) || "0.00"}</span>
+        <div className="flex gap-4">
+          <span>USDC Balance: {walletBalance?.toFixed(2) || "0.00"}</span>
+          {freeBetsRemaining > 0 && (
+            <span className="text-green-400 font-medium">
+              Free Bets: {freeBetsRemaining}
+            </span>
+          )}
+        </div>
       </div>
       {myBet && (
         <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 flex items-center justify-between">
@@ -131,9 +180,31 @@ const BetControls: React.FC = () => {
 
       {canPlaceBet && (
         <div className="space-y-3">
+          {freeBetsRemaining > 0 && (
+            <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useFreeBet}
+                  onChange={(e) => {
+                    setUseFreeBet(e.target.checked);
+                    setBetAmount(freeBetMaxAmount.toString());
+                  }}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-blue-300 font-courier">
+                  Use Free Bet ({freeBetsRemaining} remaining, max{" "}
+                  {freeBetMaxAmount} USDC)
+                </span>
+              </label>
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-gray-400 mb-1 block font-courier">
-              Balance: {walletBalance?.toFixed(2) || "0.00"} (USDC)
+              {useFreeBet
+                ? `Free Bet (Max: ${freeBetMaxAmount} USDC)`
+                : `Balance: ${walletBalance?.toFixed(2) || "0.00"} (USDC)`}
             </label>
             <input
               type="number"
@@ -141,7 +212,11 @@ const BetControls: React.FC = () => {
               onChange={(e) => setBetAmount(e.target.value)}
               step="0.10"
               min="0.10"
-              max={walletBalance!.toString()}
+              max={
+                useFreeBet
+                  ? freeBetMaxAmount.toString()
+                  : walletBalance!.toString()
+              }
               className="w-full bg-slate-800/50 border border-green-500/30 rounded-lg px-4 py-3 text-white text-lg font-medium focus:outline-none focus:border-green-400 font-courier"
             />
             {!betValidation.isValid && (
@@ -150,20 +225,31 @@ const BetControls: React.FC = () => {
               </div>
             )}
             <div className="text-xs text-gray-500 mt-1 font-courier">
-              Balance: {walletBalance?.toFixed(2) || "0.00"} USDC
+              {useFreeBet
+                ? `Max Free Bet: ${freeBetMaxAmount} USDC`
+                : `Balance: ${walletBalance?.toFixed(2) || "0.00"} USDC`}
             </div>
           </div>
 
           <div className="flex gap-2">
-            {["0.5", "1", "5", "10"].map((amount) => (
-              <button
-                key={amount}
-                onClick={() => setBetAmount(amount)}
-                className="flex-1 bg-green-700/30 hover:bg-green-600/40 rounded-lg py-2 text-sm font-medium transition-colors font-courier"
-              >
-                {amount}
-              </button>
-            ))}
+            {["0.5", "1", "5", "10"].map((amount) => {
+              const amountNum = parseFloat(amount);
+              const isDisabled = useFreeBet && amountNum > freeBetMaxAmount;
+              return (
+                <button
+                  key={amount}
+                  onClick={() => setBetAmount(amount)}
+                  disabled={isDisabled}
+                  className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors font-courier ${
+                    isDisabled
+                      ? "bg-gray-700/30 text-gray-500 cursor-not-allowed"
+                      : "bg-green-700/30 hover:bg-green-600/40"
+                  }`}
+                >
+                  {amount}
+                </button>
+              );
+            })}
           </div>
 
           <button
@@ -193,11 +279,13 @@ const BetControls: React.FC = () => {
       {isConnected && !canPlaceBet && roundData?.phase === "BETTING" && (
         <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 text-center">
           <div className="text-yellow-400 font-medium font-orbitron uppercase tracking-wide">
-            {walletBalance === 0
-              ? "Insufficient USDC balance"
-              : myBet
-                ? "You've already placed a bet"
-                : "Betting closed for this round"}
+            {walletBalance === 0 && freeBetsRemaining === 0
+              ? "Insufficient USDC balance and no free bets"
+              : walletBalance === 0
+                ? "Insufficient USDC balance"
+                : myBet
+                  ? "You've already placed a bet"
+                  : "Betting closed for this round"}
           </div>
         </div>
       )}
