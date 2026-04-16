@@ -291,6 +291,27 @@ export class GameEngine {
       this.currentRound!.currentMultiplier = calculateCurrentMultiplier(elapsed);
       this.currentRound!.planePosition = calculatePlanePosition(elapsed);
 
+      // Check for auto-cashouts
+      const players: PlayerBet[] = await this.betRepo.find({
+        where: { round: { id: this.currentRound!.id }, cashedOut: false },
+      });
+
+      for (const player of players) {
+        if (
+          player.autoCashoutMultiplier &&
+          this.currentRound!.currentMultiplier >= player.autoCashoutMultiplier
+        ) {
+          try {
+            await this.cashOutById(player.id, 0); // chainId 0 for auto-cashout (no on-chain relay needed for free bets)
+          } catch (err) {
+            logger.error('Failed to auto-cashout bet', {
+              betId: player.id,
+              error: (err as Error).message,
+            });
+          }
+        }
+      }
+
       // persist small updates occasionally
       if (elapsed % 1000 < 60) {
         await this.roundRepo.save(this.currentRound!);
@@ -373,7 +394,7 @@ export class GameEngine {
     setTimeout(() => this.startNewRound(), 10000);
   }
 
-  async placeBet(address: string, amount: number, chainId: number, useFreeBet: boolean = false) {
+  async placeBet(address: string, amount: number, chainId: number, useFreeBet: boolean = false, autoCashoutMultiplier?: number) {
     if (!chainId) {
       throw new Error('chainId is required. Pass the connected chain from the frontend.');
     }
@@ -382,6 +403,10 @@ export class GameEngine {
 
     if (amount < 0.1 || amount > 1000) {
       throw new Error('Invalid bet amount: must be between 0.1 and 1000 USDC');
+    }
+
+    if (autoCashoutMultiplier && (autoCashoutMultiplier < 1.01 || autoCashoutMultiplier > 100)) {
+      throw new Error('Auto-cashout multiplier must be between 1.01 and 100');
     }
 
     let finalTxHash: string | null = null;
@@ -426,6 +451,7 @@ export class GameEngine {
       cashoutMultiplier: null,
       payout: null,
       txHash: finalTxHash,
+      autoCashoutMultiplier: autoCashoutMultiplier || null,
       timestamp: Date.now(),
       round: this.currentRound,
     });
