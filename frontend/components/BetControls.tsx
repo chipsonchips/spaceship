@@ -16,9 +16,15 @@ const BetControls: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [freeBetsRemaining, setFreeBetsRemaining] = useState<number>(0);
   const [freeBetMaxAmount, setFreeBetMaxAmount] = useState<number>(0.1);
+  const [freeBetsExpiresAt, setFreeBetsExpiresAt] = useState<string | null>(
+    null,
+  );
   const [useFreeBet, setUseFreeBet] = useState(false);
 
-  const betValidation = useBetValidation(betAmount, walletBalance || 0);
+  const betValidation = useBetValidation(
+    betAmount,
+    useFreeBet ? freeBetMaxAmount : walletBalance || 0,
+  );
 
   // Fetch free bets info when wallet address changes
   useEffect(() => {
@@ -29,20 +35,39 @@ const BetControls: React.FC = () => {
 
   const fetchFreeBetsInfo = async () => {
     try {
+      const apiBase =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       // Get user ID from wallet address
-      const userRes = await fetch(`/api/users/address/${walletAddress}`);
+      const userRes = await fetch(
+        `${apiBase}/api/users/address/${walletAddress}`,
+      );
       if (userRes.ok) {
         const userData = await userRes.json();
+        console.log("User data:", userData);
         if (userData.user?.id) {
           const freeBetsRes = await fetch(
-            `/api/free-bets/user/${userData.user.id}`,
+            `${apiBase}/api/free-bets/user/${userData.user.id}`,
           );
           if (freeBetsRes.ok) {
             const freeBetsData = await freeBetsRes.json();
+            console.log("Free bets data:", freeBetsData);
             setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
             setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
+            setFreeBetsExpiresAt(freeBetsData.expiresAt);
+          } else {
+            console.error(
+              "Failed to fetch free bets:",
+              freeBetsRes.status,
+              await freeBetsRes.text(),
+            );
           }
         }
+      } else {
+        console.error(
+          "Failed to fetch user:",
+          userRes.status,
+          await userRes.text(),
+        );
       }
     } catch (err) {
       console.error("Failed to fetch free bets info:", err);
@@ -111,13 +136,33 @@ const BetControls: React.FC = () => {
       (p: any) => p.address?.toLowerCase() === walletAddress?.toLowerCase(),
     ) || null;
 
-  const handleCashOut = () => {
+  const [isCashingOut, setIsCashingOut] = useState(false);
+  const [optimisticCashOut, setOptimisticCashOut] = useState(false);
+
+  const handleCashOut = async () => {
     if (!walletAddress || !myBet?.id) {
       setError("Cannot cash out at this time");
       return;
     }
     setError(null);
-    cashOut(myBet.id);
+
+    // Optimistic UI update
+    setOptimisticCashOut(true);
+    setIsCashingOut(true);
+
+    try {
+      const result = await cashOut(myBet.id);
+      if (!result.success) {
+        setError(result.error || "Failed to cash out");
+        setOptimisticCashOut(false);
+      }
+      // If successful, keep the optimistic state until server updates
+    } catch (err) {
+      setError((err as Error).message || "Failed to cash out");
+      setOptimisticCashOut(false);
+    } finally {
+      setIsCashingOut(false);
+    }
   };
 
   /*
@@ -161,19 +206,29 @@ const BetControls: React.FC = () => {
             <div className="text-sm text-gray-400">
               Your Bet: {myBet.amount || "0.00"} USDC
             </div>
-            {myBet.cashedOut && myBet.payout && (
+            {(myBet.cashedOut || optimisticCashOut) && myBet.payout && (
               <div className="text-green-400 font-medium">
-                Cashed Out at {myBet.cashoutMultiplier}x
+                {optimisticCashOut && isCashingOut
+                  ? "Cashing Out..."
+                  : `Cashed Out at ${myBet.cashoutMultiplier}x`}
               </div>
             )}
           </div>
-          {roundData?.phase === "FLYING" && !myBet.cashedOut && (
-            <button
-              onClick={handleCashOut}
-              className="w-full bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-bold transition-colors"
-            >
-              CASH OUT
-            </button>
+          {roundData?.phase === "FLYING" &&
+            !myBet.cashedOut &&
+            !optimisticCashOut && (
+              <button
+                onClick={handleCashOut}
+                disabled={isCashingOut}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:opacity-50 px-6 py-2 rounded-lg font-bold transition-colors disabled:cursor-not-allowed"
+              >
+                {isCashingOut ? "PROCESSING..." : "CASH OUT"}
+              </button>
+            )}
+          {optimisticCashOut && (
+            <div className="w-full bg-green-600 px-6 py-2 rounded-lg font-bold text-center">
+              ✓ CASHED OUT
+            </div>
           )}
         </div>
       )}
@@ -182,30 +237,44 @@ const BetControls: React.FC = () => {
         <div className="space-y-3">
           {freeBetsRemaining > 0 && (
             <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useFreeBet}
-                  onChange={(e) => {
-                    setUseFreeBet(e.target.checked);
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-blue-300 font-courier">
+                    Free Bets Available: {freeBetsRemaining} (Max{" "}
+                    {freeBetMaxAmount} USDC each)
+                  </span>
+                  {freeBetsExpiresAt && (
+                    <div className="text-xs text-blue-400 mt-1 font-courier">
+                      Expires:{" "}
+                      {new Date(freeBetsExpiresAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setUseFreeBet(!useFreeBet);
                     setBetAmount(freeBetMaxAmount.toString());
                   }}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm text-blue-300 font-courier">
-                  Use Free Bet ({freeBetsRemaining} remaining, max{" "}
-                  {freeBetMaxAmount} USDC)
-                </span>
-              </label>
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    useFreeBet ? "bg-green-600" : "bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      useFreeBet ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+              {useFreeBet && (
+                <div className="text-xs text-green-300 mt-2 font-courier">
+                  ✓ Using free bet - no USDC required
+                </div>
+              )}
             </div>
           )}
 
           <div>
-            <label className="text-sm text-gray-400 mb-1 block font-courier">
-              {useFreeBet
-                ? `Free Bet (Max: ${freeBetMaxAmount} USDC)`
-                : `Balance: ${walletBalance?.toFixed(2) || "0.00"} (USDC)`}
-            </label>
             <input
               type="number"
               value={betAmount}
