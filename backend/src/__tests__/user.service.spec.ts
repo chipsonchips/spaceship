@@ -39,6 +39,9 @@ const createMockUser = (overrides: Partial<User> = {}): User => ({
     lastLoginAt: null,
     lastActivityAt: null,
     preferences: {},
+    freeBetsRemaining: 2,
+    freeBetMaxAmount: 0.1,
+    freeBetsExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
     adminLogs: [],
@@ -103,13 +106,15 @@ describe('UserService', () => {
             const result = await userService.getOrCreatePlayerFromWallet(address);
 
             expect(result).toEqual(newUser);
-            expect(mockUserRepo.create).toHaveBeenCalledWith({
-                address,
-                role: UserRole.PLAYER,
-                source: UserSource.WALLET,
-                isActive: true,
-                permissions: [],
-            });
+            const createCall = mockUserRepo.create.mock.calls[0][0];
+            expect(createCall.address).toBe(address);
+            expect(createCall.role).toBe(UserRole.PLAYER);
+            expect(createCall.source).toBe(UserSource.WALLET);
+            expect(createCall.isActive).toBe(true);
+            expect(createCall.permissions).toEqual([]);
+            expect(createCall.freeBetsRemaining).toBe(2);
+            expect(createCall.freeBetMaxAmount).toBe(0.1);
+            expect(createCall.freeBetsExpiresAt).toBeDefined();
             expect(mockUserRepo.save).toHaveBeenCalledWith(newUser);
         });
 
@@ -180,17 +185,19 @@ describe('UserService', () => {
             );
 
             expect(result).toEqual(newUser);
-            expect(mockUserRepo.create).toHaveBeenCalledWith({
-                farcasterId: 12345,
-                farcasterUsername: 'farcaster_user',
-                username: 'farcaster_user',
-                displayName: 'Farcaster User',
-                avatarUrl: 'https://example.com/avatar.jpg',
-                bio: 'Test bio',
-                role: UserRole.PLAYER,
-                source: UserSource.FARCASTER,
-                isActive: true,
-            });
+            const createCall = mockUserRepo.create.mock.calls[0][0];
+            expect(createCall.farcasterId).toBe(12345);
+            expect(createCall.farcasterUsername).toBe('farcaster_user');
+            expect(createCall.username).toBe('farcaster_user');
+            expect(createCall.displayName).toBe('Farcaster User');
+            expect(createCall.avatarUrl).toBe('https://example.com/avatar.jpg');
+            expect(createCall.bio).toBe('Test bio');
+            expect(createCall.role).toBe(UserRole.PLAYER);
+            expect(createCall.source).toBe(UserSource.FARCASTER);
+            expect(createCall.isActive).toBe(true);
+            expect(createCall.freeBetsRemaining).toBe(2);
+            expect(createCall.freeBetMaxAmount).toBe(0.1);
+            expect(createCall.freeBetsExpiresAt).toBeDefined();
         });
     });
 
