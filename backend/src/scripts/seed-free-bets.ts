@@ -21,10 +21,15 @@ async function seedFreeBets() {
 
         let updatedCount = 0;
 
+        // Calculate expiration date (30 days from now)
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30);
+
         // Update each user with free bets
         for (const user of users) {
             user.freeBetsRemaining = 2;
             user.freeBetMaxAmount = 0.1;
+            user.freeBetsExpiresAt = expirationDate;
             await userRepo.save(user);
             updatedCount++;
         }
@@ -33,6 +38,7 @@ async function seedFreeBets() {
         console.log(`\n✓ Seeded ${updatedCount} users with:`);
         console.log(`  - Free Bets: 2`);
         console.log(`  - Max Amount per Bet: 0.1 USDC`);
+        console.log(`  - Expires: ${expirationDate.toISOString()}`);
 
         process.exit(0);
     } catch (error) {
