@@ -20,6 +20,8 @@ export class UserService {
                 source: UserSource.WALLET,
                 isActive: true,
                 permissions: [],
+                freeBetsRemaining: 2,
+                freeBetMaxAmount: 0.1,
             });
             await this.userRepo.save(user);
             logger.info(`Created new player from wallet: ${address}`);
@@ -51,6 +53,8 @@ export class UserService {
                 role: UserRole.PLAYER,
                 source: UserSource.FARCASTER,
                 isActive: true,
+                freeBetsRemaining: 2,
+                freeBetMaxAmount: 0.1,
             });
             await this.userRepo.save(user);
             logger.info(`Created new player from Farcaster: ${username} (FID: ${farcasterId})`);
