@@ -13,8 +13,9 @@ export async function placeBetRest(
   address: string,
   amount: number,
   chainId?: number,
+  useFreeBet: boolean = false,
 ) {
-  const body: any = { address, amount, chainId };
+  const body: any = { address, amount, chainId, useFreeBet };
   const res = await fetch(`${API_BASE}/api/rounds/${roundId}/bets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
