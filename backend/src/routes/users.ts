@@ -9,6 +9,41 @@ import { UserRole } from '../entities/user.entity.js';
 const router = Router();
 
 /**
+ * GET /api/users/address/:address
+ * Get user by wallet address
+ */
+router.get('/address/:address', async (req: Request, res: Response) => {
+    try {
+        const user = await userService.getUserByAddress(req.params.address as string);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+            });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                address: user.address,
+                username: user.username,
+                displayName: user.displayName,
+                avatarUrl: user.avatarUrl,
+                role: user.role,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to fetch user by address', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch user',
+        });
+    }
+});
+
+/**
  * GET /api/users/:userId
  * Get user profile (public info)
  */
@@ -38,41 +73,6 @@ router.get('/:userId', async (req: Request, res: Response) => {
         });
     } catch (error) {
         logger.error('Failed to fetch user', { error: (error as Error).message });
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch user',
-        });
-    }
-});
-
-/**
- * GET /api/users/address/:address
- * Get user by wallet address
- */
-router.get('/address/:address', async (req: Request, res: Response) => {
-    try {
-        const user = await userService.getUserByAddress(req.params.address as string);
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                error: 'User not found',
-            });
-        }
-
-        res.json({
-            success: true,
-            user: {
-                id: user.id,
-                address: user.address,
-                username: user.username,
-                displayName: user.displayName,
-                avatarUrl: user.avatarUrl,
-                role: user.role,
-            },
-        });
-    } catch (error) {
-        logger.error('Failed to fetch user by address', { error: (error as Error).message });
         res.status(500).json({
             success: false,
             error: 'Failed to fetch user',
