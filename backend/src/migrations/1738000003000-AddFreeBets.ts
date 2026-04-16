@@ -55,7 +55,7 @@ export class AddFreeBets1738000003000 implements MigrationInterface {
                     {
                         name: 'txHash',
                         type: 'varchar',
-                        length: 128,
+                        length: '128',
                         isNullable: true,
                     },
                     {
