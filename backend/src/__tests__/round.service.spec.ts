@@ -51,7 +51,7 @@ describe('RoundService', () => {
         roundId: 1,
         serverSeed: 'test-seed',
         serverSeedHash: '0xhash',
-        phase: 'betting',
+        phase: 'BETTING',
         startTime: Date.now(),
       };
 
@@ -69,7 +69,7 @@ describe('RoundService', () => {
     it('should return the created round', async () => {
       const roundData: Partial<Round> = {
         roundId: 2,
-        phase: 'betting',
+        phase: 'BETTING',
       };
 
       const savedRound = { id: 2, ...roundData, players: [] };
@@ -103,7 +103,7 @@ describe('RoundService', () => {
       const mockRound = {
         id: 1,
         roundId: 5,
-        phase: 'flying',
+        phase: 'FLYING',
         players: [
           { id: 1, address: '0x111', amount: 100 },
           { id: 2, address: '0x222', amount: 200 },
@@ -212,7 +212,7 @@ describe('RoundService', () => {
       };
 
       mockRoundRepo.findOne.mockResolvedValue(mockRound);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       const result = await roundService.addBet(roundId, betData);
 
@@ -243,7 +243,7 @@ describe('RoundService', () => {
       };
 
       mockRoundRepo.findOne.mockResolvedValue(mockRound);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       const result = await roundService.addBet(roundId, betData);
 
@@ -277,8 +277,8 @@ describe('RoundService', () => {
       };
 
       mockRoundRepo.findOne.mockResolvedValue(mockRound);
-      mockBetRepo.create.mockImplementation((data) => data);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.create.mockImplementation((data: any) => data);
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       await roundService.addBet(roundId, betData);
 
@@ -311,7 +311,7 @@ describe('RoundService', () => {
       };
 
       mockRoundRepo.findOne.mockResolvedValue(mockRound);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       await roundService.addBet(1, betData);
 
@@ -340,7 +340,7 @@ describe('RoundService', () => {
       };
 
       mockBetRepo.findOne.mockResolvedValue(mockBet);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       const result = await roundService.cashOut(betId, multiplier);
 
@@ -361,7 +361,7 @@ describe('RoundService', () => {
       };
 
       mockBetRepo.findOne.mockResolvedValue(mockBet);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       const result = await roundService.cashOut(1, 3.0);
 
@@ -377,7 +377,7 @@ describe('RoundService', () => {
       };
 
       mockBetRepo.findOne.mockResolvedValue(mockBet);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       const result = await roundService.cashOut(1, 2.0);
 
@@ -404,7 +404,7 @@ describe('RoundService', () => {
       };
 
       mockBetRepo.findOne.mockResolvedValue(mockBet);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       const result = await roundService.cashOut(1, 1.5);
 
@@ -433,7 +433,7 @@ describe('RoundService', () => {
       };
 
       mockBetRepo.findOne.mockResolvedValue(mockBet);
-      mockBetRepo.save.mockImplementation((bet) => Promise.resolve(bet));
+      mockBetRepo.save.mockImplementation((bet: any) => Promise.resolve(bet));
 
       await roundService.cashOut(1, 2.0);
 

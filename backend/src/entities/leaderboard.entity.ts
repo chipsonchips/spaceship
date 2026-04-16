@@ -5,6 +5,9 @@ export class LeaderboardEntry {
   @PrimaryColumn({ type: 'varchar', length: 64 })
   address!: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  username?: string | null;
+
   @Column({ type: 'numeric', precision: 18, scale: 8, default: 0 })
   totalWagered!: number;
 

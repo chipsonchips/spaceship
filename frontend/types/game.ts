@@ -37,6 +37,7 @@ export interface GameHistory {
 
 export interface LeaderboardEntry {
   address: string;
+  username?: string | null;
   totalWagered: number;
   totalWon: number;
   gamesPlayed: number;

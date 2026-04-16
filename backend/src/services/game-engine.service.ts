@@ -11,6 +11,8 @@ import {
 } from './game-utils.js';
 import { LeaderboardService } from './leaderboard.service.js';
 import { HistoryService } from './history.service.js';
+import { FreeBetService } from './free-bet.service.js';
+import { UserService } from './user.service.js';
 import { logger } from '../utils/logger.js';
 
 export class GameEngine {
@@ -23,6 +25,8 @@ export class GameEngine {
 
   leaderboardService = new LeaderboardService();
   historyService = new HistoryService();
+  freeBetService = new FreeBetService();
+  userService = new UserService();
   chainService: import('./chain.service.js').ChainService | null = null;
 
   constructor(io: Server) {
@@ -56,9 +60,9 @@ export class GameEngine {
 
       socket.on(
         'PLACE_BET',
-        async (data: { address: string; amount: number; chainId: number }) => {
+        async (data: { address: string; amount: number; chainId: number; useFreeBet?: boolean }) => {
           try {
-            await this.placeBet(data.address, data.amount, data.chainId);
+            await this.placeBet(data.address, data.amount, data.chainId, data.useFreeBet || false);
             socket.emit('BET_PLACED', { success: true });
             await this.broadcastGameState();
           } catch (err) {
@@ -369,7 +373,7 @@ export class GameEngine {
     setTimeout(() => this.startNewRound(), 10000);
   }
 
-  async placeBet(address: string, amount: number, chainId: number) {
+  async placeBet(address: string, amount: number, chainId: number, useFreeBet: boolean = false) {
     if (!chainId) {
       throw new Error('chainId is required. Pass the connected chain from the frontend.');
     }
@@ -380,17 +384,39 @@ export class GameEngine {
       throw new Error('Invalid bet amount: must be between 0.1 and 1000 USDC');
     }
 
-    // Relay to chain
-    let finalTxHash = null;
-    try {
-      const chainService = new (await import('./chain.service.js')).ChainService(chainId);
+    let finalTxHash: string | null = null;
 
-      if (chainService) {
-        finalTxHash = await chainService.placeBetFor(this.currentRound.roundId, address, amount);
+    // Handle free bet
+    if (useFreeBet) {
+      const user = await this.userService.getUserByAddress(address);
+      if (!user) {
+        throw new Error('User not found');
       }
-    } catch (err) {
-      logger.error('Failed to relay bet to chain', { error: (err as Error).message, chainId });
-      throw new Error('Failed to place bet on chain: ' + (err as Error).message);
+
+      const freeBetsRemaining = await this.freeBetService.getFreeBetsRemaining(user.id);
+      if (freeBetsRemaining <= 0) {
+        throw new Error('No free bets remaining');
+      }
+
+      const maxFreeBetAmount = await this.freeBetService.getFreeBetMaxAmount(user.id);
+      if (amount > maxFreeBetAmount) {
+        throw new Error(`Free bet amount exceeds maximum of ${maxFreeBetAmount} USDC`);
+      }
+
+      // Record free bet usage
+      await this.freeBetService.useFreeBet(user.id, amount, this.currentRound.roundId);
+    } else {
+      // Relay to chain for regular bets
+      try {
+        const chainService = new (await import('./chain.service.js')).ChainService(chainId);
+
+        if (chainService) {
+          finalTxHash = await chainService.placeBetFor(this.currentRound.roundId, address, amount);
+        }
+      } catch (err) {
+        logger.error('Failed to relay bet to chain', { error: (err as Error).message, chainId });
+        throw new Error('Failed to place bet on chain: ' + (err as Error).message);
+      }
     }
 
     const bet = this.betRepo.create({

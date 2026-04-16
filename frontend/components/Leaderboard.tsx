@@ -7,6 +7,10 @@ import { Trophy, Medal } from "lucide-react";
 const Leaderboard: React.FC = () => {
   const { leaderboard } = useGameContext();
 
+  React.useEffect(() => {
+    console.log("Leaderboard data:", leaderboard);
+  }, [leaderboard]);
+
   const getMedalIcon = (position: number) => {
     if (position === 1) return <Trophy className="text-yellow-400" size={20} />;
     if (position === 2) return <Medal className="text-gray-300" size={20} />;
@@ -19,6 +23,13 @@ const Leaderboard: React.FC = () => {
     if (position === 2) return "bg-gray-400/10 border-l-4 border-gray-300";
     if (position === 3) return "bg-orange-500/10 border-l-4 border-orange-400";
     return "bg-slate-800/20 border-l-4 border-green-500/30";
+  };
+
+  const getDisplayName = (entry: any) => {
+    return (
+      entry.username ||
+      `${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`
+    );
   };
 
   return (
@@ -47,7 +58,7 @@ const Leaderboard: React.FC = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-mono text-xs text-gray-400 font-courier truncate">
-                        {entry.address.slice(0, 6)}...{entry.address.slice(-4)}
+                        {getDisplayName(entry)}
                       </div>
                     </div>
                   </div>
@@ -102,7 +113,7 @@ const Leaderboard: React.FC = () => {
                       )}
                     </div>
                     <div className="font-mono text-sm text-gray-300 font-courier">
-                      {entry.address.slice(0, 6)}...{entry.address.slice(-4)}
+                      {getDisplayName(entry)}
                     </div>
                   </div>
                   <div className="text-right">

@@ -22,23 +22,28 @@ import { Menu, X } from "lucide-react";
 import { useGameContext } from "@/context/GameContext";
 import ChainSwitcher from "@/components/ChainSwitcher";
 import useChainInfo from "@/hooks/useChainInfo";
+import useUSDC from "@/hooks/useUSDC";
 import { useEnvironment } from "@/hooks/useEnvironment";
+import { useUsername } from "@/hooks/useUsername";
 
 const isMobile = () => {
   if (typeof window === "undefined") return false;
   return window.innerWidth <= 500;
 };
 
-const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+const formatAddress = (addr: string) =>
+  `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
 const Nav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { roundData } = useGameContext();
   const { address, isConnected } = useAccount();
-  const { chainLabel, usdcBalance } = useChainInfo();
+  const { chainLabel } = useChainInfo();
+  const { walletBalance } = useUSDC();
   const env = useEnvironment();
   const { connect } = useConnect();
+  const { username } = useUsername(address);
 
   useEffect(() => {
     setMounted(true);
@@ -97,20 +102,39 @@ const Nav = () => {
           </div>
         );
       }
+      const displayName = username || formatAddress(address);
       return (
         <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 text-sm font-medium text-white shadow shadow-green-500/10">
           <div className="h-6 w-6 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 mr-1" />
-          <span>{formatAddress(address)}</span>
+          <span>{displayName}</span>
         </div>
       );
     }
 
     // Default Desktop/Base OnchainKit controls
+    if (!isConnected) {
+      return (
+        <Wallet>
+          <ConnectWallet className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 hover:bg-green-500/10 hover:border-green-400/50 transition-colors text-sm font-medium text-white h-auto leading-none">
+            <Avatar className="h-6 w-6" />
+            <Name />
+          </ConnectWallet>
+        </Wallet>
+      );
+    }
+
+    // When connected, show username or address with dropdown
     return (
       <Wallet>
         <ConnectWallet className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 hover:bg-green-500/10 hover:border-green-400/50 transition-colors text-sm font-medium text-white h-auto leading-none">
           <Avatar className="h-6 w-6" />
-          <Name />
+          <span
+            className="onchainkit_name"
+            style={{ display: username ? "none" : "inline" }}
+          >
+            <Name />
+          </span>
+          {username && <span>{username}</span>}
         </ConnectWallet>
         <WalletDropdown>
           <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
@@ -159,7 +183,7 @@ const Nav = () => {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 text-sm font-courier">
               <span className="text-gray-400">Balance:</span>
               <span className="text-green-400 font-medium">
-                {usdcBalance.toFixed(2)} USDC
+                {(walletBalance || 0).toFixed(2)} USDC
               </span>
             </div>
           )}
@@ -190,16 +214,14 @@ const Nav = () => {
             <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-green-500/30 text-sm font-courier">
               <span className="text-gray-400">Balance:</span>
               <span className="text-green-400 font-medium">
-                {usdcBalance.toFixed(2)} USDC
+                {(walletBalance || 0).toFixed(2)} USDC
               </span>
             </div>
           )}
           <div className="flex justify-center">
             <ChainSwitcher />
           </div>
-          <div className="flex justify-center">
-            {renderWalletControls()}
-          </div>
+          <div className="flex justify-center">{renderWalletControls()}</div>
         </div>
       )}
     </header>

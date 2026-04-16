@@ -1,11 +1,17 @@
 import { AppDataSource } from '../config/database.js';
 import { LeaderboardEntry } from '../entities/leaderboard.entity.js';
+import { User } from '../entities/user.entity.js';
 import { Repository } from 'typeorm';
 
 export class LeaderboardService {
   private get repo(): Repository<LeaderboardEntry> {
     if (!AppDataSource.isInitialized) throw new Error('Database not initialized');
     return AppDataSource.getRepository(LeaderboardEntry);
+  }
+
+  private get userRepo(): Repository<User> {
+    if (!AppDataSource.isInitialized) throw new Error('Database not initialized');
+    return AppDataSource.getRepository(User);
   }
 
   async updateFromBet(bet: {
@@ -20,6 +26,11 @@ export class LeaderboardService {
 
     if (!entry) {
       entry = this.repo.create({ address: addr });
+      // Try to fetch username from user entity
+      const user = await this.userRepo.findOneBy({ address: addr });
+      if (user?.username) {
+        entry.username = user.username;
+      }
     }
 
     entry.totalWagered = Number(entry.totalWagered || 0) + Number(bet.amount || 0);
@@ -47,5 +58,13 @@ export class LeaderboardService {
       .orderBy('lb.totalWon', 'DESC')
       .limit(limit)
       .getMany();
+  }
+
+  async updateUsername(address: string, username: string) {
+    const entry = await this.repo.findOneBy({ address });
+    if (entry) {
+      entry.username = username;
+      return this.repo.save(entry);
+    }
   }
 }

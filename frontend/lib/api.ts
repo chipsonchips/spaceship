@@ -13,8 +13,9 @@ export async function placeBetRest(
   address: string,
   amount: number,
   chainId?: number,
+  useFreeBet: boolean = false,
 ) {
-  const body: any = { address, amount, chainId };
+  const body: any = { address, amount, chainId, useFreeBet };
   const res = await fetch(`${API_BASE}/api/rounds/${roundId}/bets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -39,6 +40,12 @@ export async function fetchLeaderboard() {
   if (!res.ok) throw new Error("Failed to fetch leaderboard");
   const j = await res.json();
   return j.leaderboard || [];
+}
+
+export async function fetchUserByAddress(address: string) {
+  const res = await fetch(`${API_BASE}/api/users/address/${address}`);
+  if (!res.ok) throw new Error("Failed to fetch user");
+  return res.json();
 }
 
 // Admin API functions

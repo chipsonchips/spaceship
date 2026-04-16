@@ -64,6 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Log user changes
+  useEffect(() => {
+    console.log("AuthProvider: user state changed:", user);
+  }, [user]);
+
   // Load tokens from localStorage on mount
   useEffect(() => {
     const loadStoredAuth = () => {
@@ -74,14 +79,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedTokens && storedUser) {
           const parsedTokens = JSON.parse(storedTokens);
           const parsedUser = JSON.parse(storedUser);
+          console.log("Loaded stored auth from localStorage:", parsedUser);
           setTokens(parsedTokens);
           setUser(parsedUser);
+        } else {
+          console.log("No stored auth found in localStorage");
         }
       } catch (err) {
         console.error("Failed to load stored auth:", err);
         localStorage.removeItem("authTokens");
         localStorage.removeItem("authUser");
       } finally {
+        console.log("Setting isLoading to false after localStorage check");
         setIsLoading(false);
       }
     };
@@ -90,10 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const saveAuth = useCallback((user: AuthUser, tokens: AuthTokens) => {
+    console.log("saveAuth called with user:", user);
     setUser(user);
     setTokens(tokens);
     localStorage.setItem("authUser", JSON.stringify(user));
     localStorage.setItem("authTokens", JSON.stringify(tokens));
+    console.log("User saved to state and localStorage");
   }, []);
 
   const clearAuth = useCallback(() => {
@@ -106,29 +117,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithWallet = useCallback(
     async (address: string) => {
       try {
+        console.log("loginWithWallet called with address:", address);
         setIsLoading(true);
         setError(null);
 
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        console.log("Calling API:", `${apiUrl}/api/auth/wallet/login`);
+
         const response = await fetch(`${apiUrl}/api/auth/wallet/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ address }),
         });
 
+        console.log("Login response status:", response.status);
+
         if (!response.ok) {
           throw new Error("Login failed");
         }
 
         const data = await response.json();
+        console.log("Login response data:", data);
+
         saveAuth(data.user, {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
           expiresIn: data.expiresIn,
         });
+
+        console.log("User saved to auth context:", data.user);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Login failed";
+        console.error("Login error:", errorMsg);
         setError(errorMsg);
         throw err;
       } finally {

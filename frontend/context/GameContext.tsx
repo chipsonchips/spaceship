@@ -12,7 +12,8 @@ interface GameContextType {
   error: string | null;
   placeBet: (
     address: string,
-    amount: number
+    amount: number,
+    useFreeBet?: boolean,
   ) => Promise<{ success: boolean; error?: string; txHash?: string }>;
   cashOut: (betId: number) => Promise<{ success: boolean; error?: string }>;
   reconnect: () => void;

@@ -90,48 +90,65 @@ export function useGame(options: { wsUrl?: string } = {}) {
         const round = await r.fetchCurrentRound();
         if (round) setRoundData(round);
         const lb = await r.fetchLeaderboard();
+        console.log("Fetched leaderboard:", lb);
         setLeaderboard(lb);
       } catch (e) {
+        console.error("Failed to fetch leaderboard:", e);
         // ignore; socket will update state when ready
       }
     })();
 
+    // Refresh leaderboard every 10 seconds
+    const leaderboardInterval = setInterval(async () => {
+      try {
+        const r = await import("@/lib/api");
+        const lb = await r.fetchLeaderboard();
+        setLeaderboard(lb);
+      } catch (e) {
+        console.error("Failed to refresh leaderboard:", e);
+      }
+    }, 10000);
+
     return () => {
+      clearInterval(leaderboardInterval);
       // unsubscribe();
     };
   }, [wsUrl]);
 
   const placeBet = useCallback(
-    async (address: string, amount: number) => {
-      if (!walletClient?.account?.address) {
+    async (address: string, amount: number, useFreeBet: boolean = false) => {
+      // For free bets, we don't need wallet connection
+      if (!useFreeBet && !walletClient?.account?.address) {
         return { success: false, error: 'Wallet not connected' };
       }
 
-      if (!publicClient) {
+      if (!useFreeBet && !publicClient) {
         return { success: false, error: 'Public client not available' };
       }
 
       const gameContractAddress = houseAddress;
-      if (!gameContractAddress) {
+      if (!gameContractAddress && !useFreeBet) {
         return { success: false, error: 'Game contract address not configured for this chain' };
       }
 
       try {
-        const currentAllowance = await checkAllowance(address, gameContractAddress);
+        if (!useFreeBet) {
+          const currentAllowance = await checkAllowance(address, gameContractAddress);
 
-        if (currentAllowance < amount) {
-          try {
-            const approvalTxHash = await approveUSDC(gameContractAddress, maxUint256);
-            console.log('USDC approval transaction hash:', approvalTxHash);
+          if (currentAllowance < amount) {
+            try {
+              const approvalTxHash = await approveUSDC(gameContractAddress, maxUint256);
+              console.log('USDC approval transaction hash:', approvalTxHash);
 
-            if (publicClient) {
-              await publicClient.waitForTransactionReceipt({
-                hash: approvalTxHash as `0x${string}`
-              });
+              if (publicClient) {
+                await publicClient.waitForTransactionReceipt({
+                  hash: approvalTxHash as `0x${string}`
+                });
+              }
+            } catch (err) {
+              console.error('USDC approval failed:', err);
+              return { success: false, error: 'Failed to approve USDC transfer' };
             }
-          } catch (err) {
-            console.error('USDC approval failed:', err);
-            return { success: false, error: 'Failed to approve USDC transfer' };
           }
         }
 
@@ -139,8 +156,8 @@ export function useGame(options: { wsUrl?: string } = {}) {
           return { success: false, error: 'No active round' };
         }
 
-        console.log("placing bet", roundData.roundId, address, amount);
-        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId);
+        console.log("placing bet", roundData.roundId, address, amount, useFreeBet ? "(free bet)" : "");
+        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet);
 
         if (res.success && res.bet) {
           // Notify socket (optimistic) or wait for server push

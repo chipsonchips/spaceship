@@ -1,9 +1,20 @@
 import { AppDataSource } from '../config/database.js';
 import { User, UserRole, UserSource } from '../entities/user.entity.js';
+import { LeaderboardService } from './leaderboard.service.js';
 import { logger } from '../utils/logger.js';
 
 export class UserService {
     private userRepo = AppDataSource.getRepository(User);
+    private leaderboardService = new LeaderboardService();
+
+    /**
+     * Get free bets expiration date (30 days from now)
+     */
+    private getFreeBetsExpirationDate(): Date {
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30);
+        return expirationDate;
+    }
 
     /**
      * Get or create a player from wallet address
@@ -17,6 +28,10 @@ export class UserService {
                 role: UserRole.PLAYER,
                 source: UserSource.WALLET,
                 isActive: true,
+                permissions: [],
+                freeBetsRemaining: 2,
+                freeBetMaxAmount: 0.1,
+                freeBetsExpiresAt: this.getFreeBetsExpirationDate(),
             });
             await this.userRepo.save(user);
             logger.info(`Created new player from wallet: ${address}`);
@@ -48,6 +63,9 @@ export class UserService {
                 role: UserRole.PLAYER,
                 source: UserSource.FARCASTER,
                 isActive: true,
+                freeBetsRemaining: 2,
+                freeBetMaxAmount: 0.1,
+                freeBetsExpiresAt: this.getFreeBetsExpirationDate(),
             });
             await this.userRepo.save(user);
             logger.info(`Created new player from Farcaster: ${username} (FID: ${farcasterId})`);
@@ -133,6 +151,11 @@ export class UserService {
 
         Object.assign(user, updates);
         await this.userRepo.save(user);
+
+        // Update leaderboard if username changed
+        if (updates.username && user.address) {
+            await this.leaderboardService.updateUsername(user.address, updates.username);
+        }
 
         return user;
     }

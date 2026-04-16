@@ -17,7 +17,17 @@
     "backend:start": "pnpm --filter aviator-backend start",
     "frontend:start": "pnpm --filter aviator start",
     "backend:lint": "pnpm --filter aviator-backend lint",
-    "frontend:lint": "pnpm --filter aviator lint"
+    "frontend:lint": "pnpm --filter aviator lint",
+    "test": "pnpm --parallel --filter aviator-backend --filter aviator test:run",
+    "test:watch": "pnpm --parallel --filter aviator-backend --filter aviator test",
+    "test:ui": "pnpm --parallel --filter aviator-backend --filter aviator test:ui",
+    "test:coverage": "pnpm --parallel --filter aviator-backend --filter aviator test:coverage",
+    "backend:test": "pnpm --filter aviator-backend test:run",
+    "backend:test:watch": "pnpm --filter aviator-backend test",
+    "backend:test:ui": "pnpm --filter aviator-backend test:ui",
+    "frontend:test": "pnpm --filter aviator test:run",
+    "frontend:test:watch": "pnpm --filter aviator test",
+    "frontend:test:ui": "pnpm --filter aviator test:ui"
   },
   "engines": {
     "node": ">=18.0.0",
