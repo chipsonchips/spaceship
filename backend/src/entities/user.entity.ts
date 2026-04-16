@@ -94,6 +94,13 @@ export class User {
     @Column({ type: 'bigint', nullable: true })
     lastActivityAt!: number | null;
 
+    // Free bets
+    @Column({ type: 'int', default: 2 })
+    freeBetsRemaining!: number;
+
+    @Column({ type: 'numeric', precision: 10, scale: 4, default: 0.1 })
+    freeBetMaxAmount!: number;
+
     // Preferences
     @Column({ type: 'simple-json', default: '{}' })
     preferences!: {
