@@ -116,7 +116,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
   }, [wsUrl]);
 
   const placeBet = useCallback(
-    async (address: string, amount: number, useFreeBet: boolean = false) => {
+    async (address: string, amount: number, useFreeBet: boolean = false, autoCashoutMultiplier?: number) => {
       // For free bets, we don't need wallet connection
       if (!useFreeBet && !walletClient?.account?.address) {
         return { success: false, error: 'Wallet not connected' };
@@ -156,8 +156,8 @@ export function useGame(options: { wsUrl?: string } = {}) {
           return { success: false, error: 'No active round' };
         }
 
-        console.log("placing bet", roundData.roundId, address, amount, useFreeBet ? "(free bet)" : "");
-        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet);
+        console.log("placing bet", roundData.roundId, address, amount, useFreeBet ? "(free bet)" : "", autoCashoutMultiplier ? `(auto-cashout: ${autoCashoutMultiplier}x)` : "");
+        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet, autoCashoutMultiplier);
 
         if (res.success && res.bet) {
           // Notify socket (optimistic) or wait for server push

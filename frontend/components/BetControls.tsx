@@ -5,12 +5,16 @@ import { useGameContext } from "@/context/GameContext";
 import { useBetValidation } from "@/hooks/useBetValidation";
 import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
+import AutoCashout from "./AutoCashout";
 
 const BetControls: React.FC = () => {
   const { roundData, cashOut, placeBet } = useGameContext();
   const { walletBalance, walletAddress, refreshBalance } = useUSDC();
   const { chainLabel, explorerUrl } = useChainInfo();
   const [betAmount, setBetAmount] = useState("0.10");
+  const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState<
+    number | null
+  >(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +113,7 @@ const BetControls: React.FC = () => {
         walletAddress,
         parseFloat(betAmount),
         useFreeBet,
+        autoCashoutMultiplier || undefined,
       );
       if (!useFreeBet) {
         await refreshBalance();
@@ -117,6 +122,7 @@ const BetControls: React.FC = () => {
         setTxHash(res.txHash || null);
         setBetAmount("0.10");
         setUseFreeBet(false);
+        setAutoCashoutMultiplier(null);
         // Refresh free bets info
         await fetchFreeBetsInfo();
       } else {
@@ -206,6 +212,11 @@ const BetControls: React.FC = () => {
             <div className="text-sm text-gray-400">
               Your Bet: {myBet.amount || "0.00"} USDC
             </div>
+            {myBet.autoCashoutMultiplier && (
+              <div className="text-xs text-blue-400 mt-1">
+                Auto Cashout: {myBet.autoCashoutMultiplier}x
+              </div>
+            )}
             {(myBet.cashedOut || optimisticCashOut) && myBet.payout && (
               <div className="text-green-400 font-medium">
                 {optimisticCashOut && isCashingOut
@@ -320,6 +331,12 @@ const BetControls: React.FC = () => {
               );
             })}
           </div>
+
+          <AutoCashout
+            value={autoCashoutMultiplier}
+            onChange={setAutoCashoutMultiplier}
+            disabled={isProcessing}
+          />
 
           <button
             onClick={handlePlaceBet}

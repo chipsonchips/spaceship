@@ -14,6 +14,7 @@ interface GameContextType {
     address: string,
     amount: number,
     useFreeBet?: boolean,
+    autoCashoutMultiplier?: number,
   ) => Promise<{ success: boolean; error?: string; txHash?: string }>;
   cashOut: (betId: number) => Promise<{ success: boolean; error?: string }>;
   reconnect: () => void;
