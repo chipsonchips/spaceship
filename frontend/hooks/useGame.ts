@@ -116,7 +116,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
   }, [wsUrl]);
 
   const placeBet = useCallback(
-    async (address: string, amount: number) => {
+    async (address: string, amount: number, useFreeBet: boolean = false) => {
       if (!walletClient?.account?.address) {
         return { success: false, error: 'Wallet not connected' };
       }
@@ -126,26 +126,28 @@ export function useGame(options: { wsUrl?: string } = {}) {
       }
 
       const gameContractAddress = houseAddress;
-      if (!gameContractAddress) {
+      if (!gameContractAddress && !useFreeBet) {
         return { success: false, error: 'Game contract address not configured for this chain' };
       }
 
       try {
-        const currentAllowance = await checkAllowance(address, gameContractAddress);
+        if (!useFreeBet) {
+          const currentAllowance = await checkAllowance(address, gameContractAddress);
 
-        if (currentAllowance < amount) {
-          try {
-            const approvalTxHash = await approveUSDC(gameContractAddress, maxUint256);
-            console.log('USDC approval transaction hash:', approvalTxHash);
+          if (currentAllowance < amount) {
+            try {
+              const approvalTxHash = await approveUSDC(gameContractAddress, maxUint256);
+              console.log('USDC approval transaction hash:', approvalTxHash);
 
-            if (publicClient) {
-              await publicClient.waitForTransactionReceipt({
-                hash: approvalTxHash as `0x${string}`
-              });
+              if (publicClient) {
+                await publicClient.waitForTransactionReceipt({
+                  hash: approvalTxHash as `0x${string}`
+                });
+              }
+            } catch (err) {
+              console.error('USDC approval failed:', err);
+              return { success: false, error: 'Failed to approve USDC transfer' };
             }
-          } catch (err) {
-            console.error('USDC approval failed:', err);
-            return { success: false, error: 'Failed to approve USDC transfer' };
           }
         }
 
@@ -153,8 +155,8 @@ export function useGame(options: { wsUrl?: string } = {}) {
           return { success: false, error: 'No active round' };
         }
 
-        console.log("placing bet", roundData.roundId, address, amount);
-        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId);
+        console.log("placing bet", roundData.roundId, address, amount, useFreeBet ? "(free bet)" : "");
+        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet);
 
         if (res.success && res.bet) {
           // Notify socket (optimistic) or wait for server push
