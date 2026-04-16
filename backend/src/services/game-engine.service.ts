@@ -384,6 +384,8 @@ export class GameEngine {
       throw new Error('Invalid bet amount: must be between 0.1 and 1000 USDC');
     }
 
+    let finalTxHash: string | null = null;
+
     // Handle free bet
     if (useFreeBet) {
       const user = await this.userService.getUserByAddress(address);
@@ -405,7 +407,6 @@ export class GameEngine {
       await this.freeBetService.useFreeBet(user.id, amount, this.currentRound.roundId);
     } else {
       // Relay to chain for regular bets
-      let finalTxHash = null;
       try {
         const chainService = new (await import('./chain.service.js')).ChainService(chainId);
 
@@ -424,7 +425,7 @@ export class GameEngine {
       cashedOut: false,
       cashoutMultiplier: null,
       payout: null,
-      txHash: useFreeBet ? null : undefined,
+      txHash: finalTxHash,
       timestamp: Date.now(),
       round: this.currentRound,
     });
