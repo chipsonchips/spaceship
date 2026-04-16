@@ -1,27 +1,36 @@
 import { Router, Request, Response } from 'express';
 import { freeBetService } from '../services/free-bet.service.js';
-import { userService } from '../services/user.service.js';
 import { auditLogService } from '../services/audit-log.service.js';
-import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
+import { requireAdmin } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
+import { AppDataSource } from '../config/database.js';
+import { User } from '../entities/user.entity.js';
 
 const router = Router();
 
 /**
  * GET /api/free-bets/user/:userId
- * Get free bets info for a user
+ * Get free bets info for a user (public)
  */
-router.get('/user/:userId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/user/:userId', async (req: Request, res: Response) => {
     try {
-        const userId = req.params.userId;
+        const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
         const remaining = await freeBetService.getFreeBetsRemaining(userId);
         const maxAmount = await freeBetService.getFreeBetMaxAmount(userId);
+
+        // Get user to check expiration
+        const userRepo = AppDataSource.getRepository(User);
+        const user = await userRepo.findOne({ where: { id: userId } });
+        const expiresAt = user?.freeBetsExpiresAt || null;
+        const isExpired = expiresAt ? new Date() > expiresAt : false;
 
         res.json({
             success: true,
             freeBetsRemaining: remaining,
             freeBetMaxAmount: maxAmount,
+            expiresAt,
+            isExpired,
         });
     } catch (error) {
         logger.error('Failed to get free bets info', { error: (error as Error).message });
@@ -34,11 +43,11 @@ router.get('/user/:userId', authenticateToken, async (req: Request, res: Respons
 
 /**
  * GET /api/free-bets/history/:userId
- * Get free bet history for a user
+ * Get free bet history for a user (public)
  */
-router.get('/history/:userId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/history/:userId', async (req: Request, res: Response) => {
     try {
-        const userId = req.params.userId;
+        const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
         const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
         const history = await freeBetService.getFreeBetHistory(userId, limit);
 
@@ -73,13 +82,13 @@ router.post('/admin/add', requireAdmin, async (req: Request, res: Response) => {
         const user = await freeBetService.addFreeBets(userId, count);
 
         // Log admin action
-        await auditLogService.logAdminAction({
-            adminId: (req as any).user?.id,
-            actionType: AdminActionType.SETTINGS_CHANGED,
-            description: `Added ${count} free bets to user ${userId}`,
-            details: { userId, count, newTotal: user.freeBetsRemaining },
-            ipAddress: req.ip,
-        });
+        await auditLogService.logAction(
+            (req as any).user?.id || null,
+            AdminActionType.SETTINGS_CHANGED,
+            `Added ${count} free bets to user ${userId}`,
+            { userId, count, newTotal: user.freeBetsRemaining },
+            req.ip || null
+        );
 
         res.json({
             success: true,
@@ -113,13 +122,13 @@ router.post('/admin/set', requireAdmin, async (req: Request, res: Response) => {
         const user = await freeBetService.setFreeBets(userId, count);
 
         // Log admin action
-        await auditLogService.logAdminAction({
-            adminId: (req as any).user?.id,
-            actionType: AdminActionType.SETTINGS_CHANGED,
-            description: `Set free bets for user ${userId} to ${count}`,
-            details: { userId, count },
-            ipAddress: req.ip,
-        });
+        await auditLogService.logAction(
+            (req as any).user?.id || null,
+            AdminActionType.SETTINGS_CHANGED,
+            `Set free bets for user ${userId} to ${count}`,
+            { userId, count },
+            req.ip || null
+        );
 
         res.json({
             success: true,
@@ -153,13 +162,13 @@ router.post('/admin/set-max-amount', requireAdmin, async (req: Request, res: Res
         const user = await freeBetService.setFreeBetMaxAmount(userId, maxAmount);
 
         // Log admin action
-        await auditLogService.logAdminAction({
-            adminId: (req as any).user?.id,
-            actionType: AdminActionType.SETTINGS_CHANGED,
-            description: `Set free bet max amount for user ${userId} to ${maxAmount}`,
-            details: { userId, maxAmount },
-            ipAddress: req.ip,
-        });
+        await auditLogService.logAction(
+            (req as any).user?.id || null,
+            AdminActionType.SETTINGS_CHANGED,
+            `Set free bet max amount for user ${userId} to ${maxAmount}`,
+            { userId, maxAmount },
+            req.ip || null
+        );
 
         res.json({
             success: true,
