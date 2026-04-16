@@ -42,6 +42,12 @@ export async function fetchLeaderboard() {
   return j.leaderboard || [];
 }
 
+export async function fetchUserByAddress(address: string) {
+  const res = await fetch(`${API_BASE}/api/users/address/${address}`);
+  if (!res.ok) throw new Error("Failed to fetch user");
+  return res.json();
+}
+
 // Admin API functions
 export async function adminFetchContractStatus(adminSecret: string, chainId?: number) {
   const params = new URLSearchParams();
