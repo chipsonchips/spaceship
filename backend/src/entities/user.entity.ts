@@ -101,6 +101,9 @@ export class User {
     @Column({ type: 'numeric', precision: 10, scale: 4, default: 0.1 })
     freeBetMaxAmount!: number;
 
+    @Column({ type: 'timestamp', nullable: true })
+    freeBetsExpiresAt!: Date | null;
+
     // Preferences
     @Column({ type: 'simple-json', default: '{}' })
     preferences!: {
