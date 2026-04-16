@@ -13,6 +13,12 @@ export class FreeBetService {
     async getFreeBetsRemaining(userId: string): Promise<number> {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user) throw new Error('User not found');
+
+        // Check if free bets have expired
+        if (user.freeBetsExpiresAt && new Date() > user.freeBetsExpiresAt) {
+            return 0;
+        }
+
         return user.freeBetsRemaining;
     }
 
@@ -31,6 +37,11 @@ export class FreeBetService {
     async useFreeBet(userId: string, amount: number, roundId: number, txHash?: string): Promise<FreeBet> {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user) throw new Error('User not found');
+
+        // Check if free bets have expired
+        if (user.freeBetsExpiresAt && new Date() > user.freeBetsExpiresAt) {
+            throw new Error('Free bets have expired');
+        }
 
         if (user.freeBetsRemaining <= 0) {
             throw new Error('No free bets remaining');
@@ -68,6 +79,10 @@ export class FreeBetService {
         if (!user) throw new Error('User not found');
 
         user.freeBetsRemaining += count;
+        // Reset expiration when adding new free bets
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30);
+        user.freeBetsExpiresAt = expirationDate;
         await this.userRepo.save(user);
 
         logger.info(`Added ${count} free bets to user ${userId}, total: ${user.freeBetsRemaining}`);
@@ -83,6 +98,10 @@ export class FreeBetService {
         if (!user) throw new Error('User not found');
 
         user.freeBetsRemaining = count;
+        // Reset expiration when setting free bets
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30);
+        user.freeBetsExpiresAt = expirationDate;
         await this.userRepo.save(user);
 
         logger.info(`Set free bets for user ${userId} to ${count}`);
