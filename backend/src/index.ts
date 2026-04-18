@@ -17,6 +17,7 @@ import { createRoundsRouter } from './routes/rounds.js';
 import leaderboardRouter from './routes/leaderboard.js';
 import historyRouter from './routes/history.js';
 import adminRouter from './routes/admin.js';
+import gameAdminRouter from './routes/game-admin.js';
 import authRouter from './routes/auth.js';
 import freeBetsRouter from './routes/free-bets.js';
 import usersRouter from './routes/users.js';
@@ -84,6 +85,7 @@ app.use('/api/rounds', createRoundsRouter(gameEngine));
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/history', historyRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/game', gameAdminRouter);
 app.use('/api/free-bets', freeBetsRouter);
 app.use('/api/users', usersRouter);
 
