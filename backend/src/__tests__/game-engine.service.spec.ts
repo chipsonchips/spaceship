@@ -365,7 +365,7 @@ describe('GameEngine', () => {
         address: '0x111',
         amount: 100,
         cashedOut: false,
-        round: { id: 1 },
+        round: { id: 1, phase: 'FLYING' },
       };
 
       mockBetRepo.findOne.mockResolvedValue(bet);
@@ -381,7 +381,7 @@ describe('GameEngine', () => {
         address: '0x111',
         amount: 100,
         cashedOut: false,
-        round: { id: 1 },
+        round: { id: 1, phase: 'FLYING', currentMultiplier: 2.5 },
       };
 
       mockBetRepo.findOne.mockResolvedValue(bet);
@@ -400,7 +400,7 @@ describe('GameEngine', () => {
         address: '0x111',
         amount: 100,
         cashedOut: false,
-        round: { id: 1 },
+        round: { id: 1, phase: 'FLYING', currentMultiplier: 2.5 },
       };
 
       mockBetRepo.findOne.mockResolvedValue(bet);
@@ -440,12 +440,12 @@ describe('GameEngine', () => {
         address: '0x111',
         amount: 100,
         cashedOut: false,
-        round: { id: 1 },
+        round: { id: 1, phase: 'BETTING' },
       };
 
       mockBetRepo.findOne.mockResolvedValue(bet);
 
-      await expect(gameEngine.cashOutById(1, 8453)).rejects.toThrow('Cannot cash out now');
+      await expect(gameEngine.cashOutById(1, 8453)).rejects.toThrow('Cannot cash out: round is not in flying phase');
     });
 
     it('should update round totalPayouts', async () => {
@@ -454,7 +454,7 @@ describe('GameEngine', () => {
         address: '0x111',
         amount: 100,
         cashedOut: false,
-        round: { id: 1 },
+        round: { id: 1, phase: 'FLYING', currentMultiplier: 2.5 },
       };
 
       mockBetRepo.findOne.mockResolvedValue(bet);
@@ -476,7 +476,7 @@ describe('GameEngine', () => {
         address: '0x111',
         amount: 100,
         cashedOut: false,
-        round: { id: 1 },
+        round: { id: 1, phase: 'FLYING', currentMultiplier: 2.5 },
       };
 
       mockBetRepo.findOne.mockResolvedValue(bet);
