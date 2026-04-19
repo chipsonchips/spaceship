@@ -144,6 +144,14 @@ const BetControls: React.FC = () => {
 
   const [isCashingOut, setIsCashingOut] = useState(false);
   const [optimisticCashOut, setOptimisticCashOut] = useState(false);
+  const [cashoutTimer, setCashoutTimer] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!myBet) {
+      setOptimisticCashOut(false);
+      setCashoutTimer(null);
+    }
+  }, [myBet?.id, roundData?.roundId]);
 
   const handleCashOut = async () => {
     if (!walletAddress || !myBet?.id) {
@@ -152,24 +160,41 @@ const BetControls: React.FC = () => {
     }
     setError(null);
 
-    // Optimistic UI update
     setOptimisticCashOut(true);
     setIsCashingOut(true);
+    setCashoutTimer(3); // Show timer for 3 seconds
 
     try {
       const result = await cashOut(myBet.id);
       if (!result.success) {
         setError(result.error || "Failed to cash out");
         setOptimisticCashOut(false);
+        setCashoutTimer(null);
       }
-      // If successful, keep the optimistic state until server updates
     } catch (err) {
       setError((err as Error).message || "Failed to cash out");
       setOptimisticCashOut(false);
+      setCashoutTimer(null);
     } finally {
       setIsCashingOut(false);
     }
   };
+
+  // Timer countdown for cashout message
+  useEffect(() => {
+    if (cashoutTimer === null || cashoutTimer <= 0) return;
+
+    const interval = setInterval(() => {
+      setCashoutTimer((prev) => {
+        if (prev === null || prev <= 1) {
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cashoutTimer]);
 
   /*
    * Hydration fix:
@@ -207,24 +232,37 @@ const BetControls: React.FC = () => {
         </div>
       </div>
       {myBet && (
-        <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 flex items-center justify-between">
-          <div>
+        <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+          {/* Centered Bet Info */}
+          <div className="text-center mb-3">
             <div className="text-sm text-gray-400">
-              Your Bet: {myBet.amount || "0.00"} USDC
+              Your Bet: {Number(myBet.amount).toFixed(2)} USDC
             </div>
             {myBet.autoCashoutMultiplier && (
               <div className="text-xs text-blue-400 mt-1">
                 Auto Cashout: {myBet.autoCashoutMultiplier}x
               </div>
             )}
-            {(myBet.cashedOut || optimisticCashOut) && myBet.payout && (
-              <div className="text-green-400 font-medium">
+          </div>
+
+          {/* Cashout Status Section - Centered */}
+          {(myBet.cashedOut || optimisticCashOut) && myBet.payout && (
+            <div className="text-center mb-3">
+              <div className="text-green-400 font-medium text-lg">
                 {optimisticCashOut && isCashingOut
                   ? "Cashing Out..."
-                  : `Cashed Out at ${myBet.cashoutMultiplier}x`}
+                  : `✓ Cashed Out at ${myBet.cashoutMultiplier}x`}
               </div>
-            )}
-          </div>
+              {cashoutTimer !== null && (
+                <div className="text-sm text-green-300 mt-2 font-medium">
+                  Payout: {Number(myBet.payout).toFixed(2)} USDC
+                  {cashoutTimer > 0 && ` (${cashoutTimer}s)`}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Cashout Button - Only show if not cashed out */}
           {roundData?.phase === "FLYING" &&
             !myBet.cashedOut &&
             !optimisticCashOut && (
@@ -236,11 +274,6 @@ const BetControls: React.FC = () => {
                 {isCashingOut ? "PROCESSING..." : "CASH OUT"}
               </button>
             )}
-          {optimisticCashOut && (
-            <div className="w-full bg-green-600 px-6 py-2 rounded-lg font-bold text-center">
-              ✓ CASHED OUT
-            </div>
-          )}
         </div>
       )}
 
