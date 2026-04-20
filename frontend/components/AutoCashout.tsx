@@ -49,30 +49,36 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
   const isValid = !isNaN(multiplier) && multiplier >= 1.01 && multiplier <= 100;
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-      <div className="flex items-center justify-between mb-3">
-        <label className="text-sm font-semibold text-gray-200">
-          Auto Cashout
+    <div className={`rounded-lg p-3 border transition-all duration-300 ${
+      isEnabled 
+        ? "bg-slate-800/80 border-emerald-500/30" 
+        : "bg-slate-800/40 border-slate-700/50"
+    }`}>
+      <div className="flex items-center justify-between mb-2">
+        <label className={`text-xs font-bold font-orbitron tracking-wider transition-colors ${
+          isEnabled ? "text-emerald-400" : "text-slate-400"
+        }`}>
+          AUTO CASHOUT
         </label>
         <button
           onClick={handleToggle}
           disabled={disabled}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            isEnabled ? "bg-green-600" : "bg-gray-600"
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 focus:outline-none ${
+            isEnabled ? "bg-emerald-500" : "bg-slate-600"
           } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              isEnabled ? "translate-x-6" : "translate-x-1"
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+              isEnabled ? "translate-x-5" : "translate-x-0.5"
             }`}
           />
         </button>
       </div>
 
       {isEnabled && (
-        <>
-          <div className="mb-3">
-            <div className="flex items-center gap-2 mb-2">
+        <div className="animate-[fadeIn_0.3s_ease-out]">
+          <div className="mb-2">
+            <div className="relative flex items-center bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
               <input
                 type="number"
                 value={inputValue}
@@ -81,19 +87,16 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
                 min="1.01"
                 max="100"
                 step="0.1"
-                className={`flex-1 bg-gray-700 border rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 ${
-                  isValid
-                    ? "border-gray-600 focus:ring-green-500"
-                    : "border-red-500 focus:ring-red-500"
-                } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`w-full bg-transparent text-white text-base font-bold font-orbitron focus:outline-none ${
+                  disabled ? "opacity-50 cursor-not-allowed" : ""
+                } ${!isValid ? "text-red-400" : ""}`}
               />
-              <span className="text-gray-400 text-sm">x</span>
+              <span className={`font-bold font-orbitron text-xs select-none transition-colors ${
+                isValid ? "text-emerald-500" : "text-red-500"
+              }`}>
+                X
+              </span>
             </div>
-            {!isValid && inputValue && (
-              <p className="text-xs text-red-400">
-                Must be between 1.01 and 100
-              </p>
-            )}
           </div>
 
           <div className="grid grid-cols-4 gap-2">
@@ -102,17 +105,17 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
                 key={mult}
                 onClick={() => handleQuickSelect(mult)}
                 disabled={disabled}
-                className={`py-2 px-2 rounded text-xs font-semibold transition-colors ${
+                className={`py-1.5 px-1 rounded-md text-[10px] font-bold font-orbitron transition-all ${
                   parseFloat(inputValue) === mult
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                    ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-400"
+                    : "bg-slate-900/50 border border-slate-700/50 text-slate-400 hover:bg-slate-800"
                 } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {mult}x
+                {mult}X
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

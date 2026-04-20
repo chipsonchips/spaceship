@@ -219,59 +219,74 @@ const BetControls: React.FC = () => {
       (!useFreeBet && walletBalance && walletBalance > 0));
 
   return (
-    <div className="bg-black/50 backdrop-blur-sm border-t border-green-500/30 p-4 space-y-3">
-      <div className="flex items-center justify-between text-xs text-gray-400 mb-2 font-courier">
-        <span>Playing on {chainLabel}</span>
-        <div className="flex gap-4">
-          <span>USDC Balance: {walletBalance?.toFixed(2) || "0.00"}</span>
+    <div className="relative bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 p-3 sm:p-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)] space-y-3 rounded-t-2xl sm:rounded-2xl">
+      {/* Header Info */}
+      <div className="flex items-center justify-between text-[10px] sm:text-xs text-slate-400 font-orbitron tracking-wider">
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)] animate-pulse"></span>
+          <span>{chainLabel}</span>
+        </span>
+        <div className="flex gap-2">
+          <span className="bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700/50 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
+            <span className="text-slate-500 text-[10px]">💰</span>
+            {walletBalance?.toFixed(2) || "0.00"} <span className="text-[9px] text-emerald-500/70">USDC</span>
+          </span>
           {freeBetsRemaining > 0 && (
-            <span className="text-green-400 font-medium">
-              Free Bets: {freeBetsRemaining}
+            <span className="bg-blue-900/30 px-2 py-1 rounded-md border border-blue-500/30 text-blue-400 text-xs font-bold flex items-center gap-1.5">
+              <span className="text-blue-500 text-[10px]">🎟️</span>
+              {freeBetsRemaining} <span className="text-[9px] text-blue-500/70">FREE</span>
             </span>
           )}
         </div>
       </div>
+
       {myBet && (
-        <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
-          {/* Centered Bet Info */}
-          <div className="text-center mb-3">
-            <div className="text-sm text-gray-400">
-              Your Bet: {Number(myBet.amount).toFixed(2)} USDC
+        <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-3 sm:p-4 shadow-inner relative overflow-hidden group">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none"></div>
+          
+          <div className="relative text-center mb-3 mt-0.5">
+            <div className="text-[10px] font-orbitron text-emerald-400/80 uppercase tracking-widest mb-1 font-semibold">
+              ACTIVE BET
+            </div>
+            <div className="text-2xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+              {Number(myBet.amount).toFixed(2)} <span className="text-sm text-emerald-200">USDC</span>
             </div>
             {myBet.autoCashoutMultiplier && (
-              <div className="text-xs text-blue-400 mt-1">
+              <div className="inline-block mt-1.5 bg-slate-800/80 border border-emerald-500/30 rounded-md px-2 py-0.5 text-[10px] text-emerald-400 font-bold font-courier">
                 Auto Cashout: {myBet.autoCashoutMultiplier}x
               </div>
             )}
           </div>
 
-          {/* Cashout Status Section - Centered */}
           {(myBet.cashedOut || optimisticCashOut) && myBet.payout && (
-            <div className="text-center mb-3">
-              <div className="text-green-400 font-medium text-lg">
+            <div className="text-center mb-3 py-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20 backdrop-blur-sm">
+              <div className="text-emerald-400 font-black text-xl font-orbitron mb-0.5">
                 {optimisticCashOut && isCashingOut
-                  ? "Cashing Out..."
-                  : `✓ Cashed Out at ${myBet.cashoutMultiplier}x`}
+                  ? "CASHING OUT..."
+                  : `+ ${Number(myBet.payout).toFixed(2)} USDC`}
               </div>
-              {cashoutTimer !== null && (
-                <div className="text-sm text-green-300 mt-2 font-medium">
-                  Payout: {Number(myBet.payout).toFixed(2)} USDC
-                  {cashoutTimer > 0 && ` (${cashoutTimer}s)`}
-                </div>
-              )}
+              <div className="text-[10px] text-emerald-300 font-bold font-courier uppercase tracking-wide">
+                {optimisticCashOut && isCashingOut
+                  ? "Processing Network Tx..."
+                  : `Secured at ${myBet.cashoutMultiplier}x`}
+              </div>
             </div>
           )}
 
-          {/* Cashout Button - Only show if not cashed out */}
           {roundData?.phase === "FLYING" &&
             !myBet.cashedOut &&
             !optimisticCashOut && (
               <button
                 onClick={handleCashOut}
                 disabled={isCashingOut}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:opacity-50 px-6 py-2 rounded-lg font-bold transition-colors disabled:cursor-not-allowed"
+                className="w-full relative group/btn overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-0.5 active:translate-y-0"
               >
-                {isCashingOut ? "PROCESSING..." : "CASH OUT"}
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
+                <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-150%] group-hover/btn:translate-x-[150%] transition-all duration-700 ease-out z-10"></div>
+                <div className="relative px-4 py-3 flex items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] z-20 gap-2">
+                  <span className="text-xl leading-none group-hover/btn:scale-110 transition-transform">💰</span>
+                  <span>{isCashingOut ? "PROCESSING..." : "CASH OUT NOW"}</span>
+                </div>
               </button>
             )}
         </div>
@@ -280,71 +295,70 @@ const BetControls: React.FC = () => {
       {canPlaceBet && (
         <div className="space-y-3">
           {freeBetsRemaining > 0 && (
-            <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm text-blue-300 font-courier">
-                    Free Bets Available: {freeBetsRemaining} (Max{" "}
-                    {freeBetMaxAmount} USDC each)
-                  </span>
-                  {freeBetsExpiresAt && (
-                    <div className="text-xs text-blue-400 mt-1 font-courier">
-                      Expires:{" "}
-                      {new Date(freeBetsExpiresAt).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setUseFreeBet(!useFreeBet);
-                    setBetAmount(freeBetMaxAmount.toString());
-                  }}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    useFreeBet ? "bg-green-600" : "bg-gray-600"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      useFreeBet ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-              {useFreeBet && (
-                <div className="text-xs text-green-300 mt-2 font-courier">
-                  ✓ Using free bet - no USDC required
-                </div>
-              )}
-            </div>
+             <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-3 flex items-center justify-between">
+               <div>
+                 <div className="text-blue-300 font-bold font-orbitron text-xs flex items-center gap-1.5">
+                   <span>🎟️</span> Use Free Bet
+                 </div>
+                 <div className="text-[10px] text-blue-400/70 font-courier mt-0.5">
+                   Max Cover: {freeBetMaxAmount} USDC
+                 </div>
+               </div>
+               <button
+                 onClick={() => {
+                   setUseFreeBet(!useFreeBet);
+                   setBetAmount(freeBetMaxAmount.toString());
+                 }}
+                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
+                   useFreeBet ? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]" : "bg-slate-700"
+                 }`}
+               >
+                 <span
+                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+                     useFreeBet ? "translate-x-6" : "translate-x-1"
+                   }`}
+                 />
+               </button>
+             </div>
           )}
 
           <div>
-            <input
-              type="number"
-              value={betAmount}
-              onChange={(e) => setBetAmount(e.target.value)}
-              step="0.10"
-              min="0.10"
-              max={
-                useFreeBet
-                  ? freeBetMaxAmount.toString()
-                  : walletBalance!.toString()
-              }
-              className="w-full bg-slate-800/50 border border-green-500/30 rounded-lg px-4 py-3 text-white text-lg font-medium focus:outline-none focus:border-green-400 font-courier"
-            />
+            <div className="relative group">
+              <div className="relative flex items-center bg-slate-800/80 border border-slate-600 rounded-lg px-3 py-2 flex-1 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden">
+                <div className="flex items-center justify-center text-emerald-400 mr-2 font-bold text-base select-none">
+                  $
+                </div>
+                <input
+                  type="number"
+                  value={betAmount}
+                  onChange={(e) => setBetAmount(e.target.value)}
+                  step="0.10"
+                  min="0.10"
+                  max={
+                    useFreeBet
+                      ? freeBetMaxAmount.toString()
+                      : walletBalance?.toString() || "0"
+                  }
+                  className="w-full bg-transparent text-white text-xl sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
+                  placeholder="0.00"
+                />
+                <span className="text-slate-500 text-xs font-bold font-courier ml-2 select-none tracking-wider">USDC</span>
+              </div>
+            </div>
             {!betValidation.isValid && (
-              <div className="text-red-400 text-xs mt-1">
-                {betValidation.error}
+              <div className="text-red-400 text-[10px] mt-1.5 font-bold flex items-start gap-1 px-1">
+                <span className="text-red-500 mt-0.5">⚠️</span> 
+                <span>{betValidation.error}</span>
               </div>
             )}
-            <div className="text-xs text-gray-500 mt-1 font-courier">
+            <div className="text-[10px] text-slate-500 mt-1 font-courier flex justify-end px-1 uppercase tracking-wide">
               {useFreeBet
-                ? `Max Free Bet: ${freeBetMaxAmount} USDC`
-                : `Balance: ${walletBalance?.toFixed(2) || "0.00"} USDC`}
+                ? `Max Allowed: ${freeBetMaxAmount}`
+                : `Available: ${walletBalance?.toFixed(2) || "0.00"}`} USDC
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {["0.5", "1", "5", "10"].map((amount) => {
               const amountNum = parseFloat(amount);
               const isDisabled = useFreeBet && amountNum > freeBetMaxAmount;
@@ -353,12 +367,13 @@ const BetControls: React.FC = () => {
                   key={amount}
                   onClick={() => setBetAmount(amount)}
                   disabled={isDisabled}
-                  className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors font-courier ${
+                  className={`relative rounded-md py-1.5 text-xs font-bold font-orbitron transition-all ${
                     isDisabled
-                      ? "bg-gray-700/30 text-gray-500 cursor-not-allowed"
-                      : "bg-green-700/30 hover:bg-green-600/40"
+                      ? "bg-slate-800/30 border border-slate-700/30 text-slate-600 cursor-not-allowed"
+                      : "bg-slate-800/80 border border-slate-600/60 text-emerald-100 hover:border-emerald-500/50 hover:bg-slate-700 focus:outline-none"
                   }`}
                 >
+                  <span className="text-[9px] text-emerald-500 absolute top-0.5 left-1 opacity-50">+</span>
                   {amount}
                 </button>
               );
@@ -374,21 +389,29 @@ const BetControls: React.FC = () => {
           <button
             onClick={handlePlaceBet}
             disabled={!betValidation.isValid || isProcessing}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 py-4 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-orbitron uppercase tracking-wide"
+            className="w-full mt-1 relative group/play overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-base sm:text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform active:scale-[0.98]"
           >
-            {isProcessing ? "Processing…" : `Place Bet (${betAmount} USDC)`}
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 bg-[length:200%_auto] hover:bg-right transition-all duration-500"></div>
+            <div className="absolute inset-0 bg-black opacity-0 group-active/play:opacity-10 transition-opacity"></div>
+            <div className="relative px-4 py-3 sm:py-3.5 flex items-center justify-center text-slate-950 shadow-[inset_0_1px_rgba(255,255,255,0.4)] z-20">
+              {isProcessing ? "PROCESSING..." : `PLACE BET`}
+            </div>
           </button>
 
           {txHash && (
-            <div className="text-xs text-gray-400 bg-green-900/20 border border-green-500/30 rounded p-2">
-              ✓ Transaction on {chainLabel}:{" "}
+            <div className="mt-3 text-[10px] font-courier flex items-center justify-center gap-1.5 bg-emerald-900/20 py-1.5 px-2 rounded-md border border-emerald-500/20">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <span className="text-emerald-400/80">Confirmed:</span>
               <a
                 target="_blank"
                 rel="noreferrer"
                 href={`${explorerUrl}/tx/${txHash}`}
-                className="underline hover:text-green-400"
+                className="text-emerald-300 underline text-[10px]"
               >
-                {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                {txHash.slice(0, 8)}...{txHash.slice(-6)}
               </a>
             </div>
           )}
@@ -396,34 +419,35 @@ const BetControls: React.FC = () => {
       )}
 
       {isConnected && !canPlaceBet && roundData?.phase === "BETTING" && (
-        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 text-center">
-          <div className="text-yellow-400 font-medium font-orbitron uppercase tracking-wide">
+        <div className="bg-slate-800/60 border border-amber-500/30 rounded-lg p-3 text-center">
+          <div className="text-amber-400 font-bold font-orbitron tracking-widest text-xs">
             {walletBalance === 0 && freeBetsRemaining === 0
-              ? "Insufficient USDC balance and no free bets"
+              ? "INSUFFICIENT BALANCE"
               : walletBalance === 0
-                ? "Insufficient USDC balance"
+                ? "INSUFFICIENT BALANCE"
                 : myBet
-                  ? "You've already placed a bet"
-                  : "Betting closed for this round"}
+                  ? "BET REGISTERED"
+                  : "BETTING CLOSED"}
           </div>
         </div>
       )}
 
       {!isConnected && (
-        <div className="bg-green-600/20 border border-green-500/30 rounded-lg p-4 text-center">
-          <div className="text-green-400 font-extrabold mb-3 font-orbitron uppercase tracking-widest text-lg">
-            🔗 Connect wallet to play
+        <div className="bg-slate-800/60 border border-emerald-500/30 rounded-lg p-6 text-center">
+          <div className="text-2xl mb-2 animate-bounce">⚡</div>
+          <div className="text-emerald-400 font-black mb-1 font-orbitron uppercase tracking-widest text-lg">
+            CONNECT WALLET
           </div>
-          <p className="text-sm text-green-300 mb-3 font-courier">
-            Connect your wallet to start placing bets and playing
+          <p className="text-[10px] text-emerald-200/60 font-courier">
+            Authenticate to prepare for takeoff
           </p>
-          {/* Wallet connection UI can be added here */}
         </div>
       )}
 
       {error && (
-        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-          <div className="text-red-400 text-sm">⚠️ {error}</div>
+        <div className="bg-red-900/20 border border-red-500/30 rounded-md p-2.5 flex items-start gap-2 mt-2">
+          <span className="text-sm mt-0.5">⚠️</span>
+          <div className="text-red-300 text-[10px] font-medium leading-relaxed font-inter">{error}</div>
         </div>
       )}
     </div>
