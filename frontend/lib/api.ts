@@ -14,8 +14,12 @@ export async function placeBetRest(
   amount: number,
   chainId?: number,
   useFreeBet: boolean = false,
+  autoCashoutMultiplier?: number,
 ) {
   const body: any = { address, amount, chainId, useFreeBet };
+  if (autoCashoutMultiplier) {
+    body.autoCashoutMultiplier = autoCashoutMultiplier;
+  }
   const res = await fetch(`${API_BASE}/api/rounds/${roundId}/bets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

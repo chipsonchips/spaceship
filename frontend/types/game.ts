@@ -8,6 +8,7 @@ export interface PlayerBet {
   cashoutMultiplier: number | null;
   payout: number | null;
   txHash?: string | null;
+  autoCashoutMultiplier?: number | null;
 }
 
 export interface RoundData {

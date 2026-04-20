@@ -17,8 +17,8 @@ export const createRoundsRouter = (gameEngine: GameEngine) => {
 
   router.post('/:roundId/bets', async (req, res) => {
     try {
-      const { address, amount, chainId, useFreeBet } = req.body;
-      const saved = await gameEngine.placeBet(address, amount, chainId, useFreeBet || false);
+      const { address, amount, chainId, useFreeBet, autoCashoutMultiplier } = req.body;
+      const saved = await gameEngine.placeBet(address, amount, chainId, useFreeBet || false, autoCashoutMultiplier);
       res.json({ success: true, bet: saved });
     } catch (err) {
       res.status(500).json({ success: false, error: (err as Error).message });

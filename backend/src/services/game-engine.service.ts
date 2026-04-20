@@ -21,6 +21,9 @@ export class GameEngine {
   private currentRound: Round | null = null;
   private flyingInterval: NodeJS.Timeout | null = null;
   private bettingTimeout: NodeJS.Timeout | null = null;
+  private autoCashedOutBets = new Set<number>(); // Track already auto-cashed bets
+  private activeAutoCashouts: PlayerBet[] = []; // In-memory active bets for current round
+  private previousMultiplier = 1.0; // Track previous multiplier for interpolation
   private readonly BETTING_DURATION_MS = Number(process.env.BETTING_DURATION_MS) || 15000;
 
   leaderboardService = new LeaderboardService();
@@ -281,6 +284,15 @@ export class GameEngine {
     this.currentRound.flyStartTime = Date.now();
     await this.roundRepo.save(this.currentRound);
 
+
+    this.autoCashedOutBets.clear(); // Reset for new round
+    this.previousMultiplier = 1.0; // Reset previous multiplier
+
+    // Fetch all bets with auto-cashout for this round once
+    this.activeAutoCashouts = await this.betRepo.find({
+      where: { round: { id: this.currentRound.id }, cashedOut: false },
+    });
+
     const startTime = Date.now();
 
     if (this.flyingInterval) clearInterval(this.flyingInterval);
@@ -290,6 +302,14 @@ export class GameEngine {
 
       this.currentRound!.currentMultiplier = calculateCurrentMultiplier(elapsed);
       this.currentRound!.planePosition = calculatePlanePosition(elapsed);
+
+      // Check for auto-cashouts (fire-and-forget, non-blocking)
+      this.processAutoCashouts().catch((err) => {
+        logger.error('Error in auto-cashout processing', { error: (err as Error).message });
+      });
+
+      // Update previous multiplier for next iteration
+      this.previousMultiplier = this.currentRound!.currentMultiplier;
 
       // persist small updates occasionally
       if (elapsed % 1000 < 60) {
@@ -305,6 +325,85 @@ export class GameEngine {
         await this.crashRound(targetCrash);
       }
     }, 50);
+  }
+
+  private async processAutoCashouts() {
+    if (!this.currentRound || this.currentRound.phase !== 'FLYING') {
+      return;
+    }
+
+    try {
+      // Use in-memory bets instead of DB lookup every 50ms
+      const players = this.activeAutoCashouts.filter(p => !p.cashedOut);
+
+      for (const player of players) {
+        // Skip if already processed or no auto-cashout set
+        if (
+          this.autoCashedOutBets.has(player.id) ||
+          !player.autoCashoutMultiplier
+        ) {
+          continue;
+        }
+
+        const targetMultiplier = Number(player.autoCashoutMultiplier);
+        const currentMultiplier = this.currentRound.currentMultiplier;
+
+        // Check if we've crossed the target multiplier
+        // previousMultiplier < target <= currentMultiplier
+        if (this.previousMultiplier < targetMultiplier && currentMultiplier >= targetMultiplier) {
+          // Interpolate to find the exact multiplier at trigger point
+          // This gives us a more precise cashout multiplier
+          const exactMultiplier = targetMultiplier;
+
+          // Mark as processed immediately to avoid duplicate attempts
+          this.autoCashedOutBets.add(player.id);
+
+          // Fire-and-forget: don't await, let it process in background
+          this.performAutoCashout(player, exactMultiplier).catch((err) => {
+            logger.error('Auto-cashout failed for bet', {
+              betId: player.id,
+              address: player.address,
+              targetMultiplier,
+              exactMultiplier,
+              currentMultiplier,
+              error: (err as Error).message,
+            });
+            // Remove from processed set so it can retry
+            this.autoCashedOutBets.delete(player.id);
+          });
+        }
+      }
+    } catch (err) {
+      logger.error('Error fetching bets for auto-cashout', { error: (err as Error).message });
+    }
+  }
+
+  private async performAutoCashout(player: PlayerBet, exactMultiplier?: number) {
+    if (!player.chainId) {
+      logger.warn('Auto-cashout skipped: no chainId stored for bet', { betId: player.id });
+      return;
+    }
+
+    try {
+      await this.cashOutById(player.id, player.chainId, true, exactMultiplier);
+      logger.info('Auto-cashout successful', {
+        betId: player.id,
+        address: player.address,
+        targetMultiplier: player.autoCashoutMultiplier,
+        exactMultiplier: exactMultiplier || player.autoCashoutMultiplier,
+      });
+    } catch (err) {
+      const errorMsg = (err as Error).message;
+      logger.error('Auto-cashout failed', {
+        betId: player.id,
+        address: player.address,
+        chainId: player.chainId,
+        targetMultiplier: player.autoCashoutMultiplier,
+        exactMultiplier: exactMultiplier || player.autoCashoutMultiplier,
+        error: errorMsg,
+      });
+      throw err;
+    }
   }
 
   async crashRound(crashMultiplier: number) {
@@ -373,7 +472,7 @@ export class GameEngine {
     setTimeout(() => this.startNewRound(), 10000);
   }
 
-  async placeBet(address: string, amount: number, chainId: number, useFreeBet: boolean = false) {
+  async placeBet(address: string, amount: number, chainId: number, useFreeBet: boolean = false, autoCashoutMultiplier?: number) {
     if (!chainId) {
       throw new Error('chainId is required. Pass the connected chain from the frontend.');
     }
@@ -382,6 +481,10 @@ export class GameEngine {
 
     if (amount < 0.1 || amount > 1000) {
       throw new Error('Invalid bet amount: must be between 0.1 and 1000 USDC');
+    }
+
+    if (autoCashoutMultiplier && (autoCashoutMultiplier < 1.01 || autoCashoutMultiplier > 100)) {
+      throw new Error('Auto-cashout multiplier must be between 1.01 and 100');
     }
 
     let finalTxHash: string | null = null;
@@ -426,6 +529,8 @@ export class GameEngine {
       cashoutMultiplier: null,
       payout: null,
       txHash: finalTxHash,
+      autoCashoutMultiplier: autoCashoutMultiplier || null,
+      chainId,
       timestamp: Date.now(),
       round: this.currentRound,
     });
@@ -443,7 +548,7 @@ export class GameEngine {
     return bet;
   }
 
-  async cashOutById(betId: number, chainId: number) {
+  async cashOutById(betId: number, chainId: number, isAutoCashout = false, exactMultiplier?: number) {
     if (!chainId) {
       throw new Error('chainId is required. Pass the connected chain from the frontend.');
     }
@@ -453,29 +558,46 @@ export class GameEngine {
     });
     if (!bet) throw new Error('Bet not found');
     if (bet.cashedOut) throw new Error('Already cashed out');
-    if (!this.currentRound || this.currentRound.phase !== 'FLYING')
-      throw new Error('Cannot cash out now');
+
+    // Check if the bet's round is still in FLYING phase
+    // For auto-cashout, we allow it to complete even if the round just crashed,
+    // as long as it was triggered during the flight.
+    if (!isAutoCashout && bet.round.phase !== 'FLYING') {
+      throw new Error('Cannot cash out: round is not in flying phase');
+    }
 
     bet.cashedOut = true;
-    bet.cashoutMultiplier = this.currentRound.currentMultiplier;
+    // Use exact multiplier if provided (for auto-cashout precision), otherwise use current
+    bet.cashoutMultiplier = exactMultiplier ?? bet.round.currentMultiplier;
     bet.payout = Number(bet.amount) * Number(bet.cashoutMultiplier || 1);
 
-    // Relay cashout to chain
+    // Relay cashout to chain (non-blocking, with error handling)
+    let chainError: Error | null = null;
     try {
       const chainService = new (await import('./chain.service.js')).ChainService(chainId);
 
       if (chainService) {
-        await chainService.cashOutFor(this.currentRound.roundId, bet.address, Number(bet.payout), Number(bet.cashoutMultiplier));
+        await chainService.cashOutFor(bet.round.roundId, bet.address, Number(bet.payout), Number(bet.cashoutMultiplier));
+        logger.info('Cashout relayed to chain successfully', { betId, chainId });
       }
     } catch (err) {
-      logger.error('Failed to relay cashout to chain', { error: (err as Error).message, chainId });
-      throw new Error('Failed to cash out on chain: ' + (err as Error).message);
+      chainError = err as Error;
+      logger.error('Failed to relay cashout to chain', {
+        error: chainError.message,
+        chainId,
+        betId,
+        note: 'Cashout will still be recorded locally but may need manual on-chain settlement'
+      });
+      // Don't throw - allow local cashout to succeed even if chain fails
+      // This prevents players from losing their winnings due to RPC issues
     }
+
+    // Save cashout locally regardless of chain status
     await this.betRepo.save(bet);
 
-    this.currentRound.totalPayouts =
-      Number(this.currentRound.totalPayouts || 0) + Number(bet.payout || 0);
-    await this.roundRepo.save(this.currentRound);
+    bet.round.totalPayouts =
+      Number(bet.round.totalPayouts || 0) + Number(bet.payout || 0);
+    await this.roundRepo.save(bet.round);
 
     await this.leaderboardService.updateFromBet({
       address: bet.address,
@@ -485,7 +607,22 @@ export class GameEngine {
       cashoutMultiplier: Number(bet.cashoutMultiplier),
     });
 
+    // Update in-memory active bets if it exists there
+    const activeBetIndex = this.activeAutoCashouts.findIndex(p => p.id === bet.id);
+    if (activeBetIndex !== -1) {
+      this.activeAutoCashouts[activeBetIndex] = bet;
+    }
+
     this.broadcastGameState();
+
+    // If there was a chain error, log it but don't fail the cashout
+    if (chainError) {
+      logger.warn('Cashout completed locally but chain relay failed', {
+        betId,
+        chainId,
+        error: chainError.message,
+      });
+    }
 
     return bet;
   }

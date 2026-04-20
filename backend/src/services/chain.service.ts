@@ -13,6 +13,7 @@ export class ChainService {
   signer: ethers.Wallet;
   contract: ethers.Contract;
   chainId: number;
+  private providerReady = false;
 
   constructor(chainId: number) {
     const chainConfig = getChainConfig(chainId);
@@ -33,6 +34,47 @@ export class ChainService {
     this.provider = new ethers.JsonRpcProvider(rpc);
     this.signer = new ethers.Wallet(key, this.provider);
     this.contract = new ethers.Contract(addr, aviatorAbiTyped, this.signer);
+
+    // Initialize provider connection in background
+    this.initializeProvider().catch((err) => {
+      logger.warn(`ChainService provider initialization warning for ${chainConfig.label}`, {
+        error: (err as Error).message,
+      });
+    });
+  }
+
+  private async initializeProvider() {
+    try {
+      // Test the connection by getting the network
+      const network = await this.provider.getNetwork();
+      logger.info(`ChainService provider ready for ${network.name} (chainId=${network.chainId})`);
+      this.providerReady = true;
+    } catch (err) {
+      logger.warn('ChainService provider initialization failed', {
+        error: (err as Error).message,
+      });
+      this.providerReady = false;
+    }
+  }
+
+  private async ensureProviderReady(maxRetries = 3) {
+    if (this.providerReady) return;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await this.initializeProvider();
+        if (this.providerReady) return;
+      } catch (err) {
+        logger.warn(`Provider ready check attempt ${i + 1}/${maxRetries} failed`, {
+          error: (err as Error).message,
+        });
+        if (i < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+        }
+      }
+    }
+
+    logger.warn('Provider may not be ready, proceeding anyway');
   }
 
   /**
@@ -47,6 +89,9 @@ export class ChainService {
       return;
     }
     try {
+      // Ensure provider is ready before attempting transaction
+      await this.ensureProviderReady(2);
+
       const playersMerkleRoot = computePlayersMerkleRoot(players);
 
       console.log('playersMerkleRoot', playersMerkleRoot);
@@ -147,6 +192,9 @@ export class ChainService {
 
   async cashOutFor(roundId: number, player: string, payout: number, multiplier: number) {
     try {
+      // Ensure provider is ready before attempting transaction
+      await this.ensureProviderReady(2);
+
       // Multiplier is scaled by 100 (e.g. 1.05x -> 105)
       const scaledMultiplier = BigInt(Math.round(multiplier * 100));
       // Payout is in USDC (6 decimals)
