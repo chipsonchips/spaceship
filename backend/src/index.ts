@@ -21,6 +21,7 @@ import gameAdminRouter from './routes/game-admin.js';
 import authRouter from './routes/auth.js';
 import freeBetsRouter from './routes/free-bets.js';
 import usersRouter from './routes/users.js';
+import auditLogsRouter from './routes/audit-logs.js';
 import { AppDataSource } from './config/database.js';
 
 config();
@@ -86,6 +87,7 @@ app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/history', historyRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/game', gameAdminRouter);
+app.use('/api/audit-logs', auditLogsRouter);
 app.use('/api/free-bets', freeBetsRouter);
 app.use('/api/users', usersRouter);
 
