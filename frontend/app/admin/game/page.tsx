@@ -39,27 +39,6 @@ export default function GameAdminPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  if (!isAdmin()) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-red-900 mb-2">
-              Access Denied
-            </h1>
-            <p className="text-red-700">
-              You need admin privileges to access this page.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -80,23 +59,42 @@ export default function GameAdminPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isAdmin()) return;
+    loadData();
+  }, [currentPage, search, isAdmin]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(0);
-    loadData();
   };
+
+  if (!isAdmin()) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-red-900 mb-2">
+              Access Denied
+            </h1>
+            <p className="text-red-700">
+              You need admin privileges to access this page.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleNextPage = () => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
-      loadData();
     }
   };
 
   const handlePrevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
-      loadData();
     }
   };
 
