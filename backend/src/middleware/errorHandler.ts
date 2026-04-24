@@ -1,4 +1,5 @@
 import { AppError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 import type {
   Request,
   Response,
@@ -16,8 +17,8 @@ export const errorHandler: ErrorRequestHandler = (
   let error: AppError | Record<string, unknown> = { ...err };
   error.message = err.message;
 
-  // Log to console for development
-  console.error('Error Middleware:', err.stack);
+  // Log error for debugging
+  logger.error('Error Middleware:', { stack: err.stack, message: err.message });
 
   // Handle specific error types
   if (err.name === 'CastError') {
