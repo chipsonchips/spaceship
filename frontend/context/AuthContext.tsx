@@ -7,54 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { UserRole } from "@/types/user";
-
-export interface AuthUser {
-  id: string;
-  address?: string;
-  farcasterId?: number;
-  username?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  email?: string;
-  role: UserRole;
-  permissions: string[];
-  isActive: boolean;
-  createdAt: string;
-}
-
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-  tokens: AuthTokens | null;
-
-  // Auth methods
-  loginWithWallet: (address: string) => Promise<void>;
-  loginWithFarcaster: (
-    farcasterId: number,
-    username: string,
-    displayName: string,
-    avatarUrl?: string,
-    bio?: string,
-    address?: string,
-  ) => Promise<void>;
-  refreshToken: () => Promise<void>;
-  logout: () => Promise<void>;
-  updateProfile: (updates: Partial<AuthUser>) => Promise<void>;
-
-  // Permission checks
-  hasPermission: (permission: string) => boolean;
-  hasAnyPermission: (permissions: string[]) => boolean;
-  isAdmin: () => boolean;
-}
+import { UserRole, AuthUser, AuthTokens, AuthContextType } from "@/types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
