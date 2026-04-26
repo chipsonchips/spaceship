@@ -6,6 +6,10 @@ import GameBoard from "@/components/game/GameBoard";
 import BetControls from "@/components/game/BetControls";
 import RoundInfo from "@/components/game/RoundInfo";
 import HistoryBar from "@/components/game/HistoryBar";
+import ParticleEffect from "@/components/game/ParticleEffect";
+import PotentialPayout from "@/components/game/PotentialPayout";
+import SessionStats from "@/components/game/SessionStats";
+import PlayerActivityFeed from "@/components/game/PlayerActivityFeed";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import ChainWarning from "@/components/common/ChainWarning";
 
@@ -20,7 +24,11 @@ const GameScreen = () => {
               <ChainWarning />
             </div>
             <RoundInfo />
+            <SessionStats />
             <GameBoard />
+            <ParticleEffect trigger={false} x={0} y={0} />
+            <PotentialPayout />
+            <PlayerActivityFeed />
           </div>
         </ErrorBoundary>
         <HistoryBar />
