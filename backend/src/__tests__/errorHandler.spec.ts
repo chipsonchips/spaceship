@@ -22,7 +22,7 @@ describe('Error Handler Middleware', () => {
     mockNext = vi.fn() as unknown as NextFunction;
 
     // Suppress console.error during tests
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -157,11 +157,13 @@ describe('Error Handler Middleware', () => {
     });
 
     it('should log error to console', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
       const error = new Error('Test error');
 
       errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
 
-      expect(console.error).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
   });
 
@@ -197,7 +199,7 @@ describe('Error Handler Middleware', () => {
       const wrappedFn = catchAsync(asyncFn);
 
       wrappedFn(mockReq as Request, mockRes as Response, mockNext);
-      
+
       // Wait for promise to settle
       await new Promise(resolve => setTimeout(resolve, 10));
 
