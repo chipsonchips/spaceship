@@ -613,6 +613,14 @@ export class GameEngine {
       this.activeAutoCashouts[activeBetIndex] = bet;
     }
 
+    // Emit cashout notification to all connected clients
+    this.io.emit('CASHOUT_NOTIFICATION', {
+      address: bet.address,
+      multiplier: bet.cashoutMultiplier,
+      payout: bet.payout,
+      timestamp: Date.now(),
+    });
+
     this.broadcastGameState();
 
     // If there was a chain error, log it but don't fail the cashout
