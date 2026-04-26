@@ -13,6 +13,7 @@ import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
 import "@coinbase/onchainkit/styles.css";
 import { SUPPORTED_CHAINS, CHAIN_CONFIGS } from "@/lib/chains";
 import { AuthProvider } from "@/context/AuthContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 import UsernamePrompt from "@/components/auth/UsernamePrompt";
 import WalletAuthManager from "@/components/auth/WalletAuthManager";
 
@@ -72,11 +73,13 @@ export function RootProvider({ children }: { children: ReactNode }) {
     return (
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <WalletAuthManager />
-            {children}
-            <UsernamePrompt />
-          </AuthProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <WalletAuthManager />
+              {children}
+              <UsernamePrompt />
+            </AuthProvider>
+          </SettingsProvider>
         </QueryClientProvider>
       </WagmiProvider>
     );
@@ -98,11 +101,13 @@ export function RootProvider({ children }: { children: ReactNode }) {
             },
           }}
         >
-          <AuthProvider>
-            <WalletAuthManager />
-            {children}
-            <UsernamePrompt />
-          </AuthProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <WalletAuthManager />
+              {children}
+              <UsernamePrompt />
+            </AuthProvider>
+          </SettingsProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
