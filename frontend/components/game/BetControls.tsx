@@ -120,6 +120,7 @@ const BetControls: React.FC = () => {
       }
       if (res?.success) {
         setTxHash(res.txHash || null);
+        setLastBetAmount(betAmount); // Track last bet
         setBetAmount("0.10");
         setUseFreeBet(false);
         setAutoCashoutMultiplier(null);
@@ -196,15 +197,8 @@ const BetControls: React.FC = () => {
     return () => clearInterval(interval);
   }, [cashoutTimer]);
 
-  /*
-   * Hydration fix:
-   * The wallet connection state (walletAddress) is only available on the client.
-   * During SSR, walletAddress is undefined, so the server renders the "Connect Wallet" state.
-   * On the client, if the wallet is already connected, it might render the betting UI immediately.
-   * This mismatch causes hydration errors.
-   * We use a `mounted` state to ensure we only render client-specific UI after the component has mounted.
-   */
   const [mounted, setMounted] = useState(false);
+  const [lastBetAmount, setLastBetAmount] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -229,12 +223,14 @@ const BetControls: React.FC = () => {
         <div className="flex gap-2">
           <span className="bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700/50 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
             <span className="text-slate-500 text-[10px]">💰</span>
-            {walletBalance?.toFixed(2) || "0.00"} <span className="text-[9px] text-emerald-500/70">USDC</span>
+            {walletBalance?.toFixed(2) || "0.00"}{" "}
+            <span className="text-[9px] text-emerald-500/70">USDC</span>
           </span>
           {freeBetsRemaining > 0 && (
             <span className="bg-blue-900/30 px-2 py-1 rounded-md border border-blue-500/30 text-blue-400 text-xs font-bold flex items-center gap-1.5">
               <span className="text-blue-500 text-[10px]">🎟️</span>
-              {freeBetsRemaining} <span className="text-[9px] text-blue-500/70">FREE</span>
+              {freeBetsRemaining}{" "}
+              <span className="text-[9px] text-blue-500/70">FREE</span>
             </span>
           )}
         </div>
@@ -243,13 +239,14 @@ const BetControls: React.FC = () => {
       {myBet && (
         <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-3 sm:p-4 shadow-inner relative overflow-hidden group">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none"></div>
-          
+
           <div className="relative text-center mb-3 mt-0.5">
             <div className="text-[10px] font-orbitron text-emerald-400/80 uppercase tracking-widest mb-1 font-semibold">
               ACTIVE BET
             </div>
             <div className="text-2xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
-              {Number(myBet.amount).toFixed(2)} <span className="text-sm text-emerald-200">USDC</span>
+              {Number(myBet.amount).toFixed(2)}{" "}
+              <span className="text-sm text-emerald-200">USDC</span>
             </div>
             {myBet.autoCashoutMultiplier && (
               <div className="inline-block mt-1.5 bg-slate-800/80 border border-emerald-500/30 rounded-md px-2 py-0.5 text-[10px] text-emerald-400 font-bold font-courier">
@@ -284,7 +281,9 @@ const BetControls: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
                 <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-150%] group-hover/btn:translate-x-[150%] transition-all duration-700 ease-out z-10"></div>
                 <div className="relative px-4 py-3 flex items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] z-20 gap-2">
-                  <span className="text-xl leading-none group-hover/btn:scale-110 transition-transform">💰</span>
+                  <span className="text-xl leading-none group-hover/btn:scale-110 transition-transform">
+                    💰
+                  </span>
                   <span>{isCashingOut ? "PROCESSING..." : "CASH OUT NOW"}</span>
                 </div>
               </button>
@@ -295,31 +294,33 @@ const BetControls: React.FC = () => {
       {canPlaceBet && (
         <div className="space-y-3">
           {freeBetsRemaining > 0 && (
-             <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-3 flex items-center justify-between">
-               <div>
-                 <div className="text-blue-300 font-bold font-orbitron text-xs flex items-center gap-1.5">
-                   <span>🎟️</span> Use Free Bet
-                 </div>
-                 <div className="text-[10px] text-blue-400/70 font-courier mt-0.5">
-                   Max Cover: {freeBetMaxAmount} USDC
-                 </div>
-               </div>
-               <button
-                 onClick={() => {
-                   setUseFreeBet(!useFreeBet);
-                   setBetAmount(freeBetMaxAmount.toString());
-                 }}
-                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
-                   useFreeBet ? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]" : "bg-slate-700"
-                 }`}
-               >
-                 <span
-                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
-                     useFreeBet ? "translate-x-6" : "translate-x-1"
-                   }`}
-                 />
-               </button>
-             </div>
+            <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-3 flex items-center justify-between">
+              <div>
+                <div className="text-blue-300 font-bold font-orbitron text-xs flex items-center gap-1.5">
+                  <span>🎟️</span> Use Free Bet
+                </div>
+                <div className="text-[10px] text-blue-400/70 font-courier mt-0.5">
+                  Max Cover: {freeBetMaxAmount} USDC
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setUseFreeBet(!useFreeBet);
+                  setBetAmount(freeBetMaxAmount.toString());
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
+                  useFreeBet
+                    ? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                    : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+                    useFreeBet ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
           )}
 
           <div>
@@ -342,19 +343,33 @@ const BetControls: React.FC = () => {
                   className="w-full bg-transparent text-white text-xl sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
                   placeholder="0.00"
                 />
-                <span className="text-slate-500 text-xs font-bold font-courier ml-2 select-none tracking-wider">USDC</span>
+                <span className="text-slate-500 text-xs font-bold font-courier ml-2 select-none tracking-wider">
+                  USDC
+                </span>
               </div>
             </div>
             {!betValidation.isValid && (
               <div className="text-red-400 text-[10px] mt-1.5 font-bold flex items-start gap-1 px-1">
-                <span className="text-red-500 mt-0.5">⚠️</span> 
+                <span className="text-red-500 mt-0.5">⚠️</span>
                 <span>{betValidation.error}</span>
               </div>
             )}
-            <div className="text-[10px] text-slate-500 mt-1 font-courier flex justify-end px-1 uppercase tracking-wide">
-              {useFreeBet
-                ? `Max Allowed: ${freeBetMaxAmount}`
-                : `Available: ${walletBalance?.toFixed(2) || "0.00"}`} USDC
+            <div className="text-[10px] text-slate-500 mt-1 font-courier flex justify-between px-1 uppercase tracking-wide">
+              <span>
+                {useFreeBet
+                  ? `Max Allowed: ${freeBetMaxAmount}`
+                  : `Available: ${walletBalance?.toFixed(2) || "0.00"}`}{" "}
+                USDC
+              </span>
+              {lastBetAmount && (
+                <button
+                  onClick={() => setBetAmount(lastBetAmount)}
+                  className="text-emerald-400 hover:text-emerald-300 transition-colors text-[10px]"
+                  title="Repeat last bet"
+                >
+                  ↻ {lastBetAmount}
+                </button>
+              )}
             </div>
           </div>
 
@@ -373,7 +388,9 @@ const BetControls: React.FC = () => {
                       : "bg-slate-800/80 border border-slate-600/60 text-emerald-100 hover:border-emerald-500/50 hover:bg-slate-700 focus:outline-none"
                   }`}
                 >
-                  <span className="text-[9px] text-emerald-500 absolute top-0.5 left-1 opacity-50">+</span>
+                  <span className="text-[9px] text-emerald-500 absolute top-0.5 left-1 opacity-50">
+                    +
+                  </span>
                   {amount}
                 </button>
               );
@@ -447,7 +464,9 @@ const BetControls: React.FC = () => {
       {error && (
         <div className="bg-red-900/20 border border-red-500/30 rounded-md p-2.5 flex items-start gap-2 mt-2">
           <span className="text-sm mt-0.5">⚠️</span>
-          <div className="text-red-300 text-[10px] font-medium leading-relaxed font-inter">{error}</div>
+          <div className="text-red-300 text-[10px] font-medium leading-relaxed font-inter">
+            {error}
+          </div>
         </div>
       )}
     </div>
