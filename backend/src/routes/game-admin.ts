@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
-import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { PlayerBet } from '../entities/player-bet.entity.js';
 import { Round } from '../entities/round.entity.js';
@@ -9,8 +9,8 @@ import { GameHistory } from '../entities/game-history.entity.js';
 
 const router = Router();
 
-// All endpoints require admin authentication
-router.use(authenticateToken);
+// All endpoints require admin authentication (supports both JWT and admin secret)
+router.use(authenticateTokenOrAdminSecret);
 router.use(requireAdmin);
 
 /**

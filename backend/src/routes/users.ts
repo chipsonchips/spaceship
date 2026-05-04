@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { userService } from '../services/user.service.js';
 import { auditLogService } from '../services/audit-log.service.js';
-import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
 import { UserRole } from '../entities/user.entity.js';
@@ -88,7 +88,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
  * GET /api/users/admin/all
  * Get all users (admin only)
  */
-router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/all', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const users = await userService.getAllAdmins();
 
@@ -119,7 +119,7 @@ router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, r
  * POST /api/users/admin/create
  * Create a new admin user
  */
-router.post('/admin/create', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/create', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { address, email, username, permissions } = req.body;
 
@@ -174,7 +174,7 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req: Reques
  * PUT /api/users/:userId/role
  * Update user role and permissions (admin only)
  */
-router.put('/:userId/role', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:userId/role', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { role, permissions } = req.body;
 
@@ -216,7 +216,7 @@ router.put('/:userId/role', authenticateToken, requireAdmin, async (req: Request
  * PUT /api/users/:userId/deactivate
  * Deactivate user (admin only)
  */
-router.put('/:userId/deactivate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:userId/deactivate', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const user = await userService.deactivateUser(req.params.userId as string);
 
@@ -248,7 +248,7 @@ router.put('/:userId/deactivate', authenticateToken, requireAdmin, async (req: R
  * PUT /api/users/:userId/activate
  * Activate user (admin only)
  */
-router.put('/:userId/activate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:userId/activate', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const user = await userService.activateUser(req.params.userId as string);
 
