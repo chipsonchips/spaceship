@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useChainId } from "wagmi";
+import Link from "next/link";
 import {
   Wallet,
   TrendingUp,
@@ -15,6 +16,8 @@ import {
   Loader2,
   ExternalLink,
   RefreshCw,
+  Users,
+  BarChart3,
 } from "lucide-react";
 import * as api from "@/lib/api";
 
@@ -70,25 +73,30 @@ export default function AdminDashboard() {
   useEffect(() => {
     const storedSecret = localStorage.getItem("adminSecret");
     const storedChain = localStorage.getItem("adminSelectedChain");
+    const chainToUse = storedChain ? Number(storedChain) : 8453;
+
     if (storedChain) {
-      setSelectedChain(Number(storedChain));
+      setSelectedChain(chainToUse);
     }
     if (storedSecret) {
       setAdminSecret(storedSecret);
-      verifyAndLogin(storedSecret);
+      verifyAndLogin(storedSecret, chainToUse);
     }
   }, []);
 
-  const verifyAndLogin = async (secret: string) => {
+  const verifyAndLogin = async (
+    secret: string,
+    chainId: number = selectedChain,
+  ) => {
     setIsLoading(true);
     setError("");
     try {
       console.log("secret", secret);
-      const data = await api.adminFetchContractStatus(secret, selectedChain);
+      const data = await api.adminFetchContractStatus(secret, chainId);
       setContractStatus(data);
       setIsAuthenticated(true);
       localStorage.setItem("adminSecret", secret);
-      localStorage.setItem("adminSelectedChain", selectedChain.toString());
+      localStorage.setItem("adminSelectedChain", chainId.toString());
     } catch (err) {
       console.error("Login verification failed:", err);
       const errorMsg = (err as Error).message;
@@ -325,6 +333,65 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Admin Navigation */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/admin">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 hover:border-green-500/50 rounded-2xl p-6 shadow-2xl cursor-pointer transition-all hover:shadow-green-500/20">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-500/20 rounded-lg">
+                  <Settings className="w-6 h-6 text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Contract Management
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Manage contract and house
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/admin/game">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 hover:border-blue-500/50 rounded-2xl p-6 shadow-2xl cursor-pointer transition-all hover:shadow-blue-500/20">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-500/20 rounded-lg">
+                  <BarChart3 className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Game Administration
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Monitor players and statistics
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/admin/users">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 hover:border-purple-500/50 rounded-2xl p-6 shadow-2xl cursor-pointer transition-all hover:shadow-purple-500/20">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-500/20 rounded-lg">
+                  <Users className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    User Management
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    Manage admin users and permissions
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
 

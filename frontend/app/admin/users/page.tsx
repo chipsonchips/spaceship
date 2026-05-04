@@ -2,6 +2,7 @@
 
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   getAllAdmins,
   createAdmin,
@@ -11,6 +12,7 @@ import {
   getAuditLogs,
 } from "@/lib/api-auth";
 import { User, UserRole } from "@/types/user";
+import { ArrowLeft, Users } from "lucide-react";
 
 export default function UserManagementPage() {
   const { isAdmin, user } = useAuthUser();
@@ -28,16 +30,22 @@ export default function UserManagementPage() {
     permissions: [] as string[],
   });
 
-  if (!isAdmin()) {
+  // Check if user has admin secret stored (from contract management dashboard)
+  const hasAdminSecret =
+    typeof window !== "undefined" && !!localStorage.getItem("adminSecret");
+  const isAuthorized = isAdmin() || hasAdminSecret;
+
+  if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-red-900 mb-2">
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-red-400 mb-2">
               Access Denied
             </h1>
-            <p className="text-red-700">
-              You need admin privileges to access this page.
+            <p className="text-red-300">
+              You need admin privileges to access this page. Please log in as an
+              admin user or access from the admin dashboard.
             </p>
           </div>
         </div>
@@ -155,34 +163,47 @@ export default function UserManagementPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            User Management
-          </h1>
-          <p className="text-gray-600">
-            Manage admin users and view audit logs
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto mb-8">
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Dashboard
+            </Link>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              User Management
+            </h1>
+            <p className="text-slate-400">
+              Manage admin users and view audit logs
+            </p>
+          </div>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto">
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-700">{error}</p>
+          <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-lg p-4">
+            <p className="text-red-400">{error}</p>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200">
+        <div className="mb-6 border-b border-slate-700">
           <div className="flex gap-8">
             <button
               onClick={() => setActiveTab("admins")}
               className={`pb-4 px-2 font-medium transition-colors ${
                 activeTab === "admins"
-                  ? "border-b-2 border-blue-500 text-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "border-b-2 border-green-500 text-green-400"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
               Admin Users
@@ -191,8 +212,8 @@ export default function UserManagementPage() {
               onClick={() => setActiveTab("logs")}
               className={`pb-4 px-2 font-medium transition-colors ${
                 activeTab === "logs"
-                  ? "border-b-2 border-blue-500 text-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "border-b-2 border-green-500 text-green-400"
+                  : "text-slate-400 hover:text-white"
               }`}
             >
               Audit Logs
@@ -204,15 +225,15 @@ export default function UserManagementPage() {
         {activeTab === "admins" && (
           <div className="space-y-8">
             {/* Create Admin Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
+              <h2 className="text-2xl font-bold text-white mb-6">
                 Create New Admin
               </h2>
 
               <form onSubmit={handleCreateAdmin} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Username *
                     </label>
                     <input
@@ -225,13 +246,13 @@ export default function UserManagementPage() {
                           username: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                       placeholder="admin_username"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Email
                     </label>
                     <input
@@ -243,13 +264,13 @@ export default function UserManagementPage() {
                           email: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                       placeholder="admin@example.com"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Wallet Address
                     </label>
                     <input
@@ -261,7 +282,7 @@ export default function UserManagementPage() {
                           address: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                       placeholder="0x..."
                     />
                   </div>
@@ -269,7 +290,7 @@ export default function UserManagementPage() {
 
                 {/* Permissions */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <label className="block text-sm font-medium text-slate-300 mb-3">
                     Permissions
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -282,9 +303,9 @@ export default function UserManagementPage() {
                           type="checkbox"
                           checked={newAdminForm.permissions.includes(perm.id)}
                           onChange={() => handleTogglePermission(perm.id)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                          className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500 bg-slate-800 border-slate-700"
                         />
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-slate-300">
                           {perm.label}
                         </span>
                       </label>
@@ -295,7 +316,7 @@ export default function UserManagementPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-slate-700 disabled:to-slate-700 text-white py-2 rounded-lg disabled:opacity-50 font-medium transition-all"
                 >
                   {loading ? "Creating..." : "Create Admin"}
                 </button>
@@ -303,48 +324,46 @@ export default function UserManagementPage() {
             </div>
 
             {/* Admins List */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Admin Users
-                </h2>
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-700">
+                <h2 className="text-2xl font-bold text-white">Admin Users</h2>
               </div>
 
               {loading && admins.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">Loading...</div>
+                <div className="p-6 text-center text-slate-400">Loading...</div>
               ) : admins.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
+                <div className="p-6 text-center text-slate-400">
                   No admin users found
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-slate-800/50 border-b border-slate-700">
                       <tr>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                           Username
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                           Email
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                           Permissions
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-slate-700">
                       {admins.map((admin) => (
-                        <tr key={admin.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 text-sm text-gray-900">
+                        <tr key={admin.id} className="hover:bg-slate-800/30">
+                          <td className="px-6 py-4 text-sm text-white">
                             {admin.displayName || admin.username || "N/A"}
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
+                          <td className="px-6 py-4 text-sm text-slate-400">
                             {admin.email || "N/A"}
                           </td>
                           <td className="px-6 py-4 text-sm">
@@ -353,13 +372,13 @@ export default function UserManagementPage() {
                                 admin.permissions.map((perm) => (
                                   <span
                                     key={perm}
-                                    className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
+                                    className="inline-block bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs border border-green-500/30"
                                   >
                                     {perm}
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-gray-500">
+                                <span className="text-slate-500">
                                   No permissions
                                 </span>
                               )}
@@ -369,8 +388,8 @@ export default function UserManagementPage() {
                             <span
                               className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                                 admin.isActive
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
+                                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
                               }`}
                             >
                               {admin.isActive ? "Active" : "Inactive"}
@@ -381,7 +400,7 @@ export default function UserManagementPage() {
                               <button
                                 onClick={() => handleDeactivateUser(admin.id)}
                                 disabled={loading}
-                                className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                className="text-red-400 hover:text-red-300 disabled:opacity-50"
                               >
                                 Deactivate
                               </button>
@@ -389,7 +408,7 @@ export default function UserManagementPage() {
                               <button
                                 onClick={() => handleActivateUser(admin.id)}
                                 disabled={loading}
-                                className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                                className="text-green-400 hover:text-green-300 disabled:opacity-50"
                               >
                                 Activate
                               </button>
@@ -407,57 +426,57 @@ export default function UserManagementPage() {
 
         {/* Audit Logs Tab */}
         {activeTab === "logs" && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Audit Logs</h2>
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-700">
+              <h2 className="text-2xl font-bold text-white">Audit Logs</h2>
             </div>
 
             {loading && auditLogs.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">Loading...</div>
+              <div className="p-6 text-center text-slate-400">Loading...</div>
             ) : auditLogs.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-slate-400">
                 No audit logs found
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-slate-800/50 border-b border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                         Action
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                         Description
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                         Timestamp
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-slate-700">
                     {auditLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <tr key={log.id} className="hover:bg-slate-800/30">
+                        <td className="px-6 py-4 text-sm font-medium text-white">
                           {log.actionType}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
+                        <td className="px-6 py-4 text-sm text-slate-400">
                           {log.description || "N/A"}
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span
                             className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                               log.success
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
+                                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                : "bg-red-500/20 text-red-400 border border-red-500/30"
                             }`}
                           >
                             {log.success ? "Success" : "Failed"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
+                        <td className="px-6 py-4 text-sm text-slate-400">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
                       </tr>

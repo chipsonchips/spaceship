@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { getAdminPlayers, getGameStatistics } from "@/lib/api-auth";
 import Link from "next/link";
-import { Search, Users, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import {
+  Search,
+  Users,
+  TrendingUp,
+  DollarSign,
+  Loader2,
+  ArrowLeft,
+} from "lucide-react";
 
 interface Player {
   id: string;
@@ -39,6 +46,11 @@ export default function GameAdminPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
+  // Check if user has admin secret stored (from contract management dashboard)
+  const hasAdminSecret =
+    typeof window !== "undefined" && !!localStorage.getItem("adminSecret");
+  const isAuthorized = isAdmin() || hasAdminSecret;
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -60,25 +72,26 @@ export default function GameAdminPage() {
   };
 
   useEffect(() => {
-    if (!isAdmin()) return;
+    if (!isAuthorized) return;
     loadData();
-  }, [currentPage, search, isAdmin]);
+  }, [currentPage, search, isAuthorized]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(0);
   };
 
-  if (!isAdmin()) {
+  if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-red-900 mb-2">
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-red-400 mb-2">
               Access Denied
             </h1>
-            <p className="text-red-700">
-              You need admin privileges to access this page.
+            <p className="text-red-300">
+              You need admin privileges to access this page. Please log in as an
+              admin user or access from the admin dashboard.
             </p>
           </div>
         </div>
@@ -99,18 +112,26 @@ export default function GameAdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Dashboard
+          </Link>
+          <h1 className="text-4xl font-bold text-white mb-2">
             Game Administration
           </h1>
-          <p className="text-gray-600">Monitor players and game activity</p>
+          <p className="text-slate-400">Monitor players and game activity</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-700">{error}</p>
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-6">
+            <p className="text-red-400">{error}</p>
           </div>
         )}
 
