@@ -19,14 +19,22 @@ function getAuthToken(): string | null {
     return null;
 }
 
+function getAdminSecret(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('adminSecret');
+}
+
 function getAuthHeaders(): Record<string, string> {
     const token = getAuthToken();
+    const adminSecret = getAdminSecret();
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
 
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+    } else if (adminSecret) {
+        headers['X-Admin-Secret'] = adminSecret;
     }
 
     return headers;
