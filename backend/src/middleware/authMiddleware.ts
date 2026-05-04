@@ -174,6 +174,7 @@ export function authenticateTokenOrAdminSecret(
     next: NextFunction
 ): void {
     const authHeader = req.headers.authorization;
+    const adminSecretHeader = req.headers['x-admin-secret'] as string;
 
     // Try JWT first
     const token = extractTokenFromHeader(authHeader);
@@ -188,7 +189,21 @@ export function authenticateTokenOrAdminSecret(
         }
     }
 
-    // Fall back to admin secret
+    // Try admin secret from header
+    if (adminSecretHeader && verifyAdminSecret(adminSecretHeader)) {
+        // Create a synthetic admin payload
+        req.user = {
+            userId: 'legacy-admin',
+            role: 'admin' as any,
+            permissions: [],
+        };
+        req.userId = 'legacy-admin';
+        req.ipAddress = getClientIp(req);
+        next();
+        return;
+    }
+
+    // Fall back to Bearer token as admin secret (legacy)
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const secret = authHeader.substring(7);
         if (verifyAdminSecret(secret)) {
