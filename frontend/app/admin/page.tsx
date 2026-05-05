@@ -79,24 +79,26 @@ export default function AdminDashboard() {
       setSelectedChain(chainToUse);
     }
     if (storedSecret) {
+      console.log("Found stored admin secret, attempting auto-login...");
       setAdminSecret(storedSecret);
       verifyAndLogin(storedSecret, chainToUse);
+    } else {
+      console.log("No stored admin secret found");
+      setIsLoading(false);
     }
   }, []);
 
-  const verifyAndLogin = async (
-    secret: string,
-    chainId: number = selectedChain,
-  ) => {
+  const verifyAndLogin = async (secret: string, chainId: number) => {
     setIsLoading(true);
     setError("");
     try {
-      console.log("secret", secret);
+      console.log("Verifying admin secret for chain", chainId);
       const data = await api.adminFetchContractStatus(secret, chainId);
       setContractStatus(data);
       setIsAuthenticated(true);
       localStorage.setItem("adminSecret", secret);
       localStorage.setItem("adminSelectedChain", chainId.toString());
+      console.log("Admin authentication successful");
     } catch (err) {
       console.error("Login verification failed:", err);
       const errorMsg = (err as Error).message;
@@ -132,7 +134,7 @@ export default function AdminDashboard() {
 
   const handleLogin = () => {
     if (adminSecret) {
-      verifyAndLogin(adminSecret);
+      verifyAndLogin(adminSecret, selectedChain);
     }
   };
 

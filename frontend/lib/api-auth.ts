@@ -32,9 +32,13 @@ function getAuthHeaders(): Record<string, string> {
     };
 
     if (token) {
+        console.log('Using JWT token for authentication');
         headers['Authorization'] = `Bearer ${token}`;
     } else if (adminSecret) {
+        console.log('Using admin secret for authentication');
         headers['X-Admin-Secret'] = adminSecret;
+    } else {
+        console.log('No authentication credentials found');
     }
 
     return headers;
@@ -142,7 +146,10 @@ export async function getUserByAddress(address: string) {
 // Admin endpoints
 export async function getAllAdmins() {
     const res = await authenticatedFetch(`${API_BASE}/api/users/admin/all`);
-    if (!res.ok) throw new Error('Failed to fetch admins');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch admins: ${res.status} ${res.statusText} - ${errorData.error || ''}`);
+    }
     return res.json();
 }
 
@@ -210,7 +217,10 @@ export async function getAuditLogs(
     const res = await authenticatedFetch(
         `${API_BASE}/api/audit-logs?${params.toString()}`
     );
-    if (!res.ok) throw new Error('Failed to fetch audit logs');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch audit logs: ${res.status} ${res.statusText} - ${errorData.error || ''}`);
+    }
     return res.json();
 }
 
@@ -321,7 +331,10 @@ export async function getAdminPlayers(limit: number = 50, offset: number = 0, se
     const res = await authenticatedFetch(
         `${API_BASE}/api/admin/game/players?${params.toString()}`
     );
-    if (!res.ok) throw new Error('Failed to fetch players');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch players: ${res.status} ${res.statusText} - ${errorData.error || ''}`);
+    }
     return res.json();
 }
 
