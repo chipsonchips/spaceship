@@ -86,17 +86,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log("Login response status:", response.status);
 
-        if (!response.ok) {
-          throw new Error("Login failed");
-        }
-
         const data = await response.json();
         console.log("Login response data:", data);
+
+        if (!response.ok) {
+          const errorMsg = data.error || "Login failed";
+          console.error(
+            "Login failed with status",
+            response.status,
+            ":",
+            errorMsg,
+          );
+          throw new Error(errorMsg);
+        }
+
+        if (!data.user || !data.accessToken || !data.refreshToken) {
+          console.error("Invalid response data:", data);
+          console.error("Missing fields:", {
+            hasUser: !!data.user,
+            hasAccessToken: !!data.accessToken,
+            hasRefreshToken: !!data.refreshToken,
+          });
+          throw new Error("Invalid login response - missing user or tokens");
+        }
+
+        const expiresIn = data.expiresIn || 86400000; // Default 24h
 
         saveAuth(data.user, {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
-          expiresIn: data.expiresIn,
+          expiresIn,
         });
 
         console.log("User saved to auth context:", data.user);
@@ -122,11 +141,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       address?: string,
     ) => {
       try {
+        console.log("loginWithFarcaster called with username:", username);
         setIsLoading(true);
         setError(null);
 
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        console.log("Calling API:", `${apiUrl}/api/auth/farcaster/login`);
+
         const response = await fetch(`${apiUrl}/api/auth/farcaster/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -140,18 +162,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }),
         });
 
-        if (!response.ok) {
-          throw new Error("Login failed");
-        }
+        console.log("Farcaster login response status:", response.status);
 
         const data = await response.json();
+        console.log("Farcaster login response data:", data);
+
+        if (!response.ok) {
+          const errorMsg = data.error || "Login failed";
+          console.error(
+            "Farcaster login failed with status",
+            response.status,
+            ":",
+            errorMsg,
+          );
+          throw new Error(errorMsg);
+        }
+
+        if (!data.user || !data.accessToken || !data.refreshToken) {
+          console.error("Invalid response data:", data);
+          console.error("Missing fields:", {
+            hasUser: !!data.user,
+            hasAccessToken: !!data.accessToken,
+            hasRefreshToken: !!data.refreshToken,
+          });
+          throw new Error("Invalid login response - missing user or tokens");
+        }
+
+        const expiresIn = data.expiresIn || 86400000; // Default 24h
+
         saveAuth(data.user, {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
-          expiresIn: data.expiresIn,
+          expiresIn,
         });
+
+        console.log("User saved to auth context:", data.user);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Login failed";
+        console.error("Farcaster login error:", errorMsg);
         setError(errorMsg);
         throw err;
       } finally {
