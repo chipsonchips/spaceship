@@ -45,10 +45,15 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
 
         // Generate tokens
         const tokens = generateTokens(user);
+        logger.info(`Generated tokens for user ${user.id}:`, {
+            hasAccessToken: !!tokens.accessToken,
+            hasRefreshToken: !!tokens.refreshToken,
+            expiresIn: tokens.expiresIn,
+        });
 
         logger.info(`User logged in successfully: ${user.id} (${address}), username: ${user.username || 'not set'}`);
 
-        res.json({
+        const response = {
             success: true,
             user: {
                 id: user.id,
@@ -60,10 +65,25 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
                 isActive: user.isActive,
                 createdAt: user.createdAt,
             },
-            ...tokens,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            expiresIn: tokens.expiresIn,
+        };
+
+        logger.info(`Sending login response with tokens`, {
+            hasAccessToken: !!response.accessToken,
+            hasRefreshToken: !!response.refreshToken,
         });
+
+        res.json(response);
     } catch (error) {
-        logger.error('Wallet login failed', { error: (error as Error).message });
+        const errorMsg = (error as Error).message;
+        const errorStack = (error as Error).stack;
+        logger.error('Wallet login failed', {
+            error: errorMsg,
+            stack: errorStack,
+            address: req.body?.address,
+        });
         res.status(500).json({
             success: false,
             error: 'Login failed',
@@ -80,7 +100,10 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
         const { farcasterId, username, displayName, avatarUrl, bio, address } = req.body;
 
         if (!farcasterId || !username) {
-            logger.warn('Farcaster login attempt without required fields');
+            logger.warn('Farcaster login attempt without required fields', {
+                hasFarcasterId: !!farcasterId,
+                hasUsername: !!username,
+            });
             return res.status(400).json({
                 success: false,
                 error: 'Farcaster ID and username required',
@@ -136,10 +159,15 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
 
         // Generate tokens
         const tokens = generateTokens(user);
+        logger.info(`Generated tokens for Farcaster user ${user.id}:`, {
+            hasAccessToken: !!tokens.accessToken,
+            hasRefreshToken: !!tokens.refreshToken,
+            expiresIn: tokens.expiresIn,
+        });
 
         logger.info(`Farcaster user logged in successfully: ${user.id} (${username})`);
 
-        res.json({
+        const response = {
             success: true,
             user: {
                 id: user.id,
@@ -153,10 +181,26 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
                 isActive: user.isActive,
                 createdAt: user.createdAt,
             },
-            ...tokens,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            expiresIn: tokens.expiresIn,
+        };
+
+        logger.info(`Sending Farcaster login response with tokens`, {
+            hasAccessToken: !!response.accessToken,
+            hasRefreshToken: !!response.refreshToken,
         });
+
+        res.json(response);
     } catch (error) {
-        logger.error('Farcaster login failed', { error: (error as Error).message });
+        const errorMsg = (error as Error).message;
+        const errorStack = (error as Error).stack;
+        logger.error('Farcaster login failed', {
+            error: errorMsg,
+            stack: errorStack,
+            username: req.body?.username,
+            farcasterId: req.body?.farcasterId,
+        });
         res.status(500).json({
             success: false,
             error: 'Login failed',

@@ -212,4 +212,132 @@ router.get('/admin/users-with-free-bets', requireAdmin, async (req: Request, res
     }
 });
 
+/**
+ * POST /api/free-bets/admin/assign-bulk
+ * Assign free bets to multiple users (admin only)
+ */
+router.post('/admin/assign-bulk', requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { userIds, count } = req.body;
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'userIds array is required and must not be empty',
+            });
+        }
+
+        if (!count || count <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'count (positive number) is required',
+            });
+        }
+
+        const results = {
+            successful: 0,
+            failed: 0,
+            errors: [] as { userId: string; error: string }[],
+        };
+
+        for (const userId of userIds) {
+            try {
+                await freeBetService.addFreeBets(userId, count);
+                results.successful++;
+            } catch (error) {
+                results.failed++;
+                results.errors.push({
+                    userId,
+                    error: (error as Error).message,
+                });
+            }
+        }
+
+        // Log admin action
+        await auditLogService.logAction(
+            (req as any).user?.id || null,
+            AdminActionType.FREE_BET_ASSIGNED,
+            `Assigned ${count} free bets to ${results.successful} users`,
+            { userIds, count, results },
+            req.ip || null
+        );
+
+        res.json({
+            success: true,
+            message: `Assigned free bets to ${results.successful} users`,
+            results,
+        });
+    } catch (error) {
+        logger.error('Failed to assign bulk free bets', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to assign bulk free bets',
+        });
+    }
+});
+
+/**
+ * POST /api/free-bets/admin/set-bulk
+ * Set free bets for multiple users (admin only)
+ */
+router.post('/admin/set-bulk', requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { userIds, count } = req.body;
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'userIds array is required and must not be empty',
+            });
+        }
+
+        if (count === undefined || count < 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'count (non-negative number) is required',
+            });
+        }
+
+        const results = {
+            successful: 0,
+            failed: 0,
+            errors: [] as { userId: string; error: string }[],
+        };
+
+        for (const userId of userIds) {
+            try {
+                await freeBetService.setFreeBets(userId, count);
+                results.successful++;
+            } catch (error) {
+                results.failed++;
+                results.errors.push({
+                    userId,
+                    error: (error as Error).message,
+                });
+            }
+        }
+
+        // Log admin action
+        await auditLogService.logAction(
+            (req as any).user?.id || null,
+            AdminActionType.FREE_BET_ASSIGNED,
+            `Set free bets to ${count} for ${results.successful} users`,
+            { userIds, count, results },
+            req.ip || null
+        );
+
+        res.json({
+            success: true,
+            message: `Set free bets for ${results.successful} users`,
+            results,
+        });
+    } catch (error) {
+        logger.error('Failed to set bulk free bets', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to set bulk free bets',
+        });
+    }
+});
+
 export default router;

@@ -19,38 +19,83 @@ router.use(requireAdmin);
  */
 router.get('/players', async (req: Request, res: Response) => {
     try {
+        logger.info('GET /api/admin/game/players - Starting request', {
+            userId: req.userId,
+            userRole: req.user?.role,
+        });
+
         const limit = Math.min(parseInt(req.query.limit as string) || 50, 500);
         const offset = parseInt(req.query.offset as string) || 0;
         const search = req.query.search as string;
-        const isActive = req.query.isActive as string;
 
-        const userRepo = AppDataSource.getRepository(User);
-        let query = userRepo.createQueryBuilder('user')
-            .where('user.role = :role', { role: UserRole.PLAYER });
+        logger.info('GET /api/admin/game/players - Query params', {
+            limit,
+            offset,
+            search,
+        });
 
-        if (search) {
-            query = query.andWhere(
-                '(user.username ILIKE :search OR user.address ILIKE :search OR user.displayName ILIKE :search)',
-                { search: `%${search}%` }
-            );
-        }
+        try {
+            const userRepo = AppDataSource.getRepository(User);
 
-        if (isActive !== undefined) {
-            query = query.andWhere('user.isActive = :isActive', { isActive: isActive === 'true' });
-        }
+            logger.info('GET /api/admin/game/players - Creating base query');
+            let query = userRepo.createQueryBuilder('user')
+                .where('user.role = :role', { role: UserRole.PLAYER });
 
-        const [players, total] = await query
-            .orderBy('user.createdAt', 'DESC')
-            .take(limit)
-            .skip(offset)
-            .getManyAndCount();
+            if (search) {
+                logger.info('GET /api/admin/game/players - Adding search filter', { search });
+                query = query.andWhere(
+                    '(user.username ILIKE :search OR user.address ILIKE :search OR user.displayName ILIKE :search)',
+                    { search: `%${search}%` }
+                );
+            }
 
-        // Get stats for each player
-        const playerStats = await Promise.all(
-            players.map(async (player) => {
+            logger.info('GET /api/admin/game/players - Executing query');
+            const [players, total] = await query
+                .orderBy('user.createdAt', 'DESC')
+                .take(limit)
+                .skip(offset)
+                .getManyAndCount();
+
+            logger.info('GET /api/admin/game/players - Query successful', {
+                playerCount: players.length,
+                total,
+            });
+
+            if (players.length === 0) {
+                return res.json({
+                    success: true,
+                    players: [],
+                    pagination: { total: 0, limit, offset, pages: 0 },
+                });
+            }
+
+            // Get bets for all players
+            logger.info('GET /api/admin/game/players - Fetching bets');
+            const playerAddresses = players.map(p => p.address).filter(Boolean) as string[];
+
+            let allBets: PlayerBet[] = [];
+            if (playerAddresses.length > 0) {
                 const betRepo = AppDataSource.getRepository(PlayerBet);
-                const bets = await betRepo.find({ where: { address: player.address || '' } });
+                allBets = await betRepo.find({
+                    where: playerAddresses.map(address => ({ address })),
+                });
+                logger.info('GET /api/admin/game/players - Bets fetched', {
+                    betCount: allBets.length,
+                });
+            }
 
+            // Group bets by address
+            const betsByAddress = new Map<string, PlayerBet[]>();
+            for (const bet of allBets) {
+                if (!betsByAddress.has(bet.address)) {
+                    betsByAddress.set(bet.address, []);
+                }
+                betsByAddress.get(bet.address)!.push(bet);
+            }
+
+            // Build player stats
+            const playerStats = players.map((player) => {
+                const bets = betsByAddress.get(player.address || '') || [];
                 const totalBetAmount = bets.reduce((sum, bet) => sum + Number(bet.amount), 0);
                 const totalPayouts = bets.reduce((sum, bet) => sum + Number(bet.payout || 0), 0);
                 const cashoutCount = bets.filter(b => b.cashedOut).length;
@@ -69,21 +114,37 @@ router.get('/players', async (req: Request, res: Response) => {
                     lastLoginAt: player.lastLoginAt,
                     createdAt: player.createdAt,
                 };
-            })
-        );
+            });
 
-        res.json({
-            success: true,
-            players: playerStats,
-            pagination: {
-                total,
-                limit,
-                offset,
-                pages: Math.ceil(total / limit),
-            },
-        });
+            logger.info('GET /api/admin/game/players - Success');
+
+            res.json({
+                success: true,
+                players: playerStats,
+                pagination: {
+                    total,
+                    limit,
+                    offset,
+                    pages: Math.ceil(total / limit),
+                },
+            });
+        } catch (queryError) {
+            const errorMsg = queryError instanceof Error ? queryError.message : String(queryError);
+            const errorStack = queryError instanceof Error ? queryError.stack : '';
+            logger.error('Database query error', {
+                error: errorMsg,
+                stack: errorStack,
+                errorName: queryError instanceof Error ? queryError.name : 'unknown',
+            });
+            throw queryError;
+        }
     } catch (error) {
-        logger.error('Failed to fetch players', { error: (error as Error).message });
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : '';
+        logger.error('Failed to fetch players', {
+            error: errorMsg,
+            stack: errorStack,
+        });
         res.status(500).json({
             success: false,
             error: 'Failed to fetch players',
