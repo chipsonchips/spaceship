@@ -104,6 +104,56 @@ export class User {
     @Column({ type: 'timestamp', nullable: true })
     freeBetsExpiresAt!: Date | null;
 
+    // User restrictions
+    @Column({ type: 'boolean', default: false })
+    isBlocked!: boolean;
+
+    @Column({ type: 'timestamp', nullable: true })
+    blockedAt!: Date | null;
+
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    blockReason!: string | null;
+
+    @Column({ type: 'boolean', default: false })
+    isSuspended!: boolean;
+
+    @Column({ type: 'timestamp', nullable: true })
+    suspendedAt!: Date | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    suspensionExpiresAt!: Date | null;
+
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    suspensionReason!: string | null;
+
+    // Betting limits
+    @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+    dailyBetLimit!: number | null;
+
+    @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+    weeklyBetLimit!: number | null;
+
+    @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+    monthlyBetLimit!: number | null;
+
+    @Column({ type: 'numeric', precision: 10, scale: 4, default: 0 })
+    dailyBetAmount!: number;
+
+    @Column({ type: 'numeric', precision: 10, scale: 4, default: 0 })
+    weeklyBetAmount!: number;
+
+    @Column({ type: 'numeric', precision: 10, scale: 4, default: 0 })
+    monthlyBetAmount!: number;
+
+    @Column({ type: 'timestamp', nullable: true })
+    dailyBetResetAt!: Date | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    weeklyBetResetAt!: Date | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    monthlyBetResetAt!: Date | null;
+
     // Preferences
     @Column({ type: 'simple-json', default: '{}' })
     preferences!: {

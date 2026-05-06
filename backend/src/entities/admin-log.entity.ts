@@ -22,6 +22,12 @@ export enum AdminActionType {
     ADMIN_CREATED = 'admin_created',
     ADMIN_DELETED = 'admin_deleted',
     SETTINGS_CHANGED = 'settings_changed',
+    USER_BLOCKED = 'user_blocked',
+    USER_UNBLOCKED = 'user_unblocked',
+    USER_SUSPENDED = 'user_suspended',
+    USER_UNSUSPENDED = 'user_unsuspended',
+    USER_BET_LIMIT_SET = 'user_bet_limit_set',
+    FREE_BET_ASSIGNED = 'free_bet_assigned',
 }
 
 @Entity({ name: 'admin_logs' })
