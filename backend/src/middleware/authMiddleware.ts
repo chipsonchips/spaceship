@@ -73,6 +73,7 @@ export function requireAdmin(
     next: NextFunction
 ): void {
     if (!req.user) {
+        logger.error('requireAdmin: No user object found in request');
         res.status(401).json({
             success: false,
             error: 'Authentication required',
@@ -83,6 +84,7 @@ export function requireAdmin(
     if ((req.user.role as string) !== 'admin') {
         logger.warn(`Unauthorized admin access attempt by user ${req.user.userId}`, {
             ip: req.ipAddress,
+            userRole: req.user.role,
         });
         res.status(403).json({
             success: false,
@@ -176,37 +178,33 @@ export function authenticateTokenOrAdminSecret(
     const authHeader = req.headers.authorization;
     const adminSecretHeader = req.headers['x-admin-secret'] as string;
 
+    logger.info('authenticateTokenOrAdminSecret: Checking authentication', {
+        hasAuthHeader: !!authHeader,
+        hasAdminSecretHeader: !!adminSecretHeader,
+        authHeaderPrefix: authHeader?.substring(0, 10),
+    });
+
     // Try JWT first
     const token = extractTokenFromHeader(authHeader);
     if (token) {
+        logger.info('authenticateTokenOrAdminSecret: Found JWT token');
         const payload = verifyToken(token);
         if (payload) {
+            logger.info('authenticateTokenOrAdminSecret: JWT token verified successfully');
             req.user = payload;
             req.userId = payload.userId;
             req.ipAddress = getClientIp(req);
             next();
             return;
         }
+        logger.warn('authenticateTokenOrAdminSecret: JWT token verification failed');
     }
 
     // Try admin secret from header
-    if (adminSecretHeader && verifyAdminSecret(adminSecretHeader)) {
-        // Create a synthetic admin payload
-        req.user = {
-            userId: 'legacy-admin',
-            role: 'admin' as any,
-            permissions: [],
-        };
-        req.userId = 'legacy-admin';
-        req.ipAddress = getClientIp(req);
-        next();
-        return;
-    }
-
-    // Fall back to Bearer token as admin secret (legacy)
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const secret = authHeader.substring(7);
-        if (verifyAdminSecret(secret)) {
+    if (adminSecretHeader) {
+        logger.info('authenticateTokenOrAdminSecret: Found x-admin-secret header');
+        if (verifyAdminSecret(adminSecretHeader)) {
+            logger.info('authenticateTokenOrAdminSecret: Admin secret verified successfully');
             // Create a synthetic admin payload
             req.user = {
                 userId: 'legacy-admin',
@@ -218,7 +216,33 @@ export function authenticateTokenOrAdminSecret(
             next();
             return;
         }
+        logger.warn('authenticateTokenOrAdminSecret: Admin secret verification failed');
     }
+
+    // Fall back to Bearer token as admin secret (legacy)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        logger.info('authenticateTokenOrAdminSecret: Trying Bearer token as admin secret');
+        const secret = authHeader.substring(7);
+        if (verifyAdminSecret(secret)) {
+            logger.info('authenticateTokenOrAdminSecret: Bearer token verified as admin secret');
+            // Create a synthetic admin payload
+            req.user = {
+                userId: 'legacy-admin',
+                role: 'admin' as any,
+                permissions: [],
+            };
+            req.userId = 'legacy-admin';
+            req.ipAddress = getClientIp(req);
+            next();
+            return;
+        }
+        logger.warn('authenticateTokenOrAdminSecret: Bearer token not valid as admin secret');
+    }
+
+    logger.error('authenticateTokenOrAdminSecret: All authentication methods failed', {
+        hasAuthHeader: !!authHeader,
+        hasAdminSecretHeader: !!adminSecretHeader,
+    });
 
     res.status(401).json({
         success: false,

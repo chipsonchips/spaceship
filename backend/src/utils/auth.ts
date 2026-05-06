@@ -57,18 +57,33 @@ export function generateRefreshToken(user: User): string {
  * Generate both access and refresh tokens
  */
 export function generateTokens(user: User): AuthTokens {
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    try {
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
 
-    // Parse expiry time
-    const decoded = jwt.decode(accessToken) as any;
-    const expiresIn = decoded.exp ? (decoded.exp - decoded.iat) * 1000 : 86400000; // Default 24h
+        // Parse expiry time
+        const decoded = jwt.decode(accessToken) as any;
+        if (!decoded || !decoded.exp || !decoded.iat) {
+            console.error('Failed to decode access token:', { decoded });
+            // Fallback to 24 hours
+            return {
+                accessToken,
+                refreshToken,
+                expiresIn: 86400000,
+            };
+        }
 
-    return {
-        accessToken,
-        refreshToken,
-        expiresIn,
-    };
+        const expiresIn = (decoded.exp - decoded.iat) * 1000;
+
+        return {
+            accessToken,
+            refreshToken,
+            expiresIn,
+        };
+    } catch (error) {
+        console.error('generateTokens error:', error);
+        throw error;
+    }
 }
 
 /**
