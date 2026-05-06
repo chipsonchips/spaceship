@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { errorHandler, notFoundHandler, catchAsync } from '../middleware/errorHandler.ts';
 import { AppError, NotFoundError, ValidationError } from '../utils/errors.ts';
+import { logger } from '../utils/logger.ts';
 import type { Request, Response, NextFunction } from 'express';
 
 describe('Error Handler Middleware', () => {
@@ -157,13 +158,13 @@ describe('Error Handler Middleware', () => {
     });
 
     it('should log error to console', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+      const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => { });
       const error = new Error('Test error');
 
       errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
 
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
+      expect(loggerSpy).toHaveBeenCalled();
+      loggerSpy.mockRestore();
     });
   });
 
