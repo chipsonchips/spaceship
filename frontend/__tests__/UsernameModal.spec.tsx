@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import UsernameModal from "@/components/UsernameModal";
+import UsernameModal from "@/components/auth/UsernameModal";
 import { useAuth } from "@/context/AuthContext";
 
 // Mock useAuth
