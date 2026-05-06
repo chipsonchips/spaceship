@@ -138,13 +138,13 @@ export default function GameAdminPage() {
         {/* Statistics Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">
+                  <p className="text-slate-400 text-sm font-medium">
                     Total Rounds
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                  <p className="text-3xl font-bold text-white mt-2">
                     {stats.totalRounds}
                   </p>
                 </div>
@@ -152,13 +152,13 @@ export default function GameAdminPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 border-l-4 border-purple-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">
+                  <p className="text-slate-400 text-sm font-medium">
                     Total Players
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                  <p className="text-3xl font-bold text-white mt-2">
                     {stats.totalPlayers}
                   </p>
                 </div>
@@ -166,13 +166,13 @@ export default function GameAdminPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 border-l-4 border-orange-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">
+                  <p className="text-slate-400 text-sm font-medium">
                     Total Bets
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                  <p className="text-3xl font-bold text-white mt-2">
                     {stats.totalBets}
                   </p>
                 </div>
@@ -180,13 +180,13 @@ export default function GameAdminPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">
+                  <p className="text-slate-400 text-sm font-medium">
                     House Profit
                   </p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">
+                  <p className="text-3xl font-bold text-green-400 mt-2">
                     {parseFloat(stats.houseProfit).toFixed(2)}
                   </p>
                 </div>
@@ -197,19 +197,19 @@ export default function GameAdminPage() {
         )}
 
         {/* Players List */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Players</h2>
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl">
+          <div className="p-6 border-b border-slate-700">
+            <h2 className="text-xl font-bold text-white mb-4">Players</h2>
 
             <form onSubmit={handleSearch} className="flex gap-2">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
                 <input
                   type="text"
                   placeholder="Search by username or address..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-800/50 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <button
@@ -224,35 +224,35 @@ export default function GameAdminPage() {
           {loading ? (
             <div className="p-12 text-center">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Loading players...</p>
+              <p className="text-slate-400">Loading players...</p>
             </div>
           ) : players.length === 0 ? (
             <div className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">No players found</p>
+              <Users className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-400">No players found</p>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-slate-800/50 border-b border-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                         Player
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-300">
                         Address
                       </th>
-                      <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-right text-sm font-semibold text-slate-300">
                         Total Bets
                       </th>
-                      <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-right text-sm font-semibold text-slate-300">
                         Bet Amount
                       </th>
-                      <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-right text-sm font-semibold text-slate-300">
                         Payouts
                       </th>
-                      <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">
+                      <th className="px-6 py-3 text-center text-sm font-semibold text-slate-300">
                         Action
                       </th>
                     </tr>
@@ -261,38 +261,38 @@ export default function GameAdminPage() {
                     {players.map((player) => (
                       <tr
                         key={player.id}
-                        className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                        className="border-b border-slate-700 hover:bg-slate-800/30 transition-colors"
                       >
                         <td className="px-6 py-4">
                           <div>
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-white">
                               {player.displayName ||
                                 player.username ||
                                 "Unknown"}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-slate-400">
                               {player.username}
                             </p>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+                        <td className="px-6 py-4 text-sm text-slate-400 font-mono">
                           {player.address
                             ? `${player.address.slice(0, 6)}...${player.address.slice(-4)}`
                             : "N/A"}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-gray-900 font-medium">
+                        <td className="px-6 py-4 text-right text-sm text-white font-medium">
                           {player.totalBets}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-gray-900">
+                        <td className="px-6 py-4 text-right text-sm text-slate-300">
                           {parseFloat(player.totalBetAmount).toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-gray-900">
+                        <td className="px-6 py-4 text-right text-sm text-slate-300">
                           {parseFloat(player.totalPayouts).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <Link
                             href={`/admin/game/players/${player.id}`}
-                            className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                            className="text-blue-400 hover:text-blue-300 font-medium text-sm"
                           >
                             View Details
                           </Link>
@@ -304,15 +304,15 @@ export default function GameAdminPage() {
               </div>
 
               {/* Pagination */}
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                <p className="text-sm text-gray-600">
+              <div className="px-6 py-4 border-t border-slate-700 flex items-center justify-between">
+                <p className="text-sm text-slate-400">
                   Page {currentPage + 1} of {totalPages}
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 0}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
