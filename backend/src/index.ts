@@ -46,8 +46,9 @@ corsOrigins.push(/^https:\/\/.*\.ngrok(?:-free)?\.app$/);
 app.use(cors({
   origin: corsOrigins as any,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Secret', 'x-admin-secret'],
+  credentials: true,
+  exposedHeaders: ['Content-Type']
 }));
 
 app.use(express.json());
