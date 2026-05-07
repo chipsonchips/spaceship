@@ -19,6 +19,32 @@ vi.mock('../services/game-utils.ts', () => ({
   generateCrashMultiplier: vi.fn(() => 2.5),
   calculateCurrentMultiplier: vi.fn((elapsed) => 1.0 + elapsed / 1000),
   calculatePlanePosition: vi.fn((elapsed) => ({ x: 10 + elapsed / 100, y: 80 })),
+  sanitizeRound: vi.fn((round) => round),
+}));
+
+vi.mock('../utils/encryption.ts', () => ({
+  encrypt: vi.fn(() => ({ encrypted: 'enc', iv: 'iv', authTag: 'tag' })),
+  decrypt: vi.fn(() => 'test-seed-123'),
+}));
+
+vi.mock('../utils/provably-fair.ts', () => ({
+  combineClientSeeds: vi.fn(() => 'combined-hash'),
+  createFinalSeed: vi.fn(() => 'final-seed'),
+}));
+
+vi.mock('../services/security-monitor.service.ts', () => ({
+  securityMonitor: {
+    detectHighWinRate: vi.fn(),
+    detectPerfectCashouts: vi.fn(),
+    detectConsecutiveWins: vi.fn(),
+    isSuspicious: vi.fn(() => false),
+  },
+}));
+
+vi.mock('./audit-log.service.js', () => ({
+  auditLogService: {
+    logAction: vi.fn(),
+  },
 }));
 
 vi.mock('../services/leaderboard.service.ts', () => ({
