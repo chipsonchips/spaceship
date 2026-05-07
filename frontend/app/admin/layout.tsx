@@ -207,7 +207,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col md:flex-row">
+    <div className="h-screen bg-slate-950 flex flex-col md:flex-row overflow-hidden">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
         <div className="font-orbitron font-bold text-lg tracking-wide text-white">
@@ -280,7 +280,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-x-hidden pt-4 md:pt-0">
+      <main className="flex-1 min-w-0 overflow-y-auto pt-4 md:pt-0 custom-scrollbar">
         <div className="max-w-6xl mx-auto p-4 md:p-8">{children}</div>
       </main>
 
