@@ -52,6 +52,8 @@ export default function GameAdminPage() {
   const isAuthorized = isAdmin() || hasAdminSecret;
 
   const loadData = async () => {
+    if (!isAuthorized) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -72,7 +74,6 @@ export default function GameAdminPage() {
   };
 
   useEffect(() => {
-    if (!isAuthorized) return;
     loadData();
   }, [currentPage, search, isAuthorized]);
 
