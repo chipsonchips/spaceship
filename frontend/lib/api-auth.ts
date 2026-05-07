@@ -27,17 +27,23 @@ function getAdminSecret(): string | null {
 function getAuthHeaders(): Record<string, string> {
     const token = getAuthToken();
     const adminSecret = getAdminSecret();
+
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
 
     if (token) {
-        console.log('Using JWT token for authentication');
         headers['Authorization'] = `Bearer ${token}`;
-    } else if (adminSecret) {
-        console.log('Using admin secret for authentication');
+    }
+    
+    if (adminSecret) {
         headers['x-admin-secret'] = adminSecret;
-    } else {
+        if (!token) {
+            headers['Authorization'] = `Bearer ${adminSecret}`;
+        }
+    }
+
+    if (!token && !adminSecret) {
         console.log('No authentication credentials found');
     }
 
