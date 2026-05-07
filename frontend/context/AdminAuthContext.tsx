@@ -7,6 +7,8 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { useDisconnect } from "wagmi";
+import { useAuth } from "./AuthContext";
 
 interface AdminAuthContextType {
   adminSecret: string | null;
@@ -24,9 +26,16 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(
 );
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
+  const {
+    isAdmin,
+    isAuthenticated: isAppAuthenticated,
+    isLoading: isAppLoading,
+    logout: appLogout,
+  } = useAuth();
+  const { disconnect } = useDisconnect();
   const [adminSecret, setAdminSecret] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLegacyAuthenticated, setIsLegacyAuthenticated] = useState(false);
+  const [isLegacyLoading, setIsLegacyLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedChain, setSelectedChainState] = useState<number>(8453);
 
@@ -42,15 +51,19 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     if (storedSecret) {
       console.log("AdminAuthContext: Found stored admin secret");
       setAdminSecret(storedSecret);
-      setIsAuthenticated(true);
+      setIsLegacyAuthenticated(true);
     }
 
-    setIsLoading(false);
+    setIsLegacyLoading(false);
   }, []);
+
+  const combinedIsAuthenticated =
+    (isAppAuthenticated && isAdmin()) || isLegacyAuthenticated;
+  const combinedIsLoading = isAppLoading || isLegacyLoading;
 
   const login = useCallback(async (secret: string, chainId: number = 8453) => {
     try {
-      setIsLoading(true);
+      setIsLegacyLoading(true);
       setError(null);
 
       console.log(
@@ -65,7 +78,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         {
           method: "GET",
           headers: {
-            "x-admin-secret": secret,
+            Authorization: `Bearer ${secret}`,
             "Content-Type": "application/json",
           },
         },
@@ -79,7 +92,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       console.log("AdminAuthContext: Admin secret verified successfully");
 
       setAdminSecret(secret);
-      setIsAuthenticated(true);
+      setIsLegacyAuthenticated(true);
       setSelectedChainState(chainId);
 
       localStorage.setItem("adminSecret", secret);
@@ -89,23 +102,28 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       console.error("AdminAuthContext: Login error:", errorMsg);
       setError(errorMsg);
       setAdminSecret(null);
-      setIsAuthenticated(false);
+      setIsLegacyAuthenticated(false);
       localStorage.removeItem("adminSecret");
       localStorage.removeItem("adminSelectedChain");
       throw err;
     } finally {
-      setIsLoading(false);
+      setIsLegacyLoading(false);
     }
   }, []);
 
   const logout = useCallback(() => {
     console.log("AdminAuthContext: Logging out");
     setAdminSecret(null);
-    setIsAuthenticated(false);
+    setIsLegacyAuthenticated(false);
     setError(null);
     localStorage.removeItem("adminSecret");
     localStorage.removeItem("adminSelectedChain");
-  }, []);
+    
+    // Completely clear Web3 JWT session as well
+    appLogout();
+    // Disconnect wagmi wallet
+    disconnect();
+  }, [appLogout, disconnect]);
 
   const setSelectedChain = useCallback((chainId: number) => {
     console.log("AdminAuthContext: Changing chain to", chainId);
@@ -115,8 +133,8 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AdminAuthContextType = {
     adminSecret,
-    isAuthenticated,
-    isLoading,
+    isAuthenticated: combinedIsAuthenticated,
+    isLoading: combinedIsLoading,
     error,
     selectedChain,
     login,
@@ -138,3 +156,4 @@ export function useAdminAuth() {
   }
   return context;
 }
+
