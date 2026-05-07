@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import crypto from 'crypto';
 import { Round } from '../entities/round.entity.js';
 import { PlayerBet } from '../entities/player-bet.entity.js';
 import { AppDataSource } from '../config/database.js';
@@ -8,12 +9,20 @@ import {
   calculatePlanePosition,
   generateServerSeed,
   hashServerSeed,
+  sanitizeRound,
 } from './game-utils.js';
 import { LeaderboardService } from './leaderboard.service.js';
 import { HistoryService } from './history.service.js';
 import { FreeBetService } from './free-bet.service.js';
 import { UserService } from './user.service.js';
 import { logger } from '../utils/logger.js';
+import { encrypt, decrypt } from '../utils/encryption.js';
+import { combineClientSeeds, createFinalSeed } from '../utils/provably-fair.js';
+
+const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || '';
+import { securityMonitor } from './security-monitor.service.js';
+import { auditLogService } from './audit-log.service.js';
+import { AdminActionType } from '../entities/admin-log.entity.js';
 
 export class GameEngine {
   private isRunning = false;
@@ -24,6 +33,7 @@ export class GameEngine {
   private autoCashedOutBets = new Set<number>(); // Track already auto-cashed bets
   private activeAutoCashouts: PlayerBet[] = []; // In-memory active bets for current round
   private previousMultiplier = 1.0; // Track previous multiplier for interpolation
+  private chainServices = new Map<number, any>();
   private readonly BETTING_DURATION_MS = Number(process.env.BETTING_DURATION_MS) || 15000;
 
   leaderboardService = new LeaderboardService();
@@ -54,10 +64,13 @@ export class GameEngine {
               players: round.players || [],
             }
             : this.currentRound;
-          socket.emit('GAME_STATE_UPDATE', roundData);
+
+          const sanitizedData = roundData ? sanitizeRound(roundData, ENCRYPTION_SECRET) : null;
+          socket.emit('GAME_STATE_UPDATE', sanitizedData);
         } catch (error) {
           logger.error('Failed to emit initial game state', { error });
-          socket.emit('GAME_STATE_UPDATE', this.currentRound || null);
+          const sanitizedCurrent = this.currentRound ? sanitizeRound(this.currentRound, ENCRYPTION_SECRET) : null;
+          socket.emit('GAME_STATE_UPDATE', sanitizedCurrent);
         }
       })();
 
@@ -181,6 +194,20 @@ export class GameEngine {
           const serverSeed = generateServerSeed();
           const serverSeedHash = hashServerSeed(serverSeed);
 
+          // Encrypt server seed for storage
+          let encryptedSeed = serverSeed;
+          let iv: string | null = null;
+          let authTag: string | null = null;
+
+          if (ENCRYPTION_SECRET) {
+            const encrypted = encrypt(serverSeed, ENCRYPTION_SECRET);
+            encryptedSeed = encrypted.encrypted;
+            iv = encrypted.iv;
+            authTag = encrypted.authTag;
+          } else {
+            logger.warn('ENCRYPTION_SECRET not set, storing server seed in plaintext');
+          }
+
           logger.info(`Creating new round with ID: ${nextId}`);
 
           const round = this.roundRepo.create({
@@ -190,7 +217,9 @@ export class GameEngine {
             flyStartTime: Date.now() + this.BETTING_DURATION_MS,
             crashMultiplier: null,
             currentMultiplier: 1.0,
-            serverSeed,
+            serverSeed: encryptedSeed,
+            serverSeedIV: iv,
+            serverSeedAuthTag: authTag,
             serverSeedHash,
             totalBets: 0,
             totalPayouts: 0,
@@ -273,7 +302,63 @@ export class GameEngine {
       return;
     }
 
-    const targetCrash = generateCrashMultiplier(this.currentRound.serverSeed || '');
+    // 1. Decrypt server seed
+    let serverSeed = this.currentRound.serverSeed || '';
+    if (ENCRYPTION_SECRET && this.currentRound.serverSeedIV && this.currentRound.serverSeedAuthTag) {
+      try {
+        serverSeed = decrypt(
+          this.currentRound.serverSeed!,
+          this.currentRound.serverSeedIV!,
+          this.currentRound.serverSeedAuthTag!,
+          ENCRYPTION_SECRET
+        );
+      } catch (err) {
+        logger.error('Failed to decrypt server seed', { 
+          roundId: this.currentRound.roundId, 
+          error: (err as Error).message 
+        });
+      }
+    }
+
+    // Log seed access for audit
+    await auditLogService.logAction(
+      null,
+      AdminActionType.SEED_ACCESSED,
+      `Server seed decrypted for crash point calculation`,
+      { roundId: this.currentRound.roundId, serverSeedHash: this.currentRound.serverSeedHash },
+      null,
+      null,
+      true
+    );
+
+    // 2. Get all client seeds from bets
+    const bets = await this.betRepo.find({
+      where: { round: { id: this.currentRound.id } },
+    });
+
+    const clientSeeds = bets
+      .map((b) => b.clientSeed)
+      .filter((s) => s !== null && s !== undefined) as string[];
+
+    logger.info("Combining seeds for crash calculation", {
+      roundId: this.currentRound.roundId,
+      clientSeedsCount: clientSeeds.length,
+    });
+
+    // 3. Combine client seeds
+    const combinedClientSeedHash = combineClientSeeds(clientSeeds);
+
+    // 4. Create final seed
+    const nonce = this.currentRound.roundId;
+    const finalSeed = createFinalSeed(serverSeed, combinedClientSeedHash, nonce);
+
+    // 5. Calculate crash point from final seed
+    const targetCrash = generateCrashMultiplier(finalSeed);
+
+    // 6. Store for verification
+    this.currentRound.combinedClientSeedHash = combinedClientSeedHash;
+    this.currentRound.finalSeed = finalSeed;
+
     const flyingDuration = Math.min(20000, Math.max(2000, targetCrash * 2000));
 
     // Update round phase with retry logic for transaction conflicts
@@ -426,6 +511,9 @@ export class GameEngine {
 
     if (!this.currentRound) return;
 
+    // Detect perfect cashouts
+    await securityMonitor.detectPerfectCashouts(this.currentRound.roundId);
+
     this.currentRound.phase = 'CRASHED';
     this.currentRound.crashMultiplier = crashMultiplier;
     this.currentRound.currentMultiplier = crashMultiplier;
@@ -484,7 +572,14 @@ export class GameEngine {
     setTimeout(() => this.startNewRound(), 10000);
   }
 
-  async placeBet(address: string, amount: number, chainId: number, useFreeBet: boolean = false, autoCashoutMultiplier?: number) {
+  async placeBet(
+    address: string, 
+    amount: number, 
+    chainId: number, 
+    useFreeBet: boolean = false, 
+    autoCashoutMultiplier?: number,
+    clientSeed?: string
+  ) {
     if (!chainId) {
       throw new Error('chainId is required. Pass the connected chain from the frontend.');
     }
@@ -497,6 +592,15 @@ export class GameEngine {
 
     if (autoCashoutMultiplier && (autoCashoutMultiplier < 1.01 || autoCashoutMultiplier > 100)) {
       throw new Error('Auto-cashout multiplier must be between 1.01 and 100');
+    }
+
+    // Generate client seed if not provided (should be provided by frontend ideally)
+    if (!clientSeed) {
+      clientSeed = crypto.randomBytes(16).toString('hex');
+    }
+
+    if (securityMonitor.isSuspicious(address)) {
+      throw new Error('Your account is under review. Please contact support.');
     }
 
     let finalTxHash: string | null = null;
@@ -523,13 +627,20 @@ export class GameEngine {
     } else {
       // Relay to chain for regular bets
       try {
-        const chainService = new (await import('./chain.service.js')).ChainService(chainId);
-
+        if (!this.chainServices.has(Number(chainId))) {
+          const { ChainService } = await import('./chain.service.js');
+          this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
+        }
+        
+        const chainService = this.chainServices.get(Number(chainId));
         if (chainService) {
           finalTxHash = await chainService.placeBetFor(this.currentRound.roundId, address, amount);
         }
       } catch (err) {
-        logger.error('Failed to relay bet to chain', { error: (err as Error).message, chainId });
+        logger.error('Failed to relay bet to chain', { 
+          error: (err as Error).message, 
+          chainId: Number(chainId) 
+        });
         throw new Error('Failed to place bet on chain: ' + (err as Error).message);
       }
     }
@@ -544,6 +655,7 @@ export class GameEngine {
       autoCashoutMultiplier: autoCashoutMultiplier || null,
       chainId,
       timestamp: Date.now(),
+      clientSeed,
       round: this.currentRound,
     });
     await this.betRepo.save(bet);
@@ -586,22 +698,25 @@ export class GameEngine {
     // Relay cashout to chain (non-blocking, with error handling)
     let chainError: Error | null = null;
     try {
-      const chainService = new (await import('./chain.service.js')).ChainService(chainId);
+      if (!this.chainServices.has(Number(chainId))) {
+        const { ChainService } = await import('./chain.service.js');
+        this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
+      }
 
+      const chainService = this.chainServices.get(Number(chainId));
       if (chainService) {
         await chainService.cashOutFor(bet.round.roundId, bet.address, Number(bet.payout), Number(bet.cashoutMultiplier));
-        logger.info('Cashout relayed to chain successfully', { betId, chainId });
+        logger.info('Cashout relayed to chain successfully', { betId, chainId: Number(chainId) });
       }
     } catch (err) {
       chainError = err as Error;
       logger.error('Failed to relay cashout to chain', {
         error: chainError.message,
-        chainId,
+        chainId: Number(chainId),
         betId,
         note: 'Cashout will still be recorded locally but may need manual on-chain settlement'
       });
       // Don't throw - allow local cashout to succeed even if chain fails
-      // This prevents players from losing their winnings due to RPC issues
     }
 
     // Save cashout locally regardless of chain status
@@ -662,12 +777,12 @@ export class GameEngine {
           players: players || [], // Use DB state (authoritative for bets)
         };
 
-        this.io.emit('GAME_STATE_UPDATE', roundData);
+        this.io.emit('GAME_STATE_UPDATE', sanitizeRound(roundData, ENCRYPTION_SECRET));
       }
     } catch (error) {
       logger.error('Failed to broadcast game state', { error });
       // Fallback: broadcast current round without updated players if query fails
-      this.io.emit('GAME_STATE_UPDATE', this.currentRound);
+      this.io.emit('GAME_STATE_UPDATE', sanitizeRound(this.currentRound, ENCRYPTION_SECRET));
     }
   }
 }

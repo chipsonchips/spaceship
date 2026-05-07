@@ -169,7 +169,7 @@ export class ChainService {
       const contractAddr = await this.contract.getAddress();
       logger.info('Contract details', {
         contractAddress: contractAddr,
-        chainId: (await this.provider.getNetwork()).chainId,
+        chainId: (await this.provider.getNetwork()).chainId.toString(),
         serverOperator: await this.contract.serverOperator()
       });
 

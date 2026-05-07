@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { ethers } from 'ethers';
+import { decrypt } from '../utils/encryption.js';
 
 export function generateServerSeed(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -40,4 +41,36 @@ export function calculatePlanePosition(elapsedMs: number): { x: number; y: numbe
   const eased = 1 - Math.pow(1 - progress, 2); // ease-out quad
   const y = eased * 100;
   return { x, y };
+}
+
+/**
+ * Strips sensitive data like serverSeed from the round object before sending to clients.
+ * Reveals decrypted serverSeed only after the round has CRASHED.
+ */
+export function sanitizeRound(round: any, encryptionSecret?: string): any {
+  if (!round) return null;
+  const sanitized = { ...round };
+
+  // Always remove the serverSeed if the round is not crashed
+  if (sanitized.phase !== 'CRASHED') {
+    delete sanitized.serverSeed;
+  } else if (sanitized.serverSeed && sanitized.serverSeedIV && sanitized.serverSeedAuthTag && encryptionSecret) {
+    // Decrypt the seed for reveal
+    try {
+      sanitized.serverSeed = decrypt(
+        sanitized.serverSeed,
+        sanitized.serverSeedIV,
+        sanitized.serverSeedAuthTag,
+        encryptionSecret
+      );
+    } catch (err) {
+      // If decryption fails, we leave it as is or log it
+    }
+  }
+
+  // Remove encryption metadata from public broadcast
+  delete sanitized.serverSeedIV;
+  delete sanitized.serverSeedAuthTag;
+
+  return sanitized;
 }
