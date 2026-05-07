@@ -19,12 +19,13 @@ const PlayerActivityFeed: React.FC = () => {
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
   const prevPlayersRef = React.useRef<Set<string>>(new Set());
 
-  if (!settings.activityFeedEnabled) {
-    return null;
-  }
-
   useEffect(() => {
-    if (!roundData || roundData.phase !== "CRASHED") return;
+    if (
+      !settings.activityFeedEnabled ||
+      !roundData ||
+      roundData.phase !== "CRASHED"
+    )
+      return;
 
     const newActivities: ActivityEvent[] = [];
 
@@ -62,12 +63,7 @@ const PlayerActivityFeed: React.FC = () => {
     if (newActivities.length > 0) {
       setActivities((prev) => [...newActivities, ...prev].slice(0, 5));
     }
-  }, [
-    roundData?.roundId,
-    roundData?.phase,
-    roundData?.players,
-    roundData?.crashMultiplier,
-  ]);
+  }, [settings.activityFeedEnabled, roundData]);
 
   useEffect(() => {
     if (activities.length === 0) return;
@@ -85,7 +81,7 @@ const PlayerActivityFeed: React.FC = () => {
     }
   }, [roundData?.phase]);
 
-  if (activities.length === 0) return null;
+  if (!settings.activityFeedEnabled || activities.length === 0) return null;
 
   const activity = activities[0];
   const shortAddress = `${activity.address.slice(0, 6)}...${activity.address.slice(-4)}`;

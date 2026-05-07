@@ -21,19 +21,20 @@ const SessionStats: React.FC = () => {
     totalProfit: 0,
   });
 
-  if (!settings.sessionStatsEnabled) {
-    return null;
-  }
-
   useEffect(() => {
-    if (!gameHistory || !walletAddress || gameHistory.length === 0) {
+    if (
+      !settings.sessionStatsEnabled ||
+      !gameHistory ||
+      !walletAddress ||
+      gameHistory.length === 0
+    ) {
       setStats({ wins: 0, losses: 0, totalProfit: 0 });
       return;
     }
 
     let wins = 0;
     let losses = 0;
-    let totalProfit = 0;
+    const totalProfit = 0;
 
     gameHistory.forEach((game) => {
       if (game.winnersCount > 0) {
@@ -44,7 +45,11 @@ const SessionStats: React.FC = () => {
     });
 
     setStats({ wins, losses, totalProfit });
-  }, [gameHistory, walletAddress]);
+  }, [settings.sessionStatsEnabled, gameHistory, walletAddress]);
+
+  if (!settings.sessionStatsEnabled) {
+    return null;
+  }
 
   const totalRounds = stats.wins + stats.losses;
   const winRate =
