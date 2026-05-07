@@ -28,6 +28,9 @@ export enum AdminActionType {
     USER_UNSUSPENDED = 'user_unsuspended',
     USER_BET_LIMIT_SET = 'user_bet_limit_set',
     FREE_BET_ASSIGNED = 'free_bet_assigned',
+    SECURITY_ALERT = 'security_alert',
+    SEED_ACCESSED = 'seed_accessed',
+    SUSPICIOUS_ACTIVITY = 'suspicious_activity',
 }
 
 @Entity({ name: 'admin_logs' })

@@ -36,7 +36,19 @@ export class Round {
   serverSeed!: string | null;
 
   @Column({ type: 'text', nullable: true })
+  serverSeedIV!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  serverSeedAuthTag!: string | null;
+
+  @Column({ type: 'text', nullable: true })
   serverSeedHash!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  combinedClientSeedHash!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  finalSeed!: string | null;
 
   @Column({ type: 'numeric', precision: 18, scale: 8, default: 0 })
   totalBets!: number;
