@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAdminAuth } from "@/context/AdminAuthContext";
 import { getPlayerDetails, getPlayerBets } from "@/lib/api-auth";
 import Link from "next/link";
 import {
@@ -52,7 +52,7 @@ interface Bet {
 }
 
 export default function PlayerDetailsPage() {
-  const { isAdmin } = useAuthUser();
+  const { isAuthenticated } = useAdminAuth();
   const params = useParams();
   const router = useRouter();
   const playerId = params.id as string;
@@ -87,9 +87,9 @@ export default function PlayerDetailsPage() {
   };
 
   useEffect(() => {
-    if (!isAdmin()) return;
+    if (!isAuthenticated) return;
     loadData();
-  }, [playerId, currentPage, isAdmin]);
+  }, [playerId, currentPage, isAuthenticated]);
 
   if (loading) {
     return (

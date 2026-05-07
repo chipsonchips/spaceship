@@ -39,7 +39,7 @@ interface Transaction {
 }
 
 export default function AdminDashboard() {
-  const { adminSecret, selectedChain } = useAdminAuth();
+  const { adminSecret, isAuthenticated, selectedChain } = useAdminAuth();
   const [contractStatus, setContractStatus] = useState<ContractStatus | null>(
     null,
   );
@@ -59,13 +59,14 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (adminSecret) {
+    if (isAuthenticated) {
       fetchContractStatus();
     }
-  }, [adminSecret, selectedChain]);
+  }, [isAuthenticated, selectedChain]);
+
 
   const fetchContractStatus = async () => {
-    if (!adminSecret) return;
+    if (!isAuthenticated) return;
     try {
       setIsLoading(true);
       const response = await apiAuth.adminGetContractStatus(selectedChain);
