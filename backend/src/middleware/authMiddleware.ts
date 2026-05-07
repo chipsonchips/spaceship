@@ -73,7 +73,14 @@ export function requireAdmin(
     next: NextFunction
 ): void {
     if (!req.user) {
-        logger.error('requireAdmin: No user object found in request');
+        logger.error('requireAdmin: No user object found in request', {
+            method: req.method,
+            path: req.path,
+            headers: {
+                authorization: req.headers.authorization ? 'present' : 'missing',
+                'x-admin-secret': req.headers['x-admin-secret'] ? 'present' : 'missing',
+            },
+        });
         res.status(401).json({
             success: false,
             error: 'Authentication required',
@@ -85,6 +92,8 @@ export function requireAdmin(
         logger.warn(`Unauthorized admin access attempt by user ${req.user.userId}`, {
             ip: req.ipAddress,
             userRole: req.user.role,
+            method: req.method,
+            path: req.path,
         });
         res.status(403).json({
             success: false,
@@ -179,28 +188,14 @@ export function authenticateTokenOrAdminSecret(
     const adminSecretHeader = req.headers['x-admin-secret'] as string;
 
     logger.info('authenticateTokenOrAdminSecret: Checking authentication', {
+        method: req.method,
+        path: req.path,
         hasAuthHeader: !!authHeader,
         hasAdminSecretHeader: !!adminSecretHeader,
         authHeaderPrefix: authHeader?.substring(0, 10),
     });
 
-    // Try JWT first
-    const token = extractTokenFromHeader(authHeader);
-    if (token) {
-        logger.info('authenticateTokenOrAdminSecret: Found JWT token');
-        const payload = verifyToken(token);
-        if (payload) {
-            logger.info('authenticateTokenOrAdminSecret: JWT token verified successfully');
-            req.user = payload;
-            req.userId = payload.userId;
-            req.ipAddress = getClientIp(req);
-            next();
-            return;
-        }
-        logger.warn('authenticateTokenOrAdminSecret: JWT token verification failed');
-    }
-
-    // Try admin secret from header
+    // Try admin secret from header FIRST (Root override)
     if (adminSecretHeader) {
         logger.info('authenticateTokenOrAdminSecret: Found x-admin-secret header');
         if (verifyAdminSecret(adminSecretHeader)) {
@@ -217,6 +212,22 @@ export function authenticateTokenOrAdminSecret(
             return;
         }
         logger.warn('authenticateTokenOrAdminSecret: Admin secret verification failed');
+    }
+
+    // Try JWT next
+    const token = extractTokenFromHeader(authHeader);
+    if (token) {
+        logger.info('authenticateTokenOrAdminSecret: Found JWT token');
+        const payload = verifyToken(token);
+        if (payload) {
+            logger.info('authenticateTokenOrAdminSecret: JWT token verified successfully');
+            req.user = payload;
+            req.userId = payload.userId;
+            req.ipAddress = getClientIp(req);
+            next();
+            return;
+        }
+        logger.warn('authenticateTokenOrAdminSecret: JWT token verification failed');
     }
 
     // Fall back to Bearer token as admin secret (legacy)
@@ -240,8 +251,11 @@ export function authenticateTokenOrAdminSecret(
     }
 
     logger.error('authenticateTokenOrAdminSecret: All authentication methods failed', {
+        method: req.method,
+        path: req.path,
         hasAuthHeader: !!authHeader,
         hasAdminSecretHeader: !!adminSecretHeader,
+        authHeaderLength: authHeader?.length || 0,
     });
 
     res.status(401).json({
