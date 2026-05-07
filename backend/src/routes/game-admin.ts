@@ -363,13 +363,16 @@ router.get('/statistics', async (req: Request, res: Response) => {
         const totalBets = await betRepo.count();
         const totalPlayers = await userRepo.count({ where: { role: UserRole.PLAYER } });
 
-        const history = await historyRepo.find({ order: { createdAt: 'DESC' }, take: 100 });
+        const { totalBetAmount, totalPayouts } = await historyRepo
+            .createQueryBuilder('h')
+            .select('SUM(h.totalBets)', 'totalBetAmount')
+            .addSelect('SUM(h.totalPayouts)', 'totalPayouts')
+            .getRawOne();
 
-        const totalBetAmount = history.reduce((sum, h) => sum + Number(h.totalBets), 0);
-        const totalPayouts = history.reduce((sum, h) => sum + Number(h.totalPayouts), 0);
-        const avgCrashMultiplier = history.length > 0
-            ? (history.reduce((sum, h) => sum + Number(h.crashMultiplier), 0) / history.length).toFixed(2)
-            : '0';
+        const avgCrashMultiplier = await historyRepo
+            .createQueryBuilder('h')
+            .select('AVG(h.crashMultiplier)', 'avg')
+            .getRawOne();
 
         res.json({
             success: true,
@@ -378,10 +381,10 @@ router.get('/statistics', async (req: Request, res: Response) => {
                 settledRounds,
                 totalBets,
                 totalPlayers,
-                totalBetAmount: totalBetAmount.toFixed(8),
-                totalPayouts: totalPayouts.toFixed(8),
-                houseProfit: (totalBetAmount - totalPayouts).toFixed(8),
-                averageCrashMultiplier: avgCrashMultiplier,
+                totalBetAmount: (Number(totalBetAmount) || 0).toFixed(8),
+                totalPayouts: (Number(totalPayouts) || 0).toFixed(8),
+                houseProfit: ((Number(totalBetAmount) || 0) - (Number(totalPayouts) || 0)).toFixed(8),
+                averageCrashMultiplier: (Number(avgCrashMultiplier?.avg) || 0).toFixed(2),
             },
         });
     } catch (error) {

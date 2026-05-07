@@ -202,11 +202,11 @@ export function authenticateTokenOrAdminSecret(
             logger.info('authenticateTokenOrAdminSecret: Admin secret verified successfully');
             // Create a synthetic admin payload
             req.user = {
-                userId: 'legacy-admin',
+                userId: '00000000-0000-0000-0000-000000000000', // NIL UUID for legacy admin
                 role: 'admin' as any,
                 permissions: [],
             };
-            req.userId = 'legacy-admin';
+            req.userId = undefined; // Set to undefined so it logs as NULL in UUID columns
             req.ipAddress = getClientIp(req);
             next();
             return;
@@ -238,11 +238,11 @@ export function authenticateTokenOrAdminSecret(
             logger.info('authenticateTokenOrAdminSecret: Bearer token verified as admin secret');
             // Create a synthetic admin payload
             req.user = {
-                userId: 'legacy-admin',
+                userId: '00000000-0000-0000-0000-000000000000', // NIL UUID for legacy admin
                 role: 'admin' as any,
                 permissions: [],
             };
-            req.userId = 'legacy-admin';
+            req.userId = undefined; // Set to undefined so it logs as NULL in UUID columns
             req.ipAddress = getClientIp(req);
             next();
             return;

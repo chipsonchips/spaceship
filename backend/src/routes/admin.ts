@@ -3,6 +3,8 @@ import { ChainService } from '../services/chain.service.js';
 import { getChainConfig } from '../config/chains.js';
 import { logger } from '../utils/logger.js';
 import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
+import { auditLogService } from '../services/audit-log.service.js';
+import { AdminActionType } from '../entities/admin-log.entity.js';
 
 const router = Router();
 
@@ -64,6 +66,16 @@ router.post('/house/withdraw', authenticateTokenOrAdminSecret, requireAdmin, asy
 
     const txHash = await chainService.withdrawHouseProfits(amount);
 
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.HOUSE_WITHDRAW,
+      `Withdrew ${amount} USDC on ${chainConfig.label}`,
+      { amount, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
+
     res.json({
       success: true,
       txHash,
@@ -113,6 +125,16 @@ router.post('/contract/pause', authenticateTokenOrAdminSecret, requireAdmin, asy
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.pauseContract();
 
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.CONTRACT_PAUSE,
+      `Paused contract on ${chainConfig.label}`,
+      { chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
+
     res.json({
       success: true,
       txHash,
@@ -132,6 +154,16 @@ router.post('/contract/unpause', authenticateTokenOrAdminSecret, requireAdmin, a
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.unpauseContract();
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.CONTRACT_UNPAUSE,
+      `Unpaused contract on ${chainConfig.label}`,
+      { chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
@@ -162,6 +194,16 @@ router.post('/contract/operator', authenticateTokenOrAdminSecret, requireAdmin, 
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.setServerOperator(address);
 
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.OPERATOR_SET,
+      `Set server operator to ${address} on ${chainConfig.label}`,
+      { address, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
+
     res.json({
       success: true,
       txHash,
@@ -191,6 +233,16 @@ router.post('/house/fund', authenticateTokenOrAdminSecret, requireAdmin, async (
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.fundHouse(amount);
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.HOUSE_FUND,
+      `Funded house with ${amount} USDC on ${chainConfig.label}`,
+      { amount, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
@@ -228,6 +280,16 @@ router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.withdrawETH(to, amount);
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.ETH_WITHDRAW,
+      `Withdrew ${amount} ETH to ${to} on ${chainConfig.label}`,
+      { to, amount, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
