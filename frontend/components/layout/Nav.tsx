@@ -18,19 +18,21 @@ import { injected } from "wagmi/connectors";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Settings } from "lucide-react";
 import { useGameContext } from "@/context/GameContext";
-import ChainSwitcher from "@/components/ChainSwitcher";
+import ChainSwitcher from "@/components/common/ChainSwitcher";
 import useChainInfo from "@/hooks/useChainInfo";
 import useUSDC from "@/hooks/useUSDC";
 import { useEnvironment } from "@/hooks/useEnvironment";
 import { useUsername } from "@/hooks/useUsername";
+import SettingsModal from "@/components/game/SettingsModal";
 
 const formatAddress = (addr: string) =>
   `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
 const Nav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { roundData } = useGameContext();
   const { address, isConnected } = useAccount();
@@ -100,7 +102,9 @@ const Nav = () => {
           >
             <Name />
           </span>
-          {username && <span className="font-orbitron tracking-wider">{username}</span>}
+          {username && (
+            <span className="font-orbitron tracking-wider">{username}</span>
+          )}
         </ConnectWallet>
         <WalletDropdown className="bg-slate-900 border border-emerald-500/30 rounded-xl overflow-hidden shadow-2xl backdrop-blur-xl">
           <Identity className="px-4 pt-3 pb-2 font-inter" hasCopyAddressOnClick>
@@ -120,7 +124,9 @@ const Nav = () => {
   return (
     <header
       className={`relative z-50 transition-all duration-500 ease-out bg-transparent ${
-        shouldHide ? "-translate-y-full opacity-0 absolute w-full" : "translate-y-0 opacity-100 px-3 sm:px-6 py-2.5"
+        shouldHide
+          ? "-translate-y-full opacity-0 absolute w-full"
+          : "translate-y-0 opacity-100 px-3 sm:px-6 py-2.5"
       }`}
     >
       <div className="flex items-center justify-between pointer-events-auto">
@@ -134,7 +140,9 @@ const Nav = () => {
             />
           </div>
           <span className="font-black text-lg sm:text-xl text-white font-orbitron uppercase tracking-widest flex flex-col leading-none hidden sm:block">
-            <span>AVIA<span className="text-emerald-500">TOR</span></span>
+            <span>
+              AVIA<span className="text-emerald-500">TOR</span>
+            </span>
           </span>
         </Link>
 
@@ -148,25 +156,38 @@ const Nav = () => {
           </Link>
           {isConnected && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-600/50 text-xs font-courier">
-              <span className="text-slate-400 font-bold uppercase">Balance:</span>
+              <span className="text-slate-400 font-bold uppercase">
+                Balance:
+              </span>
               <span className="text-emerald-400 font-bold drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
                 {(walletBalance || 0).toFixed(2)} USDC
               </span>
             </div>
           )}
           <ChainSwitcher />
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 border border-slate-600/50 hover:border-emerald-500/50 hover:bg-slate-700/50 transition-all text-slate-300 hover:text-emerald-400"
+            title="Game Settings"
+          >
+            <Settings size={20} />
+          </button>
           {renderWalletControls()}
         </div>
 
         {/* Mobile Menu Button */}
         <div className="flex items-center gap-2 md:hidden">
           {!isConnected && renderWalletControls()}
-          
+
           <button
             className="p-1.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? <X size={20} className="text-emerald-400" /> : <Menu size={20} />}
+            {isMenuOpen ? (
+              <X size={20} className="text-emerald-400" />
+            ) : (
+              <Menu size={20} />
+            )}
           </button>
         </div>
       </div>
@@ -181,16 +202,29 @@ const Nav = () => {
           >
             <span className="mr-2">🏆</span> Leaderboard
           </Link>
-          
+
           {isConnected && (
             <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-900/10 border border-emerald-500/20 text-sm font-courier shadow-inner">
-              <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Balance</span>
+              <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                Balance
+              </span>
               <span className="text-emerald-400 font-black text-sm drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]">
                 {(walletBalance || 0).toFixed(2)} USDC
               </span>
             </div>
           )}
-          
+
+          <button
+            onClick={() => {
+              setIsSettingsOpen(true);
+              setIsMenuOpen(false);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-800/60 border border-slate-600/50 hover:border-emerald-500/60 transition-all text-sm font-bold text-emerald-100 font-orbitron uppercase tracking-widest w-full"
+          >
+            <Settings size={18} />
+            Settings
+          </button>
+
           <div className="grid grid-cols-2 gap-2 mt-1">
             <div className="flex justify-center bg-slate-800/40 rounded-lg p-1.5 border border-slate-700/50">
               <ChainSwitcher />
@@ -201,6 +235,12 @@ const Nav = () => {
           </div>
         </div>
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </header>
   );
 };

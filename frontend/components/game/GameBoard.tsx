@@ -1,19 +1,71 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useGameContext } from "@/context/GameContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useMultiplierAnimation } from "@/hooks/useGame";
 import usePlaneAnimation from "@/hooks/usePlaneAnimation";
+import { useSound } from "@/hooks/useSound";
+import ParticleEffect from "./ParticleEffect";
 import Image from "next/image";
 
 const GameBoard: React.FC = () => {
   const { roundData } = useGameContext();
+  const { settings } = useSettings();
   const displayMultiplier = useMultiplierAnimation(roundData);
-
   const plane = usePlaneAnimation(roundData);
+  const { playCrash, playTakeoff } = useSound({
+    enabled: settings.soundEnabled,
+    volume: settings.soundVolume,
+  });
+
+  const [crashTrigger, setCrashTrigger] = useState(false);
+  const [crashPosition, setCrashPosition] = useState({ x: 0, y: 0 });
+  const prevPhaseRef = useRef<string | null>(null);
+  const planeRef = useRef<HTMLDivElement>(null);
+
+  // Trigger crash effects when phase changes to CRASHED
+  useEffect(() => {
+    if (roundData?.phase === "CRASHED" && prevPhaseRef.current !== "CRASHED") {
+      if (settings.soundEnabled) {
+        playCrash();
+      }
+
+      // Get plane position for particle effect
+      if (settings.particleEffectsEnabled && planeRef.current) {
+        const rect = planeRef.current.getBoundingClientRect();
+        setCrashPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        });
+        setCrashTrigger(true);
+        setTimeout(() => setCrashTrigger(false), 600);
+      }
+    }
+
+    if (roundData?.phase === "FLYING" && prevPhaseRef.current !== "FLYING") {
+      if (settings.soundEnabled) {
+        playTakeoff();
+      }
+    }
+
+    prevPhaseRef.current = roundData?.phase || null;
+  }, [
+    roundData?.phase,
+    playCrash,
+    playTakeoff,
+    settings.soundEnabled,
+    settings.particleEffectsEnabled,
+  ]);
 
   return (
     <div className="">
+      <ParticleEffect
+        trigger={crashTrigger}
+        x={crashPosition.x}
+        y={crashPosition.y}
+        type="crash"
+      />
       {/* Animated Radar Background - Full viewport coverage */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {/* Radar grid */}
@@ -75,7 +127,17 @@ const GameBoard: React.FC = () => {
                     : displayMultiplier >= 1.5
                       ? "text-yellow-400"
                       : "text-green-400"
-            } transition-colors duration-300 text-6xl sm:text-7xl md:text-8xl lg:text-9xl`}
+            } transition-colors duration-300 text-6xl sm:text-7xl md:text-8xl lg:text-9xl ${
+              roundData?.phase === "FLYING" && settings.animationsEnabled
+                ? "animate-pulse"
+                : ""
+            }`}
+            style={{
+              animation:
+                roundData?.phase === "FLYING" && settings.animationsEnabled
+                  ? `multiplierPulse ${Math.max(0.3, 1 - displayMultiplier * 0.1)}s ease-in-out infinite`
+                  : "none",
+            }}
           >
             {roundData?.phase === "CRASHED" && roundData.crashMultiplier
               ? Number(roundData.crashMultiplier).toFixed(2)
@@ -94,12 +156,30 @@ const GameBoard: React.FC = () => {
         </div>
       </div>
 
+      {/* Screen tint overlay for tension */}
+      {roundData?.phase === "FLYING" && settings.screenTintEnabled && (
+        <div
+          className="absolute inset-0 pointer-events-none z-5 transition-colors duration-300"
+          style={{
+            backgroundColor:
+              displayMultiplier >= 5
+                ? "rgba(239, 68, 68, 0.05)"
+                : displayMultiplier >= 3
+                  ? "rgba(234, 179, 8, 0.05)"
+                  : displayMultiplier >= 1.5
+                    ? "rgba(234, 179, 8, 0.02)"
+                    : "rgba(74, 222, 128, 0.02)",
+          }}
+        />
+      )}
+
       {roundData &&
         (roundData.phase === "FLYING" ||
           roundData.phase === "CRASHED" ||
           roundData.phase === "BETTING") && (
           <div
             className="absolute pointer-events-none"
+            ref={planeRef}
             style={{
               left: `${plane.position.x}%`,
               bottom: `${plane.position.y}%`,

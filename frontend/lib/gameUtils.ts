@@ -35,7 +35,7 @@ export function calculateGameStats(
 }
 
 export function findPlayerBet(
-  players: Array<{ address: string; [key: string]: any }>,
+  players: Array<{ address: string;[key: string]: any }>,
   playerAddress: string | null
 ) {
   if (!playerAddress) return null;
@@ -117,7 +117,7 @@ export function amountInWei(amount: number): bigint {
 }
 
 
-export default {
+const gameUtils = {
   calculateGameStats,
   findPlayerBet,
   formatAddress,
@@ -129,3 +129,5 @@ export default {
   delay,
   amountInWei,
 };
+
+export default gameUtils;

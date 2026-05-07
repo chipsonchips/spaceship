@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { userService } from '../services/user.service.js';
 import { auditLogService } from '../services/audit-log.service.js';
-import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
 import { UserRole } from '../entities/user.entity.js';
@@ -88,7 +88,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
  * GET /api/users/admin/all
  * Get all users (admin only)
  */
-router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/all', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const users = await userService.getAllAdmins();
 
@@ -119,7 +119,7 @@ router.get('/admin/all', authenticateToken, requireAdmin, async (req: Request, r
  * POST /api/users/admin/create
  * Create a new admin user
  */
-router.post('/admin/create', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/create', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { address, email, username, permissions } = req.body;
 
@@ -174,7 +174,7 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req: Reques
  * PUT /api/users/:userId/role
  * Update user role and permissions (admin only)
  */
-router.put('/:userId/role', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:userId/role', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { role, permissions } = req.body;
 
@@ -216,7 +216,7 @@ router.put('/:userId/role', authenticateToken, requireAdmin, async (req: Request
  * PUT /api/users/:userId/deactivate
  * Deactivate user (admin only)
  */
-router.put('/:userId/deactivate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:userId/deactivate', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const user = await userService.deactivateUser(req.params.userId as string);
 
@@ -248,7 +248,7 @@ router.put('/:userId/deactivate', authenticateToken, requireAdmin, async (req: R
  * PUT /api/users/:userId/activate
  * Activate user (admin only)
  */
-router.put('/:userId/activate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:userId/activate', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const user = await userService.activateUser(req.params.userId as string);
 
@@ -272,6 +272,363 @@ router.put('/:userId/activate', authenticateToken, requireAdmin, async (req: Req
         res.status(500).json({
             success: false,
             error: 'Failed to activate user',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/block
+ * Block a user (admin only)
+ */
+router.post('/:userId/block', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { reason } = req.body;
+
+        if (!reason) {
+            return res.status(400).json({
+                success: false,
+                error: 'Block reason is required',
+            });
+        }
+
+        const user = await userService.blockUser(req.params.userId as string, reason);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_BLOCKED,
+            `Blocked user ${user.id}`,
+            { userId: user.id, reason },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                isBlocked: user.isBlocked,
+                blockedAt: user.blockedAt,
+                blockReason: user.blockReason,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to block user', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to block user',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/unblock
+ * Unblock a user (admin only)
+ */
+router.post('/:userId/unblock', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const user = await userService.unblockUser(req.params.userId as string);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_UNBLOCKED,
+            `Unblocked user ${user.id}`,
+            { userId: user.id },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                isBlocked: user.isBlocked,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to unblock user', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to unblock user',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/suspend
+ * Suspend a user temporarily (admin only)
+ */
+router.post('/:userId/suspend', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { durationDays, reason } = req.body;
+
+        if (!durationDays || durationDays <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Duration in days is required and must be positive',
+            });
+        }
+
+        if (!reason) {
+            return res.status(400).json({
+                success: false,
+                error: 'Suspension reason is required',
+            });
+        }
+
+        const user = await userService.suspendUser(req.params.userId as string, durationDays, reason);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_SUSPENDED,
+            `Suspended user ${user.id} for ${durationDays} days`,
+            { userId: user.id, durationDays, reason },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                isSuspended: user.isSuspended,
+                suspendedAt: user.suspendedAt,
+                suspensionExpiresAt: user.suspensionExpiresAt,
+                suspensionReason: user.suspensionReason,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to suspend user', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to suspend user',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/unsuspend
+ * Unsuspend a user (admin only)
+ */
+router.post('/:userId/unsuspend', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const user = await userService.unsuspendUser(req.params.userId as string);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_UNSUSPENDED,
+            `Unsuspended user ${user.id}`,
+            { userId: user.id },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                isSuspended: user.isSuspended,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to unsuspend user', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to unsuspend user',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/bet-limits/daily
+ * Set daily bet limit (admin only)
+ */
+router.post('/:userId/bet-limits/daily', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { limit } = req.body;
+
+        if (limit === undefined || limit < 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Limit must be a non-negative number',
+            });
+        }
+
+        const user = await userService.setDailyBetLimit(req.params.userId as string, limit);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_BET_LIMIT_SET,
+            `Set daily bet limit for user ${user.id} to ${limit}`,
+            { userId: user.id, limitType: 'daily', limit },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                dailyBetLimit: user.dailyBetLimit,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to set daily bet limit', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to set daily bet limit',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/bet-limits/weekly
+ * Set weekly bet limit (admin only)
+ */
+router.post('/:userId/bet-limits/weekly', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { limit } = req.body;
+
+        if (limit === undefined || limit < 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Limit must be a non-negative number',
+            });
+        }
+
+        const user = await userService.setWeeklyBetLimit(req.params.userId as string, limit);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_BET_LIMIT_SET,
+            `Set weekly bet limit for user ${user.id} to ${limit}`,
+            { userId: user.id, limitType: 'weekly', limit },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                weeklyBetLimit: user.weeklyBetLimit,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to set weekly bet limit', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to set weekly bet limit',
+        });
+    }
+});
+
+/**
+ * POST /api/users/:userId/bet-limits/monthly
+ * Set monthly bet limit (admin only)
+ */
+router.post('/:userId/bet-limits/monthly', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { limit } = req.body;
+
+        if (limit === undefined || limit < 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Limit must be a non-negative number',
+            });
+        }
+
+        const user = await userService.setMonthlyBetLimit(req.params.userId as string, limit);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_BET_LIMIT_SET,
+            `Set monthly bet limit for user ${user.id} to ${limit}`,
+            { userId: user.id, limitType: 'monthly', limit },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                monthlyBetLimit: user.monthlyBetLimit,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to set monthly bet limit', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to set monthly bet limit',
+        });
+    }
+});
+
+/**
+ * DELETE /api/users/:userId/bet-limits
+ * Remove all bet limits (admin only)
+ */
+router.delete('/:userId/bet-limits', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const user = await userService.removeBetLimits(req.params.userId as string);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.USER_BET_LIMIT_SET,
+            `Removed all bet limits for user ${user.id}`,
+            { userId: user.id },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                dailyBetLimit: user.dailyBetLimit,
+                weeklyBetLimit: user.weeklyBetLimit,
+                monthlyBetLimit: user.monthlyBetLimit,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to remove bet limits', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to remove bet limits',
+        });
+    }
+});
+
+/**
+ * GET /api/users/:userId/restrictions
+ * Get user restrictions and limits (admin only)
+ */
+router.get('/:userId/restrictions', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const user = await userService.getUserById(req.params.userId as string);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+            });
+        }
+
+        res.json({
+            success: true,
+            restrictions: {
+                isBlocked: user.isBlocked,
+                blockedAt: user.blockedAt,
+                blockReason: user.blockReason,
+                isSuspended: user.isSuspended,
+                suspendedAt: user.suspendedAt,
+                suspensionExpiresAt: user.suspensionExpiresAt,
+                suspensionReason: user.suspensionReason,
+                dailyBetLimit: user.dailyBetLimit,
+                weeklyBetLimit: user.weeklyBetLimit,
+                monthlyBetLimit: user.monthlyBetLimit,
+                dailyBetAmount: user.dailyBetAmount,
+                weeklyBetAmount: user.weeklyBetAmount,
+                monthlyBetAmount: user.monthlyBetAmount,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to get user restrictions', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get user restrictions',
         });
     }
 });

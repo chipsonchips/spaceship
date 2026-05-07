@@ -2,30 +2,12 @@ import { Router, Request, Response } from 'express';
 import { ChainService } from '../services/chain.service.js';
 import { getChainConfig } from '../config/chains.js';
 import { logger } from '../utils/logger.js';
+import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
+import { auditLogService } from '../services/audit-log.service.js';
+import { AdminActionType } from '../entities/admin-log.entity.js';
 
 const router = Router();
 
-// Middleware to verify admin authorization (you should implement proper auth)
-const verifyAdmin = (req: Request, res: Response, next: () => void) => {
-  const authHeader = req.headers.authorization;
-  const adminSecret = process.env.ADMIN_SECRET;
-
-  if (!adminSecret) {
-    return res.status(500).json({
-      success: false,
-      error: 'Admin authentication not configured'
-    });
-  }
-
-  if (!authHeader || authHeader !== `Bearer ${adminSecret}`) {
-    return res.status(401).json({
-      success: false,
-      error: 'Unauthorized - Invalid admin credentials'
-    });
-  }
-
-  next();
-};
 
 // Helper to get chain service for a specific chain
 const getChainServiceForRequest = (req: Request): ChainService => {
@@ -35,7 +17,7 @@ const getChainServiceForRequest = (req: Request): ChainService => {
 };
 
 // GET /api/admin/house/balance - Get current house balance
-router.get('/house/balance', verifyAdmin, async (req: Request, res: Response) => {
+router.get('/house/balance', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const balance = await chainService.getHouseBalance();
@@ -58,7 +40,7 @@ router.get('/house/balance', verifyAdmin, async (req: Request, res: Response) =>
 });
 
 // POST /api/admin/house/withdraw - Withdraw house profits to owner
-router.post('/house/withdraw', verifyAdmin, async (req: Request, res: Response) => {
+router.post('/house/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { amount } = req.body;
 
@@ -84,6 +66,16 @@ router.post('/house/withdraw', verifyAdmin, async (req: Request, res: Response) 
 
     const txHash = await chainService.withdrawHouseProfits(amount);
 
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.HOUSE_WITHDRAW,
+      `Withdrew ${amount} USDC on ${chainConfig.label}`,
+      { amount, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
+
     res.json({
       success: true,
       txHash,
@@ -102,7 +94,7 @@ router.post('/house/withdraw', verifyAdmin, async (req: Request, res: Response) 
 });
 
 // GET /api/admin/contract/status - Get contract status
-router.get('/contract/status', verifyAdmin, async (req: Request, res: Response) => {
+router.get('/contract/status', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
@@ -127,11 +119,21 @@ router.get('/contract/status', verifyAdmin, async (req: Request, res: Response) 
 });
 
 // POST /api/admin/contract/pause - Pause contract
-router.post('/contract/pause', verifyAdmin, async (req: Request, res: Response) => {
+router.post('/contract/pause', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.pauseContract();
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.CONTRACT_PAUSE,
+      `Paused contract on ${chainConfig.label}`,
+      { chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
@@ -147,11 +149,21 @@ router.post('/contract/pause', verifyAdmin, async (req: Request, res: Response) 
 });
 
 // POST /api/admin/contract/unpause - Unpause contract
-router.post('/contract/unpause', verifyAdmin, async (req: Request, res: Response) => {
+router.post('/contract/unpause', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.unpauseContract();
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.CONTRACT_UNPAUSE,
+      `Unpaused contract on ${chainConfig.label}`,
+      { chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
@@ -167,7 +179,7 @@ router.post('/contract/unpause', verifyAdmin, async (req: Request, res: Response
 });
 
 // POST /api/admin/contract/operator - Set server operator
-router.post('/contract/operator', verifyAdmin, async (req: Request, res: Response) => {
+router.post('/contract/operator', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { address } = req.body;
 
@@ -181,6 +193,16 @@ router.post('/contract/operator', verifyAdmin, async (req: Request, res: Respons
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.setServerOperator(address);
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.OPERATOR_SET,
+      `Set server operator to ${address} on ${chainConfig.label}`,
+      { address, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
@@ -197,7 +219,7 @@ router.post('/contract/operator', verifyAdmin, async (req: Request, res: Respons
 });
 
 // POST /api/admin/house/fund - Fund the house
-router.post('/house/fund', verifyAdmin, async (req: Request, res: Response) => {
+router.post('/house/fund', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { amount } = req.body;
 
@@ -211,6 +233,16 @@ router.post('/house/fund', verifyAdmin, async (req: Request, res: Response) => {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.fundHouse(amount);
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.HOUSE_FUND,
+      `Funded house with ${amount} USDC on ${chainConfig.label}`,
+      { amount, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,
@@ -227,7 +259,7 @@ router.post('/house/fund', verifyAdmin, async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/eth/withdraw - Withdraw ETH from contract
-router.post('/eth/withdraw', verifyAdmin, async (req: Request, res: Response) => {
+router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { to, amount } = req.body;
 
@@ -248,6 +280,16 @@ router.post('/eth/withdraw', verifyAdmin, async (req: Request, res: Response) =>
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.withdrawETH(to, amount);
+
+    // Log admin action
+    await auditLogService.logAction(
+      (req as any).userId || null,
+      AdminActionType.ETH_WITHDRAW,
+      `Withdrew ${amount} ETH to ${to} on ${chainConfig.label}`,
+      { to, amount, chainId: chainService.chainId, txHash },
+      req.ip || null,
+      chainService.chainId
+    );
 
     res.json({
       success: true,

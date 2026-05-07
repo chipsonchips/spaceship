@@ -9,9 +9,9 @@
  */
 export function isFarcasterContext(): boolean {
   if (typeof window === 'undefined') return false;
-  
+
   // Check for Farcaster-specific window objects or SDK presence
-  // @ts-ignore - Farcaster SDK may inject window.farcaster
+  // @ts-expect-error - Farcaster SDK may inject window.farcaster
   return !!(window.farcaster || window.parent !== window);
 }
 

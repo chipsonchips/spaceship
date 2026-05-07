@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AviatorGameScreen from "../components/gameScreen";
+import GameScreen from "@/components/game/GameScreen";
 import { isFarcasterContext } from "@/lib/utils";
 
 export default function Home() {
@@ -27,5 +27,5 @@ export default function Home() {
     }
   }, []);
 
-  return <AviatorGameScreen />;
+  return <GameScreen />;
 }

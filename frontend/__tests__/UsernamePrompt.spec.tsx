@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import UsernamePrompt from "@/components/UsernamePrompt";
+import UsernamePrompt from "@/components/auth/UsernamePrompt";
 import { useAuth } from "@/context/AuthContext";
 import { UserRole } from "@/types/user";
 
@@ -10,7 +10,7 @@ vi.mock("@/context/AuthContext", () => ({
 }));
 
 // Mock UsernameModal
-vi.mock("@/components/UsernameModal", () => ({
+vi.mock("@/components/auth/UsernameModal", () => ({
   default: ({ isOpen, onClose }: any) =>
     isOpen ? (
       <div data-testid="username-modal">

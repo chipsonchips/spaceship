@@ -423,6 +423,7 @@ describe('UserService', () => {
             expect(mockUserRepo.find).toHaveBeenCalledWith({
                 where: { role: UserRole.ADMIN },
                 order: { createdAt: 'DESC' },
+                relations: [],
             });
         });
     });

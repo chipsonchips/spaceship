@@ -94,7 +94,7 @@ export class ChainService {
 
       const playersMerkleRoot = computePlayersMerkleRoot(players);
 
-      console.log('playersMerkleRoot', playersMerkleRoot);
+      logger.debug('Computed players merkle root', { playersMerkleRoot });
 
       const crashScaled = round.crashMultiplier
         ? Math.round(Number(round.crashMultiplier) * 100)
@@ -121,10 +121,10 @@ export class ChainService {
         )
       );
 
-      console.log('snapshotHash', snapshotHash);
+      logger.debug('Computed snapshot hash', { snapshotHash });
 
       // submit transaction (fire-and-forget style but return the tx promise)
-      console.log('Submitting round snapshot tx', {
+      logger.info('Submitting round snapshot tx', {
         roundId: round.roundId,
         playersMerkleRoot,
         totalBetsUint,
@@ -143,7 +143,7 @@ export class ChainService {
         numPlayers
       );
 
-      console.log("tx", tx);
+      logger.debug('Round snapshot transaction created', { txHash: tx.hash });
 
       logger.info('Submitted round snapshot tx', {
         roundId: round.roundId,
@@ -161,7 +161,7 @@ export class ChainService {
     try {
       // Amount is in USDC (6 decimals)
       const betAmount = BigInt(Math.round(amount * 1e6));
-      console.log('Placing bet on chain', { roundId, player, amount, betAmount: betAmount.toString() });
+      logger.debug('Placing bet on chain', { roundId, player, amount, betAmount: betAmount.toString() });
 
       logger.info('Placing bet on chain', { roundId, player, amount, betAmount: betAmount.toString() });
 
@@ -178,7 +178,6 @@ export class ChainService {
 
       return tx.hash;
     } catch (err) {
-      console.error('error', err);
       const errorMsg = (err as Error).message;
       logger.error('Failed to place bet on chain', {
         error: errorMsg,

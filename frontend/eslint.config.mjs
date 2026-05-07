@@ -20,9 +20,15 @@ const eslintConfig = [
       "@typescript-eslint/no-unsafe-declaration-merging": "off",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/ban-ts-comment": "warn",
-      "react-hooks/rules-of-hooks": "warn",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "off",
       "import/no-anonymous-default-export": "warn",
+    },
+  },
+  {
+    files: ["__tests__/**/*.spec.ts", "__tests__/**/*.spec.tsx", "vitest.setup.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];

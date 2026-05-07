@@ -2,24 +2,12 @@
 
 import React, { createContext, useContext, ReactNode } from "react";
 import useGame from "@/hooks/useGame";
-import { RoundData, GameHistory, LeaderboardEntry } from "@/types/game";
-
-interface GameContextType {
-  roundData: RoundData | null;
-  gameHistory: GameHistory[];
-  leaderboard: LeaderboardEntry[];
-  isConnected: boolean;
-  error: string | null;
-  placeBet: (
-    address: string,
-    amount: number,
-    useFreeBet?: boolean,
-    autoCashoutMultiplier?: number,
-  ) => Promise<{ success: boolean; error?: string; txHash?: string }>;
-  cashOut: (betId: number) => Promise<{ success: boolean; error?: string }>;
-  reconnect: () => void;
-  disconnect: () => void;
-}
+import {
+  RoundData,
+  GameHistory,
+  LeaderboardEntry,
+  GameContextType,
+} from "@/types";
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 

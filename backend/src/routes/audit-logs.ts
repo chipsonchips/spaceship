@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { auditLogService } from '../services/audit-log.service.js';
-import { authenticateToken, requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
 
 const router = Router();
 
-// All audit log endpoints require admin authentication
-router.use(authenticateToken);
+// All audit log endpoints require admin authentication (supports both JWT and admin secret)
+router.use(authenticateTokenOrAdminSecret);
 router.use(requireAdmin);
 
 /**

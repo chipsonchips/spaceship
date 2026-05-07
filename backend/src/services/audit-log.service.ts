@@ -1,11 +1,12 @@
 import { AppDataSource } from '../config/database.js';
 import { AdminLog, AdminActionType } from '../entities/admin-log.entity.js';
 import { logger } from '../utils/logger.js';
+import { Repository } from 'typeorm';
 
 export class AuditLogService {
-    private logRepo: any = null;
+    private logRepo: Repository<AdminLog> | null = null;
 
-    private getRepo() {
+    private getRepo(): Repository<AdminLog> {
         if (!this.logRepo) {
             this.logRepo = AppDataSource.getRepository(AdminLog);
         }

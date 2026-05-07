@@ -1,6 +1,6 @@
-import Leaderboard from "@/components/Leaderboard";
+import Leaderboard from "@/components/common/Leaderboard";
 import { GameProvider } from "@/context/GameContext";
-import Nav from "@/components/nav";
+import Nav from "@/components/layout/Nav";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 

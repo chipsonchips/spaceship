@@ -19,14 +19,32 @@ function getAuthToken(): string | null {
     return null;
 }
 
+function getAdminSecret(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('adminSecret');
+}
+
 function getAuthHeaders(): Record<string, string> {
     const token = getAuthToken();
+    const adminSecret = getAdminSecret();
+
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
 
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (adminSecret) {
+        headers['x-admin-secret'] = adminSecret;
+        if (!token) {
+            headers['Authorization'] = `Bearer ${adminSecret}`;
+        }
+    }
+
+    if (!token && !adminSecret) {
+        console.log('No authentication credentials found');
     }
 
     return headers;
@@ -134,7 +152,10 @@ export async function getUserByAddress(address: string) {
 // Admin endpoints
 export async function getAllAdmins() {
     const res = await authenticatedFetch(`${API_BASE}/api/users/admin/all`);
-    if (!res.ok) throw new Error('Failed to fetch admins');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch admins: ${res.status} ${res.statusText} - ${errorData.error || ''}`);
+    }
     return res.json();
 }
 
@@ -202,7 +223,10 @@ export async function getAuditLogs(
     const res = await authenticatedFetch(
         `${API_BASE}/api/audit-logs?${params.toString()}`
     );
-    if (!res.ok) throw new Error('Failed to fetch audit logs');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch audit logs: ${res.status} ${res.statusText} - ${errorData.error || ''}`);
+    }
     return res.json();
 }
 
@@ -313,7 +337,10 @@ export async function getAdminPlayers(limit: number = 50, offset: number = 0, se
     const res = await authenticatedFetch(
         `${API_BASE}/api/admin/game/players?${params.toString()}`
     );
-    if (!res.ok) throw new Error('Failed to fetch players');
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Failed to fetch players: ${res.status} ${res.statusText} - ${errorData.error || ''}`);
+    }
     return res.json();
 }
 
@@ -344,5 +371,117 @@ export async function getRoundDetails(roundId: number) {
 export async function getGameStatistics() {
     const res = await authenticatedFetch(`${API_BASE}/api/admin/game/statistics`);
     if (!res.ok) throw new Error('Failed to fetch game statistics');
+    return res.json();
+}
+
+// Player management endpoints
+export async function blockPlayer(userId: string, reason: string) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/block`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) throw new Error('Failed to block player');
+    return res.json();
+}
+
+export async function unblockPlayer(userId: string) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/unblock`, {
+        method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to unblock player');
+    return res.json();
+}
+
+export async function suspendPlayer(userId: string, durationDays: number, reason: string) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/suspend`, {
+        method: 'POST',
+        body: JSON.stringify({ durationDays, reason }),
+    });
+    if (!res.ok) throw new Error('Failed to suspend player');
+    return res.json();
+}
+
+export async function unsuspendPlayer(userId: string) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/unsuspend`, {
+        method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to unsuspend player');
+    return res.json();
+}
+
+export async function setDailyBetLimit(userId: string, limit: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/bet-limits/daily`, {
+        method: 'POST',
+        body: JSON.stringify({ limit }),
+    });
+    if (!res.ok) throw new Error('Failed to set daily bet limit');
+    return res.json();
+}
+
+export async function setWeeklyBetLimit(userId: string, limit: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/bet-limits/weekly`, {
+        method: 'POST',
+        body: JSON.stringify({ limit }),
+    });
+    if (!res.ok) throw new Error('Failed to set weekly bet limit');
+    return res.json();
+}
+
+export async function setMonthlyBetLimit(userId: string, limit: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/bet-limits/monthly`, {
+        method: 'POST',
+        body: JSON.stringify({ limit }),
+    });
+    if (!res.ok) throw new Error('Failed to set monthly bet limit');
+    return res.json();
+}
+
+export async function removeBetLimits(userId: string) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/bet-limits`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to remove bet limits');
+    return res.json();
+}
+
+export async function getUserRestrictions(userId: string) {
+    const res = await authenticatedFetch(`${API_BASE}/api/users/${userId}/restrictions`);
+    if (!res.ok) throw new Error('Failed to fetch user restrictions');
+    return res.json();
+}
+
+export async function assignFreeBets(userId: string, count: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/free-bets/admin/add`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, count }),
+    });
+    if (!res.ok) throw new Error('Failed to assign free bets');
+    return res.json();
+}
+
+export async function assignFreeBetsBulk(userIds: string[], count: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/free-bets/admin/assign-bulk`, {
+        method: 'POST',
+        body: JSON.stringify({ userIds, count }),
+    });
+    if (!res.ok) throw new Error('Failed to assign free bets to multiple users');
+    return res.json();
+}
+
+export async function setFreeBets(userId: string, count: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/free-bets/admin/set`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, count }),
+    });
+    if (!res.ok) throw new Error('Failed to set free bets');
+    return res.json();
+}
+
+export async function setFreeBetsBulk(userIds: string[], count: number) {
+    const res = await authenticatedFetch(`${API_BASE}/api/free-bets/admin/set-bulk`, {
+        method: 'POST',
+        body: JSON.stringify({ userIds, count }),
+    });
+    if (!res.ok) throw new Error('Failed to set free bets for multiple users');
     return res.json();
 }

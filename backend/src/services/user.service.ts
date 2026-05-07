@@ -20,24 +20,38 @@ export class UserService {
      * Get or create a player from wallet address
      */
     async getOrCreatePlayerFromWallet(address: string): Promise<User> {
-        let user = await this.userRepo.findOne({ where: { address } });
+        try {
+            const normalizedAddress = address.toLowerCase();
+            logger.info(`getOrCreatePlayerFromWallet: Looking up user with address: ${normalizedAddress}`);
+            let user = await this.userRepo.findOne({ where: { address: normalizedAddress } });
 
-        if (!user) {
-            user = this.userRepo.create({
+            if (!user) {
+                logger.info(`getOrCreatePlayerFromWallet: User not found, creating new user for address: ${address}`);
+                user = this.userRepo.create({
+                    address: normalizedAddress,
+                    role: UserRole.PLAYER,
+                    source: UserSource.WALLET,
+                    isActive: true,
+                    permissions: [],
+                    freeBetsRemaining: 2,
+                    freeBetMaxAmount: 0.1,
+                    freeBetsExpiresAt: this.getFreeBetsExpirationDate(),
+                });
+                await this.userRepo.save(user);
+                logger.info(`Created new player from wallet: ${address}, userId: ${user.id}`);
+            } else {
+                logger.info(`getOrCreatePlayerFromWallet: Found existing user: ${user.id}`);
+            }
+
+            return user;
+        } catch (error) {
+            logger.error('getOrCreatePlayerFromWallet failed', {
+                error: (error as Error).message,
+                stack: (error as Error).stack,
                 address,
-                role: UserRole.PLAYER,
-                source: UserSource.WALLET,
-                isActive: true,
-                permissions: [],
-                freeBetsRemaining: 2,
-                freeBetMaxAmount: 0.1,
-                freeBetsExpiresAt: this.getFreeBetsExpirationDate(),
             });
-            await this.userRepo.save(user);
-            logger.info(`Created new player from wallet: ${address}`);
+            throw error;
         }
-
-        return user;
     }
 
     /**
@@ -50,36 +64,49 @@ export class UserService {
         avatarUrl?: string,
         bio?: string
     ): Promise<User> {
-        let user = await this.userRepo.findOne({ where: { farcasterId } });
+        try {
+            logger.info(`getOrCreatePlayerFromFarcaster: Looking up user with FID: ${farcasterId}`);
+            let user = await this.userRepo.findOne({ where: { farcasterId } });
 
-        if (!user) {
-            user = this.userRepo.create({
+            if (!user) {
+                logger.info(`getOrCreatePlayerFromFarcaster: User not found, creating new user for FID: ${farcasterId}`);
+                user = this.userRepo.create({
+                    farcasterId,
+                    farcasterUsername: username,
+                    username,
+                    displayName,
+                    avatarUrl,
+                    bio,
+                    role: UserRole.PLAYER,
+                    source: UserSource.FARCASTER,
+                    isActive: true,
+                    freeBetsRemaining: 2,
+                    freeBetMaxAmount: 0.1,
+                    freeBetsExpiresAt: this.getFreeBetsExpirationDate(),
+                });
+                await this.userRepo.save(user);
+                logger.info(`Created new player from Farcaster: ${username} (FID: ${farcasterId}), userId: ${user.id}`);
+            } else {
+                logger.info(`getOrCreatePlayerFromFarcaster: Found existing user: ${user.id}`);
+                // Update profile if changed
+                const updated = await this.updateUserProfile(user.id, {
+                    displayName,
+                    avatarUrl,
+                    bio,
+                });
+                user = updated;
+            }
+
+            return user;
+        } catch (error) {
+            logger.error('getOrCreatePlayerFromFarcaster failed', {
+                error: (error as Error).message,
+                stack: (error as Error).stack,
                 farcasterId,
-                farcasterUsername: username,
                 username,
-                displayName,
-                avatarUrl,
-                bio,
-                role: UserRole.PLAYER,
-                source: UserSource.FARCASTER,
-                isActive: true,
-                freeBetsRemaining: 2,
-                freeBetMaxAmount: 0.1,
-                freeBetsExpiresAt: this.getFreeBetsExpirationDate(),
             });
-            await this.userRepo.save(user);
-            logger.info(`Created new player from Farcaster: ${username} (FID: ${farcasterId})`);
-        } else {
-            // Update profile if changed
-            const updated = await this.updateUserProfile(user.id, {
-                displayName,
-                avatarUrl,
-                bio,
-            });
-            user = updated;
+            throw error;
         }
-
-        return user;
     }
 
     /**
@@ -129,7 +156,7 @@ export class UserService {
      * Get user by wallet address
      */
     async getUserByAddress(address: string): Promise<User | null> {
-        return this.userRepo.findOne({ where: { address } });
+        return this.userRepo.findOne({ where: { address: address.toLowerCase() } });
     }
 
     /**
@@ -200,8 +227,9 @@ export class UserService {
         username: string,
         permissions: string[]
     ): Promise<User> {
+        const normalizedAddress = address ? address.toLowerCase() : null;
         const user = this.userRepo.create({
-            address,
+            address: normalizedAddress,
             email,
             username,
             displayName: username,
@@ -275,6 +303,7 @@ export class UserService {
         return this.userRepo.find({
             where: { role: UserRole.ADMIN },
             order: { createdAt: 'DESC' },
+            relations: [],
         });
     }
 
@@ -294,6 +323,255 @@ export class UserService {
             role: user.role,
             createdAt: user.createdAt,
         };
+    }
+
+    /**
+     * Block a user
+     */
+    async blockUser(userId: string, reason: string): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.isBlocked = true;
+        user.blockedAt = new Date();
+        user.blockReason = reason;
+        user.isActive = false;
+        await this.userRepo.save(user);
+
+        logger.info(`Blocked user: ${userId}, reason: ${reason}`);
+
+        return user;
+    }
+
+    /**
+     * Unblock a user
+     */
+    async unblockUser(userId: string): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.isBlocked = false;
+        user.blockedAt = null;
+        user.blockReason = null;
+        user.isActive = true;
+        await this.userRepo.save(user);
+
+        logger.info(`Unblocked user: ${userId}`);
+
+        return user;
+    }
+
+    /**
+     * Suspend a user temporarily
+     */
+    async suspendUser(userId: string, durationDays: number, reason: string): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+        user.isSuspended = true;
+        user.suspendedAt = new Date();
+        user.suspensionExpiresAt = expiresAt;
+        user.suspensionReason = reason;
+        user.isActive = false;
+        await this.userRepo.save(user);
+
+        logger.info(`Suspended user: ${userId} for ${durationDays} days, reason: ${reason}`);
+
+        return user;
+    }
+
+    /**
+     * Unsuspend a user
+     */
+    async unsuspendUser(userId: string): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.isSuspended = false;
+        user.suspendedAt = null;
+        user.suspensionExpiresAt = null;
+        user.suspensionReason = null;
+        user.isActive = true;
+        await this.userRepo.save(user);
+
+        logger.info(`Unsuspended user: ${userId}`);
+
+        return user;
+    }
+
+    /**
+     * Check if user is currently suspended
+     */
+    async isUserSuspended(userId: string): Promise<boolean> {
+        const user = await this.getUserById(userId);
+        if (!user) return false;
+
+        if (!user.isSuspended) return false;
+
+        // Check if suspension has expired
+        if (user.suspensionExpiresAt && new Date() > user.suspensionExpiresAt) {
+            // Auto-unsuspend
+            await this.unsuspendUser(userId);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Set daily bet limit for user
+     */
+    async setDailyBetLimit(userId: string, limit: number): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.dailyBetLimit = limit;
+        user.dailyBetAmount = 0;
+        user.dailyBetResetAt = new Date();
+        await this.userRepo.save(user);
+
+        logger.info(`Set daily bet limit for user ${userId}: ${limit}`);
+
+        return user;
+    }
+
+    /**
+     * Set weekly bet limit for user
+     */
+    async setWeeklyBetLimit(userId: string, limit: number): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.weeklyBetLimit = limit;
+        user.weeklyBetAmount = 0;
+        user.weeklyBetResetAt = new Date();
+        await this.userRepo.save(user);
+
+        logger.info(`Set weekly bet limit for user ${userId}: ${limit}`);
+
+        return user;
+    }
+
+    /**
+     * Set monthly bet limit for user
+     */
+    async setMonthlyBetLimit(userId: string, limit: number): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.monthlyBetLimit = limit;
+        user.monthlyBetAmount = 0;
+        user.monthlyBetResetAt = new Date();
+        await this.userRepo.save(user);
+
+        logger.info(`Set monthly bet limit for user ${userId}: ${limit}`);
+
+        return user;
+    }
+
+    /**
+     * Remove all bet limits for user
+     */
+    async removeBetLimits(userId: string): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.dailyBetLimit = null;
+        user.weeklyBetLimit = null;
+        user.monthlyBetLimit = null;
+        user.dailyBetAmount = 0;
+        user.weeklyBetAmount = 0;
+        user.monthlyBetAmount = 0;
+        await this.userRepo.save(user);
+
+        logger.info(`Removed all bet limits for user ${userId}`);
+
+        return user;
+    }
+
+    /**
+     * Check if user can place a bet
+     */
+    async canUserBet(userId: string, betAmount: number): Promise<{ allowed: boolean; reason?: string }> {
+        const user = await this.getUserById(userId);
+        if (!user) return { allowed: false, reason: 'User not found' };
+
+        if (user.isBlocked) return { allowed: false, reason: 'User is blocked' };
+
+        const isSuspended = await this.isUserSuspended(userId);
+        if (isSuspended) return { allowed: false, reason: 'User is suspended' };
+
+        if (!user.isActive) return { allowed: false, reason: 'User account is inactive' };
+
+        // Check daily limit
+        if (user.dailyBetLimit) {
+            const now = new Date();
+            if (user.dailyBetResetAt && now.getTime() - user.dailyBetResetAt.getTime() > 24 * 60 * 60 * 1000) {
+                user.dailyBetAmount = 0;
+                user.dailyBetResetAt = now;
+                await this.userRepo.save(user);
+            }
+
+            if (user.dailyBetAmount + betAmount > user.dailyBetLimit) {
+                return {
+                    allowed: false,
+                    reason: `Daily bet limit exceeded. Limit: ${user.dailyBetLimit}, Current: ${user.dailyBetAmount}`,
+                };
+            }
+        }
+
+        // Check weekly limit
+        if (user.weeklyBetLimit) {
+            const now = new Date();
+            if (user.weeklyBetResetAt && now.getTime() - user.weeklyBetResetAt.getTime() > 7 * 24 * 60 * 60 * 1000) {
+                user.weeklyBetAmount = 0;
+                user.weeklyBetResetAt = now;
+                await this.userRepo.save(user);
+            }
+
+            if (user.weeklyBetAmount + betAmount > user.weeklyBetLimit) {
+                return {
+                    allowed: false,
+                    reason: `Weekly bet limit exceeded. Limit: ${user.weeklyBetLimit}, Current: ${user.weeklyBetAmount}`,
+                };
+            }
+        }
+
+        // Check monthly limit
+        if (user.monthlyBetLimit) {
+            const now = new Date();
+            if (user.monthlyBetResetAt && now.getTime() - user.monthlyBetResetAt.getTime() > 30 * 24 * 60 * 60 * 1000) {
+                user.monthlyBetAmount = 0;
+                user.monthlyBetResetAt = now;
+                await this.userRepo.save(user);
+            }
+
+            if (user.monthlyBetAmount + betAmount > user.monthlyBetLimit) {
+                return {
+                    allowed: false,
+                    reason: `Monthly bet limit exceeded. Limit: ${user.monthlyBetLimit}, Current: ${user.monthlyBetAmount}`,
+                };
+            }
+        }
+
+        return { allowed: true };
+    }
+
+    /**
+     * Record a bet for limit tracking
+     */
+    async recordBet(userId: string, betAmount: number): Promise<void> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.dailyBetAmount = Number(user.dailyBetAmount) + betAmount;
+        user.weeklyBetAmount = Number(user.weeklyBetAmount) + betAmount;
+        user.monthlyBetAmount = Number(user.monthlyBetAmount) + betAmount;
+
+        await this.userRepo.save(user);
     }
 }
 

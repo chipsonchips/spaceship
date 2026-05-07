@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
-import WalletAuthManager from "@/components/WalletAuthManager";
+import WalletAuthManager from "@/components/auth/WalletAuthManager";
 import { useAccount, useDisconnect } from "wagmi";
 import { useAuth } from "@/context/AuthContext";
 
