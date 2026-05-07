@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { freeBetService } from '../services/free-bet.service.js';
 import { auditLogService } from '../services/audit-log.service.js';
-import { requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrAdminSecret, requireAdmin } from '../middleware/authMiddleware.js';
 import { logger } from '../utils/logger.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
 import { AppDataSource } from '../config/database.js';
@@ -68,7 +68,7 @@ router.get('/history/:userId', async (req: Request, res: Response) => {
  * POST /api/free-bets/admin/add
  * Add free bets to a user (admin only)
  */
-router.post('/admin/add', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/add', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { userId, count } = req.body;
 
@@ -83,7 +83,7 @@ router.post('/admin/add', requireAdmin, async (req: Request, res: Response) => {
 
         // Log admin action
         await auditLogService.logAction(
-            (req as any).user?.id || null,
+            req.userId || null,
             AdminActionType.SETTINGS_CHANGED,
             `Added ${count} free bets to user ${userId}`,
             { userId, count, newTotal: user.freeBetsRemaining },
@@ -108,7 +108,7 @@ router.post('/admin/add', requireAdmin, async (req: Request, res: Response) => {
  * POST /api/free-bets/admin/set
  * Set free bets for a user (admin only)
  */
-router.post('/admin/set', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/set', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { userId, count } = req.body;
 
@@ -123,7 +123,7 @@ router.post('/admin/set', requireAdmin, async (req: Request, res: Response) => {
 
         // Log admin action
         await auditLogService.logAction(
-            (req as any).user?.id || null,
+            req.userId || null,
             AdminActionType.SETTINGS_CHANGED,
             `Set free bets for user ${userId} to ${count}`,
             { userId, count },
@@ -148,7 +148,7 @@ router.post('/admin/set', requireAdmin, async (req: Request, res: Response) => {
  * POST /api/free-bets/admin/set-max-amount
  * Set free bet max amount for a user (admin only)
  */
-router.post('/admin/set-max-amount', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/set-max-amount', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { userId, maxAmount } = req.body;
 
@@ -163,7 +163,7 @@ router.post('/admin/set-max-amount', requireAdmin, async (req: Request, res: Res
 
         // Log admin action
         await auditLogService.logAction(
-            (req as any).user?.id || null,
+            req.userId || null,
             AdminActionType.SETTINGS_CHANGED,
             `Set free bet max amount for user ${userId} to ${maxAmount}`,
             { userId, maxAmount },
@@ -188,7 +188,7 @@ router.post('/admin/set-max-amount', requireAdmin, async (req: Request, res: Res
  * GET /api/free-bets/admin/users-with-free-bets
  * Get all users with remaining free bets (admin only)
  */
-router.get('/admin/users-with-free-bets', requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/users-with-free-bets', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const users = await freeBetService.getUsersWithFreeBets();
 
@@ -216,7 +216,7 @@ router.get('/admin/users-with-free-bets', requireAdmin, async (req: Request, res
  * POST /api/free-bets/admin/assign-bulk
  * Assign free bets to multiple users (admin only)
  */
-router.post('/admin/assign-bulk', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/assign-bulk', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { userIds, count } = req.body;
 
@@ -255,7 +255,7 @@ router.post('/admin/assign-bulk', requireAdmin, async (req: Request, res: Respon
 
         // Log admin action
         await auditLogService.logAction(
-            (req as any).user?.id || null,
+            req.userId || null,
             AdminActionType.FREE_BET_ASSIGNED,
             `Assigned ${count} free bets to ${results.successful} users`,
             { userIds, count, results },
@@ -280,7 +280,7 @@ router.post('/admin/assign-bulk', requireAdmin, async (req: Request, res: Respon
  * POST /api/free-bets/admin/set-bulk
  * Set free bets for multiple users (admin only)
  */
-router.post('/admin/set-bulk', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/set-bulk', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
     try {
         const { userIds, count } = req.body;
 
@@ -319,7 +319,7 @@ router.post('/admin/set-bulk', requireAdmin, async (req: Request, res: Response)
 
         // Log admin action
         await auditLogService.logAction(
-            (req as any).user?.id || null,
+            req.userId || null,
             AdminActionType.FREE_BET_ASSIGNED,
             `Set free bets to ${count} for ${results.successful} users`,
             { userIds, count, results },
