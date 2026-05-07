@@ -21,13 +21,14 @@ export class UserService {
      */
     async getOrCreatePlayerFromWallet(address: string): Promise<User> {
         try {
-            logger.info(`getOrCreatePlayerFromWallet: Looking up user with address: ${address}`);
-            let user = await this.userRepo.findOne({ where: { address } });
+            const normalizedAddress = address.toLowerCase();
+            logger.info(`getOrCreatePlayerFromWallet: Looking up user with address: ${normalizedAddress}`);
+            let user = await this.userRepo.findOne({ where: { address: normalizedAddress } });
 
             if (!user) {
                 logger.info(`getOrCreatePlayerFromWallet: User not found, creating new user for address: ${address}`);
                 user = this.userRepo.create({
-                    address,
+                    address: normalizedAddress,
                     role: UserRole.PLAYER,
                     source: UserSource.WALLET,
                     isActive: true,
@@ -155,7 +156,7 @@ export class UserService {
      * Get user by wallet address
      */
     async getUserByAddress(address: string): Promise<User | null> {
-        return this.userRepo.findOne({ where: { address } });
+        return this.userRepo.findOne({ where: { address: address.toLowerCase() } });
     }
 
     /**
@@ -226,8 +227,9 @@ export class UserService {
         username: string,
         permissions: string[]
     ): Promise<User> {
+        const normalizedAddress = address ? address.toLowerCase() : null;
         const user = this.userRepo.create({
-            address,
+            address: normalizedAddress,
             email,
             username,
             displayName: username,
