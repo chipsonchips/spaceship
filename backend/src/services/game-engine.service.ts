@@ -276,14 +276,20 @@ export class GameEngine {
     const targetCrash = generateCrashMultiplier(this.currentRound.serverSeed || '');
     const flyingDuration = Math.min(20000, Math.max(2000, targetCrash * 2000));
 
-    // logger.info(
-    //   `Starting flying phase for round ${this.currentRound.roundId} targetCrash=${targetCrash} duration=${flyingDuration}ms`
-    // );
-
+    // Update round phase with retry logic for transaction conflicts
     this.currentRound.phase = 'FLYING';
     this.currentRound.flyStartTime = Date.now();
-    await this.roundRepo.save(this.currentRound);
 
+    try {
+      await this.executeWithRetry(async () => {
+        if (this.currentRound) {
+          await this.roundRepo.save(this.currentRound);
+        }
+      });
+    } catch (err) {
+      logger.error('Failed to update round phase to FLYING', { error: (err as Error).message });
+      return;
+    }
 
     this.autoCashedOutBets.clear(); // Reset for new round
     this.previousMultiplier = 1.0; // Reset previous multiplier
@@ -311,9 +317,15 @@ export class GameEngine {
       // Update previous multiplier for next iteration
       this.previousMultiplier = this.currentRound!.currentMultiplier;
 
-      // persist small updates occasionally
+      // persist small updates occasionally with retry logic
       if (elapsed % 1000 < 60) {
-        await this.roundRepo.save(this.currentRound!);
+        this.executeWithRetry(async () => {
+          if (this.currentRound) {
+            await this.roundRepo.save(this.currentRound);
+          }
+        }).catch((err) => {
+          logger.warn('Failed to persist round state update', { error: (err as Error).message });
+        });
       }
 
       await this.broadcastGameState();
