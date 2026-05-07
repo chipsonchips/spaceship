@@ -15,8 +15,9 @@ export async function placeBetRest(
   chainId?: number,
   useFreeBet: boolean = false,
   autoCashoutMultiplier?: number,
+  clientSeed?: string,
 ) {
-  const body: any = { address, amount, chainId, useFreeBet };
+  const body: any = { address, amount, chainId, useFreeBet, clientSeed };
   if (autoCashoutMultiplier) {
     body.autoCashoutMultiplier = autoCashoutMultiplier;
   }

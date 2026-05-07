@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useSettings } from "@/context/SettingsContext";
+import FairnessVerifier from "./FairnessVerifier";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { settings, updateSettings, resetSettings } = useSettings();
   const [localSettings, setLocalSettings] = useState(settings);
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<"settings" | "fairness">("settings");
 
   useEffect(() => {
     setMounted(true);
@@ -62,20 +64,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       {/* Modal */}
       <div className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-slate-900/95 border-b border-slate-700/50 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-black font-orbitron text-emerald-400 uppercase tracking-widest">
-            ⚙️ Settings
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 transition-colors text-2xl leading-none"
-          >
-            ✕
-          </button>
+        <div className="sticky top-0 bg-slate-900/95 border-b border-slate-700/50 z-10">
+          <div className="px-6 py-4 flex items-center justify-between">
+            <h2 className="text-xl font-black font-orbitron text-emerald-400 uppercase tracking-widest leading-none">
+              Game Menu
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-200 transition-colors text-2xl leading-none"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="flex px-6 border-t border-slate-800">
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`flex-1 py-3 text-xs font-bold font-orbitron uppercase tracking-widest transition-all border-b-2 ${
+                activeTab === "settings" 
+                  ? "text-emerald-400 border-emerald-400" 
+                  : "text-slate-500 border-transparent hover:text-slate-300"
+              }`}
+            >
+              ⚙️ Settings
+            </button>
+            <button
+              onClick={() => setActiveTab("fairness")}
+              className={`flex-1 py-3 text-xs font-bold font-orbitron uppercase tracking-widest transition-all border-b-2 ${
+                activeTab === "fairness" 
+                  ? "text-emerald-400 border-emerald-400" 
+                  : "text-slate-500 border-transparent hover:text-slate-300"
+              }`}
+            >
+              🛡️ Fairness
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6">
+          {activeTab === "settings" ? (
+            <div className="space-y-6">
           {/* Audio Settings */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold font-orbitron text-emerald-400 uppercase tracking-widest">
@@ -325,15 +354,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Reset Button */}
-          <div className="pt-4 border-t border-slate-700/50">
-            <button
-              onClick={handleReset}
-              className="w-full px-4 py-2 bg-slate-800/60 border border-slate-600/60 text-slate-300 hover:text-slate-100 hover:border-slate-500 rounded-lg font-courier text-xs font-bold uppercase tracking-wide transition-all"
-            >
-              Reset to Defaults
-            </button>
+            {/* Reset Button */}
+            <div className="pt-4 border-t border-slate-700/50">
+              <button
+                onClick={handleReset}
+                className="w-full px-4 py-2 bg-slate-800/60 border border-slate-600/60 text-slate-300 hover:text-slate-100 hover:border-slate-500 rounded-lg font-courier text-xs font-bold uppercase tracking-wide transition-all"
+              >
+                Reset to Defaults
+              </button>
+            </div>
           </div>
+          ) : (
+            <FairnessVerifier />
+          )}
         </div>
       </div>
     </div>
