@@ -19,7 +19,7 @@ export const createRoundsRouter = (gameEngine: GameEngine) => {
 
   router.post('/:roundId/bets', betRateLimiter, async (req, res) => {
     try {
-      const { address, amount, chainId, useFreeBet, autoCashoutMultiplier, clientSeed } = req.body;
+      const { address, amount, chainId, useFreeBet, autoCashoutMultiplier } = req.body;
       const saved = await gameEngine.placeBet(address, amount, chainId, useFreeBet || false, autoCashoutMultiplier);
       res.json({ success: true, bet: saved });
     } catch (err) {

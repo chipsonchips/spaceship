@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { Round } from '../entities/round.entity.js';
-import { PlayerBet } from '../entities/player-bet.entity.js';
-import { verifyCrashPoint, combineClientSeeds } from '../utils/provably-fair.js';
+import { verifyCrashPoint } from '../utils/provably-fair.js';
 import { generateCrashMultiplier } from '../services/game-utils.js';
 import { decrypt } from '../utils/encryption.js';
 
@@ -19,9 +18,8 @@ router.get('/:roundId', async (req, res) => {
     const roundId = parseInt(req.params.roundId);
 
     const roundRepo = AppDataSource.getRepository(Round);
-    const betRepo = AppDataSource.getRepository(PlayerBet);
 
-    const round = await roundRepo.findOne({ 
+    const round = await roundRepo.findOne({
       where: { roundId },
       relations: ['players']
     });
@@ -54,7 +52,7 @@ router.get('/:roundId', async (req, res) => {
 
     // 2. Get all client seeds
     const clientSeeds = round.players
-      .map((b) => b.clientSeed)
+      .map((b: unknown) => (b as { clientSeed?: string }).clientSeed)
       .filter((s) => s !== null && s !== undefined) as string[];
 
     // 3. Verify

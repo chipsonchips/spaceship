@@ -2,16 +2,15 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
-const AUTH_TAG_LENGTH = 16;
 
 /**
  * Encrypts sensitive text using AES-256-GCM.
  * Returns an object containing the encrypted content, IV, and auth tag.
  */
-export function encrypt(text: string, secretKey: string): { 
-  encrypted: string; 
-  iv: string; 
-  authTag: string 
+export function encrypt(text: string, secretKey: string): {
+  encrypted: string;
+  iv: string;
+  authTag: string
 } {
   if (!secretKey || secretKey.length !== 64) {
     throw new Error('Invalid encryption key. Must be a 64-character hex string (32 bytes).');
@@ -36,9 +35,9 @@ export function encrypt(text: string, secretKey: string): {
  * Decrypts text using AES-256-GCM.
  */
 export function decrypt(
-  encryptedData: string, 
-  iv: string, 
-  authTag: string, 
+  encryptedData: string,
+  iv: string,
+  authTag: string,
   secretKey: string
 ): string {
   if (!secretKey || secretKey.length !== 64) {
@@ -46,8 +45,8 @@ export function decrypt(
   }
 
   const decipher = crypto.createDecipheriv(
-    ALGORITHM, 
-    Buffer.from(secretKey, 'hex'), 
+    ALGORITHM,
+    Buffer.from(secretKey, 'hex'),
     Buffer.from(iv, 'hex')
   );
 
