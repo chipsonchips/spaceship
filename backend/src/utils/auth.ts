@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User, UserRole } from '../entities/user.entity.js';
 
@@ -35,8 +35,8 @@ export function generateAccessToken(user: User): string {
     };
 
     return jwt.sign(payload, JWT_SECRET, {
-        expiresIn: JWT_EXPIRY as any,
-    });
+        expiresIn: JWT_EXPIRY,
+    } as SignOptions);
 }
 
 /**
@@ -49,8 +49,8 @@ export function generateRefreshToken(user: User): string {
     };
 
     return jwt.sign(payload, JWT_SECRET, {
-        expiresIn: REFRESH_TOKEN_EXPIRY as any,
-    });
+        expiresIn: REFRESH_TOKEN_EXPIRY,
+    } as SignOptions);
 }
 
 /**
@@ -62,7 +62,7 @@ export function generateTokens(user: User): AuthTokens {
         const refreshToken = generateRefreshToken(user);
 
         // Parse expiry time
-        const decoded = jwt.decode(accessToken) as any;
+        const decoded = jwt.decode(accessToken) as JWTPayload | null;
         if (!decoded || !decoded.exp || !decoded.iat) {
             console.error('Failed to decode access token:', { decoded });
             // Fallback to 24 hours
@@ -102,7 +102,7 @@ export function verifyToken(token: string): JWTPayload | null {
  */
 export function verifyRefreshToken(token: string): { userId: string; type: string } | null {
     try {
-        return jwt.verify(token, JWT_SECRET) as any;
+        return jwt.verify(token, JWT_SECRET) as { userId: string; type: string };
     } catch (error) {
         return null;
     }
