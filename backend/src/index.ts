@@ -22,6 +22,7 @@ import authRouter from './routes/auth.js';
 import freeBetsRouter from './routes/free-bets.js';
 import usersRouter from './routes/users.js';
 import auditLogsRouter from './routes/audit-logs.js';
+import verifyRouter from './routes/verify.js';
 import { AppDataSource } from './config/database.js';
 
 config();
@@ -44,7 +45,7 @@ corsOrigins.push(/^https:\/\/.*\.ngrok(?:-free)?\.app$/);
 
 // Middleware
 app.use(cors({
-  origin: corsOrigins as any,
+  origin: corsOrigins as (string | RegExp)[],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Secret', 'x-admin-secret'],
   credentials: true,
@@ -74,7 +75,7 @@ app.get('/', (req: Request, res: Response) => {
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: corsOrigins as any,
+    origin: corsOrigins as (string | RegExp)[],
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -83,6 +84,7 @@ const gameEngine = new GameEngine(io);
 
 // Routes with dependency injection
 app.use('/api/auth', authRouter);
+app.use('/api/verify', verifyRouter);
 app.use('/api/rounds', createRoundsRouter(gameEngine));
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/history', historyRouter);

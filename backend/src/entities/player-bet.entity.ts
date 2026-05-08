@@ -39,6 +39,9 @@ export class PlayerBet {
   @Column({ type: 'bigint' })
   timestamp!: number;
 
+  @Column({ type: 'text', nullable: true })
+  clientSeed!: string | null;
+
   @ManyToOne(() => Round, (round) => round.players, { onDelete: 'CASCADE' })
   round!: Round;
 

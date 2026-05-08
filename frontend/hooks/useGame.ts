@@ -23,6 +23,13 @@ export function useGame(options: { wsUrl?: string } = {}) {
   } = useUSDC();
 
   const [roundData, setRoundData] = useState<RoundData | null>(null);
+  const [clientSeed, setClientSeed] = useState<string>("");
+
+  useEffect(() => {
+    // Generate initial client seed
+    setClientSeed(Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2));
+  }, []);
+
   const [gameHistory, setGameHistory] = useState<GameHistory[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -157,11 +164,11 @@ export function useGame(options: { wsUrl?: string } = {}) {
         }
 
         console.log("placing bet", roundData.roundId, address, amount, useFreeBet ? "(free bet)" : "", autoCashoutMultiplier ? `(auto-cashout: ${autoCashoutMultiplier}x)` : "");
-        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet, autoCashoutMultiplier);
+        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet, autoCashoutMultiplier, clientSeed);
 
         if (res.success && res.bet) {
-          // Notify socket (optimistic) or wait for server push
-          // manager.send({ type: "PLACE_BET", data: { address, amount, txHash: res.bet.txHash } });
+          // Generate new seed for next bet
+          setClientSeed(Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2));
           return { success: true, txHash: res.bet.txHash };
         } else {
           return { success: false, error: res.error || 'Failed to place bet' };

@@ -68,7 +68,7 @@ router.post('/house/withdraw', authenticateTokenOrAdminSecret, requireAdmin, asy
 
     // Log admin action
     await auditLogService.logAction(
-      (req as any).userId || null,
+      req.userId || null,
       AdminActionType.HOUSE_WITHDRAW,
       `Withdrew ${amount} USDC on ${chainConfig.label}`,
       { amount, chainId: chainService.chainId, txHash },
@@ -127,7 +127,7 @@ router.post('/contract/pause', authenticateTokenOrAdminSecret, requireAdmin, asy
 
     // Log admin action
     await auditLogService.logAction(
-      (req as any).userId || null,
+      req.userId || null,
       AdminActionType.CONTRACT_PAUSE,
       `Paused contract on ${chainConfig.label}`,
       { chainId: chainService.chainId, txHash },
@@ -157,7 +157,7 @@ router.post('/contract/unpause', authenticateTokenOrAdminSecret, requireAdmin, a
 
     // Log admin action
     await auditLogService.logAction(
-      (req as any).userId || null,
+      req.userId || null,
       AdminActionType.CONTRACT_UNPAUSE,
       `Unpaused contract on ${chainConfig.label}`,
       { chainId: chainService.chainId, txHash },
@@ -196,7 +196,7 @@ router.post('/contract/operator', authenticateTokenOrAdminSecret, requireAdmin, 
 
     // Log admin action
     await auditLogService.logAction(
-      (req as any).userId || null,
+      req.userId || null,
       AdminActionType.OPERATOR_SET,
       `Set server operator to ${address} on ${chainConfig.label}`,
       { address, chainId: chainService.chainId, txHash },
@@ -236,7 +236,7 @@ router.post('/house/fund', authenticateTokenOrAdminSecret, requireAdmin, async (
 
     // Log admin action
     await auditLogService.logAction(
-      (req as any).userId || null,
+      req.userId || null,
       AdminActionType.HOUSE_FUND,
       `Funded house with ${amount} USDC on ${chainConfig.label}`,
       { amount, chainId: chainService.chainId, txHash },
@@ -283,7 +283,7 @@ router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async
 
     // Log admin action
     await auditLogService.logAction(
-      (req as any).userId || null,
+      req.userId || null,
       AdminActionType.ETH_WITHDRAW,
       `Withdrew ${amount} ETH to ${to} on ${chainConfig.label}`,
       { to, amount, chainId: chainService.chainId, txHash },

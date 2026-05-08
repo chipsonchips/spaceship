@@ -13,7 +13,7 @@ export class RoundService {
     if (!AppDataSource.isInitialized) throw new Error('Database not initialized');
     return AppDataSource.getRepository(PlayerBet);
   }
-  
+
   async createRound(round: Partial<Round>) {
     const entity = this.roundRepo.create(round);
     return this.roundRepo.save(entity);
@@ -28,16 +28,16 @@ export class RoundService {
   }
 
   async addBet(roundId: number, bet: Partial<PlayerBet>) {
-    const round = await this.roundRepo.findOne({ 
+    const round = await this.roundRepo.findOne({
       where: { roundId },
       relations: ['players']
     });
-    
+
     if (!round) throw new Error('Round not found');
-    
+
     // Check if player already has a bet in this round
-    const existingBet = round.players.find(p => p.address.toLowerCase() === bet.address?.toLowerCase());
-    
+    const existingBet = (round.players as unknown as PlayerBet[]).find(p => p.address.toLowerCase() === bet.address?.toLowerCase());
+
     if (existingBet) {
       // Update existing bet
       existingBet.amount = bet.amount || existingBet.amount;
@@ -45,7 +45,7 @@ export class RoundService {
       existingBet.timestamp = bet.timestamp || existingBet.timestamp;
       return this.betRepo.save(existingBet);
     }
-    
+
     // Create new bet
     const betEntity = this.betRepo.create({ ...bet, round });
     return this.betRepo.save(betEntity);
