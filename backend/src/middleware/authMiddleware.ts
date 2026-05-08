@@ -5,6 +5,7 @@ import {
     JWTPayload,
     verifyAdminSecret,
 } from '../utils/auth.js';
+import { UserRole } from '../entities/user.entity.js';
 import { logger } from '../utils/logger.js';
 
 declare global {
@@ -203,7 +204,7 @@ export function authenticateTokenOrAdminSecret(
             // Create a synthetic admin payload
             req.user = {
                 userId: '00000000-0000-0000-0000-000000000000', // NIL UUID for legacy admin
-                role: 'admin' as any,
+                role: UserRole.ADMIN,
                 permissions: [],
             };
             req.userId = undefined; // Set to undefined so it logs as NULL in UUID columns
@@ -239,7 +240,7 @@ export function authenticateTokenOrAdminSecret(
             // Create a synthetic admin payload
             req.user = {
                 userId: '00000000-0000-0000-0000-000000000000', // NIL UUID for legacy admin
-                role: 'admin' as any,
+                role: UserRole.ADMIN,
                 permissions: [],
             };
             req.userId = undefined; // Set to undefined so it logs as NULL in UUID columns
