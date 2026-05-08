@@ -15,6 +15,7 @@ import { LeaderboardService } from './leaderboard.service.js';
 import { HistoryService } from './history.service.js';
 import { FreeBetService } from './free-bet.service.js';
 import { UserService } from './user.service.js';
+import { ChainService } from './chain.service.js';
 import { logger } from '../utils/logger.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 import { combineClientSeeds, createFinalSeed } from '../utils/provably-fair.js';
@@ -33,7 +34,7 @@ export class GameEngine {
   private autoCashedOutBets = new Set<number>(); // Track already auto-cashed bets
   private activeAutoCashouts: PlayerBet[] = []; // In-memory active bets for current round
   private previousMultiplier = 1.0; // Track previous multiplier for interpolation
-  private chainServices = new Map<number, any>();
+  private chainServices = new Map<number, ChainService>();
   private readonly BETTING_DURATION_MS = Number(process.env.BETTING_DURATION_MS) || 15000;
 
   leaderboardService = new LeaderboardService();
@@ -313,9 +314,9 @@ export class GameEngine {
           ENCRYPTION_SECRET
         );
       } catch (err) {
-        logger.error('Failed to decrypt server seed', { 
-          roundId: this.currentRound.roundId, 
-          error: (err as Error).message 
+        logger.error('Failed to decrypt server seed', {
+          roundId: this.currentRound.roundId,
+          error: (err as Error).message
         });
       }
     }
@@ -573,10 +574,10 @@ export class GameEngine {
   }
 
   async placeBet(
-    address: string, 
-    amount: number, 
-    chainId: number, 
-    useFreeBet: boolean = false, 
+    address: string,
+    amount: number,
+    chainId: number,
+    useFreeBet: boolean = false,
     autoCashoutMultiplier?: number,
     clientSeed?: string
   ) {
@@ -631,15 +632,15 @@ export class GameEngine {
           const { ChainService } = await import('./chain.service.js');
           this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
         }
-        
+
         const chainService = this.chainServices.get(Number(chainId));
         if (chainService) {
           finalTxHash = await chainService.placeBetFor(this.currentRound.roundId, address, amount);
         }
       } catch (err) {
-        logger.error('Failed to relay bet to chain', { 
-          error: (err as Error).message, 
-          chainId: Number(chainId) 
+        logger.error('Failed to relay bet to chain', {
+          error: (err as Error).message,
+          chainId: Number(chainId)
         });
         throw new Error('Failed to place bet on chain: ' + (err as Error).message);
       }
