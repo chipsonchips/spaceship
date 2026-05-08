@@ -19,7 +19,7 @@ router.get('/', async (req: Request, res: Response) => {
         const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
         const offset = parseInt(req.query.offset as string) || 0;
 
-        const filters: any = {};
+        const filters: Record<string, unknown> = {};
 
         if (req.query.adminId) {
             filters.adminId = req.query.adminId as string;
