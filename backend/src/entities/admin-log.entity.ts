@@ -57,7 +57,7 @@ export class AdminLog {
     description!: string | null;
 
     @Column({ type: 'simple-json', default: '{}' })
-    details!: Record<string, any>;
+    details!: Record<string, unknown>;
 
     @Column({ type: 'varchar', length: 45, nullable: true })
     ipAddress!: string | null;

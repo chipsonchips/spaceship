@@ -63,7 +63,7 @@ export class Round {
   planePosition!: { x: number; y: number } | null;
 
   @OneToMany('PlayerBet', 'round', { cascade: true })
-  players!: any[];
+  players!: unknown[];
 
   @CreateDateColumn()
   createdAt!: Date;
