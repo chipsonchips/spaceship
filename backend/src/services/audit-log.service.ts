@@ -20,7 +20,7 @@ export class AuditLogService {
         adminId: string | null,
         actionType: AdminActionType,
         description: string | null,
-        details: Record<string, any> = {},
+        details: Record<string, unknown> = {},
         ipAddress: string | null = null,
         chainId: number | null = null,
         success: boolean = true,
