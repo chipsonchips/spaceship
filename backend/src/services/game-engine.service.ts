@@ -512,42 +512,45 @@ export class GameEngine {
 
     if (!this.currentRound) return;
 
-    // Detect perfect cashouts
-    await securityMonitor.detectPerfectCashouts(this.currentRound.roundId);
+    // Wrap all database operations in retry logic to handle serialization errors
+    await this.executeWithRetry(async () => {
+      // Detect perfect cashouts
+      await securityMonitor.detectPerfectCashouts(this.currentRound!.roundId);
 
-    this.currentRound.phase = 'CRASHED';
-    this.currentRound.crashMultiplier = crashMultiplier;
-    this.currentRound.currentMultiplier = crashMultiplier;
+      this.currentRound!.phase = 'CRASHED';
+      this.currentRound!.crashMultiplier = crashMultiplier;
+      this.currentRound!.currentMultiplier = crashMultiplier;
 
-    // determine losers (non-cashed) and update leaderboard
-    const players: PlayerBet[] = await this.betRepo.find({
-      where: { round: { id: this.currentRound.id } },
-    });
+      // determine losers (non-cashed) and update leaderboard
+      const players: PlayerBet[] = await this.betRepo.find({
+        where: { round: { id: this.currentRound!.id } },
+      });
 
-    for (const p of players) {
-      if (!p.cashedOut) {
-        p.payout = 0;
-        await this.betRepo.save(p);
-        await this.leaderboardService.updateFromBet({
-          address: p.address,
-          amount: Number(p.amount),
-          cashedOut: false,
-        });
+      for (const p of players) {
+        if (!p.cashedOut) {
+          p.payout = 0;
+          await this.betRepo.save(p);
+          await this.leaderboardService.updateFromBet({
+            address: p.address,
+            amount: Number(p.amount),
+            cashedOut: false,
+          });
+        }
       }
-    }
 
-    this.currentRound.settled = true;
-    await this.roundRepo.save(this.currentRound);
+      this.currentRound!.settled = true;
+      await this.roundRepo.save(this.currentRound!);
 
-    // record history
-    await this.historyService.record({
-      roundId: this.currentRound.roundId,
-      crashMultiplier: Number(crashMultiplier),
-      timestamp: Date.now(),
-      totalBets: Number(this.currentRound.totalBets || 0),
-      totalPayouts: Number(this.currentRound.totalPayouts || 0),
-      winnersCount: players.filter((p) => p.cashedOut).length,
-    });
+      // record history
+      await this.historyService.record({
+        roundId: this.currentRound!.roundId,
+        crashMultiplier: Number(crashMultiplier),
+        timestamp: Date.now(),
+        totalBets: Number(this.currentRound!.totalBets || 0),
+        totalPayouts: Number(this.currentRound!.totalPayouts || 0),
+        winnersCount: players.filter((p) => p.cashedOut).length,
+      });
+    }, 10); // Increase max retries to 10 for this critical operation
 
     // Submit an on-chain snapshot asynchronously (if chain service configured)
     if (this.chainService) {
@@ -555,7 +558,9 @@ export class GameEngine {
         await this.executeWithRetry(() =>
           this.chainService!.submitRoundSnapshot(
             this.currentRound!,
-            players as PlayerBet[]
+            (await this.betRepo.find({
+              where: { round: { id: this.currentRound!.id } },
+            })) as PlayerBet[]
           )
         );
       } catch (err: unknown) {
@@ -646,27 +651,32 @@ export class GameEngine {
       }
     }
 
-    const bet = this.betRepo.create({
-      address,
-      amount,
-      cashedOut: false,
-      cashoutMultiplier: null,
-      payout: null,
-      txHash: finalTxHash,
-      autoCashoutMultiplier: autoCashoutMultiplier || null,
-      chainId,
-      timestamp: Date.now(),
-      clientSeed,
-      round: this.currentRound,
-    });
-    await this.betRepo.save(bet);
+    // Wrap database operations in retry logic
+    const bet = await this.executeWithRetry(async () => {
+      const newBet = this.betRepo.create({
+        address,
+        amount,
+        cashedOut: false,
+        cashoutMultiplier: null,
+        payout: null,
+        txHash: finalTxHash,
+        autoCashoutMultiplier: autoCashoutMultiplier || null,
+        chainId,
+        timestamp: Date.now(),
+        clientSeed,
+        round: this.currentRound!,
+      });
+      await this.betRepo.save(newBet);
 
-    this.currentRound.totalBets =
-      Number(this.currentRound.totalBets || 0) + Number(amount);
-    await this.roundRepo.save(this.currentRound);
+      this.currentRound!.totalBets =
+        Number(this.currentRound!.totalBets || 0) + Number(amount);
+      await this.roundRepo.save(this.currentRound!);
 
-    // keep leaderboard updated with wager
-    await this.leaderboardService.updateFromBet({ address, amount, cashedOut: false });
+      // keep leaderboard updated with wager
+      await this.leaderboardService.updateFromBet({ address, amount, cashedOut: false });
+
+      return newBet;
+    }, 10);
 
     this.broadcastGameState();
 
@@ -691,10 +701,30 @@ export class GameEngine {
       throw new Error('Cannot cash out: round is not in flying phase');
     }
 
-    bet.cashedOut = true;
-    // Use exact multiplier if provided (for auto-cashout precision), otherwise use current
-    bet.cashoutMultiplier = exactMultiplier ?? bet.round.currentMultiplier;
-    bet.payout = Number(bet.amount) * Number(bet.cashoutMultiplier || 1);
+    // Wrap database operations in retry logic to handle serialization errors
+    const result = await this.executeWithRetry(async () => {
+      bet.cashedOut = true;
+      // Use exact multiplier if provided (for auto-cashout precision), otherwise use current
+      bet.cashoutMultiplier = exactMultiplier ?? bet.round.currentMultiplier;
+      bet.payout = Number(bet.amount) * Number(bet.cashoutMultiplier || 1);
+
+      // Save cashout locally
+      await this.betRepo.save(bet);
+
+      bet.round.totalPayouts =
+        Number(bet.round.totalPayouts || 0) + Number(bet.payout || 0);
+      await this.roundRepo.save(bet.round);
+
+      await this.leaderboardService.updateFromBet({
+        address: bet.address,
+        amount: Number(bet.amount),
+        cashedOut: true,
+        payout: Number(bet.payout),
+        cashoutMultiplier: Number(bet.cashoutMultiplier),
+      });
+
+      return bet;
+    }, 10); // Increase max retries for this critical operation
 
     // Relay cashout to chain (non-blocking, with error handling)
     let chainError: Error | null = null;
@@ -706,7 +736,7 @@ export class GameEngine {
 
       const chainService = this.chainServices.get(Number(chainId));
       if (chainService) {
-        await chainService.cashOutFor(bet.round.roundId, bet.address, Number(bet.payout), Number(bet.cashoutMultiplier));
+        await chainService.cashOutFor(result.round.roundId, result.address, Number(result.payout), Number(result.cashoutMultiplier));
         logger.info('Cashout relayed to chain successfully', { betId, chainId: Number(chainId) });
       }
     } catch (err) {
@@ -717,35 +747,19 @@ export class GameEngine {
         betId,
         note: 'Cashout will still be recorded locally but may need manual on-chain settlement'
       });
-      // Don't throw - allow local cashout to succeed even if chain fails
     }
 
-    // Save cashout locally regardless of chain status
-    await this.betRepo.save(bet);
-
-    bet.round.totalPayouts =
-      Number(bet.round.totalPayouts || 0) + Number(bet.payout || 0);
-    await this.roundRepo.save(bet.round);
-
-    await this.leaderboardService.updateFromBet({
-      address: bet.address,
-      amount: Number(bet.amount),
-      cashedOut: true,
-      payout: Number(bet.payout),
-      cashoutMultiplier: Number(bet.cashoutMultiplier),
-    });
-
     // Update in-memory active bets if it exists there
-    const activeBetIndex = this.activeAutoCashouts.findIndex(p => p.id === bet.id);
+    const activeBetIndex = this.activeAutoCashouts.findIndex(p => p.id === result.id);
     if (activeBetIndex !== -1) {
-      this.activeAutoCashouts[activeBetIndex] = bet;
+      this.activeAutoCashouts[activeBetIndex] = result;
     }
 
     // Emit cashout notification to all connected clients
     this.io.emit('CASHOUT_NOTIFICATION', {
-      address: bet.address,
-      multiplier: bet.cashoutMultiplier,
-      payout: bet.payout,
+      address: result.address,
+      multiplier: result.cashoutMultiplier,
+      payout: result.payout,
       timestamp: Date.now(),
     });
 
@@ -760,7 +774,7 @@ export class GameEngine {
       });
     }
 
-    return bet;
+    return result;
   }
 
   async broadcastGameState() {
