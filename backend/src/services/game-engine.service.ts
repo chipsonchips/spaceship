@@ -555,7 +555,7 @@ export class GameEngine {
     // Submit an on-chain snapshot asynchronously (if chain service configured)
     if (this.chainService) {
       try {
-        await this.executeWithRetry(() =>
+        await this.executeWithRetry(async () =>
           this.chainService!.submitRoundSnapshot(
             this.currentRound!,
             (await this.betRepo.find({
