@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -14,6 +14,7 @@ export const betRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip || ''),
   handler: (req, res, next, options) => {
     logger.warn(`Rate limit exceeded for bets: ${req.ip}`);
     res.status(options.statusCode).send(options.message);
@@ -33,6 +34,7 @@ export const cashoutRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip || ''),
   handler: (req, res, next, options) => {
     logger.warn(`Rate limit exceeded for cashouts: ${req.ip}`);
     res.status(options.statusCode).send(options.message);
@@ -47,8 +49,9 @@ export const walletRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
   keyGenerator: (req) => {
-    // Use wallet address if available, fallback to IP
-    return (req.body?.address || req.query?.address || req.ip) as string;
+    // Use wallet address if available, fallback to IP with proper IPv6 handling
+    const address = req.body?.address || req.query?.address;
+    return address ? (address as string) : ipKeyGenerator(req.ip || '');
   },
   message: {
     success: false,
