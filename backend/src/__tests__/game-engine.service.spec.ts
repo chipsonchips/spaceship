@@ -700,5 +700,21 @@ describe('GameEngine', () => {
 
       expect(startNewRoundSpy).toHaveBeenCalled();
     });
+
+    it('should only record history once when called concurrently', async () => {
+      mockBetRepo.find.mockResolvedValue([]);
+      mockRoundRepo.save.mockResolvedValue({});
+      mockIo.emit = vi.fn();
+
+      // Call crashRound twice concurrently
+      // The first call will synchronously set phase to CRASHED before any awaits
+      const call1 = gameEngine.crashRound(2.5);
+      const call2 = gameEngine.crashRound(2.5);
+
+      await Promise.all([call1, call2]);
+
+      // History record should only be called once
+      expect(gameEngine.historyService.record).toHaveBeenCalledTimes(1);
+    });
   });
 });

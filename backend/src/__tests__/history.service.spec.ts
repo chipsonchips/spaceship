@@ -31,6 +31,7 @@ describe('HistoryService', () => {
     mockRepo = {
       create: vi.fn(),
       save: vi.fn(),
+      findOne: vi.fn(),
       createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
@@ -47,7 +48,7 @@ describe('HistoryService', () => {
         crashMultiplier: 2.5,
         totalBets: 1000,
         totalPayouts: 2500,
-        players: 5,
+        winnersCount: 5,
         timestamp: Date.now(),
       };
 

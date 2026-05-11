@@ -1,6 +1,7 @@
 import { AppDataSource } from '../config/database.js';
 import { GameHistory } from '../entities/game-history.entity.js';
 import { Repository } from 'typeorm';
+import { logger } from '../utils/logger.js';
 
 export class HistoryService {
   private get repo(): Repository<GameHistory> {
@@ -9,6 +10,16 @@ export class HistoryService {
   }
 
   async record(history: Partial<GameHistory>) {
+    // Prevent duplicate records for the same round
+    if (history.roundId) {
+      const existing = await this.repo.findOne({ where: { roundId: history.roundId } });
+      if (existing) {
+        logger.info(`History record for round ${history.roundId} already exists, skipping.`, {
+          roundId: history.roundId
+        });
+        return existing;
+      }
+    }
     const entity = this.repo.create(history);
     return this.repo.save(entity);
   }

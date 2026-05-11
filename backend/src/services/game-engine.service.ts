@@ -505,21 +505,28 @@ export class GameEngine {
   }
 
   async crashRound(crashMultiplier: number) {
+    if (!this.currentRound || this.currentRound.phase !== 'FLYING') {
+      return;
+    }
+
     if (this.flyingInterval) {
       clearInterval(this.flyingInterval);
       this.flyingInterval = null;
     }
 
-    if (!this.currentRound) return;
+    logger.info(`Crashing round ${this.currentRound.roundId} at ${crashMultiplier}x`);
 
-    // Wrap all database operations in retry logic to handle serialization errors
+    // Guard against re-entry by updating phase immediately in-memory
+    this.currentRound.phase = 'CRASHED';
+    this.currentRound.crashMultiplier = crashMultiplier;
+    this.currentRound.currentMultiplier = crashMultiplier;
+
+    // Wrap database operations in retry logic to handle serialization errors
     await this.executeWithRetry(async () => {
-      // Detect perfect cashouts
-      await securityMonitor.detectPerfectCashouts(this.currentRound!.roundId);
+      if (!this.currentRound) return;
 
-      this.currentRound!.phase = 'CRASHED';
-      this.currentRound!.crashMultiplier = crashMultiplier;
-      this.currentRound!.currentMultiplier = crashMultiplier;
+      // Detect perfect cashouts
+      await securityMonitor.detectPerfectCashouts(this.currentRound.roundId);
 
       // determine losers (non-cashed) and update leaderboard
       const players: PlayerBet[] = await this.betRepo.find({

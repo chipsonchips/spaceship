@@ -5,7 +5,7 @@ export class GameHistory {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', unique: true })
   roundId!: number;
 
   @Column({ type: 'numeric', precision: 10, scale: 4 })
