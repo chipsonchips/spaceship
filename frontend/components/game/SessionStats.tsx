@@ -20,6 +20,11 @@ const SessionStats: React.FC = () => {
     losses: 0,
     totalProfit: 0,
   });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (
@@ -47,7 +52,7 @@ const SessionStats: React.FC = () => {
     setStats({ wins, losses, totalProfit });
   }, [settings.sessionStatsEnabled, gameHistory, walletAddress]);
 
-  if (!settings.sessionStatsEnabled) {
+  if (!mounted || !settings.sessionStatsEnabled) {
     return null;
   }
 
