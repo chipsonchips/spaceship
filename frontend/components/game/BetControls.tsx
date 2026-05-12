@@ -47,14 +47,12 @@ const BetControls: React.FC = () => {
       );
       if (userRes.ok) {
         const userData = await userRes.json();
-        console.log("User data:", userData);
         if (userData.user?.id) {
           const freeBetsRes = await fetch(
             `${apiBase}/api/free-bets/user/${userData.user.id}`,
           );
           if (freeBetsRes.ok) {
             const freeBetsData = await freeBetsRes.json();
-            console.log("Free bets data:", freeBetsData);
             setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
             setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
             setFreeBetsExpiresAt(freeBetsData.expiresAt);

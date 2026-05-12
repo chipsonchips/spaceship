@@ -17,11 +17,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Log user changes
-  useEffect(() => {
-    console.log("AuthProvider: user state changed:", user);
-  }, [user]);
-
   // Load tokens from localStorage on mount
   useEffect(() => {
     const loadStoredAuth = () => {
@@ -52,12 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const saveAuth = useCallback((user: AuthUser, tokens: AuthTokens) => {
-    console.log("saveAuth called with user:", user);
     setUser(user);
     setTokens(tokens);
     localStorage.setItem("authUser", JSON.stringify(user));
     localStorage.setItem("authTokens", JSON.stringify(tokens));
-    console.log("User saved to state and localStorage");
   }, []);
 
   const clearAuth = useCallback(() => {
@@ -70,13 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithWallet = useCallback(
     async (address: string) => {
       try {
-        console.log("loginWithWallet called with address:", address);
         setIsLoading(true);
         setError(null);
 
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        console.log("Calling API:", `${apiUrl}/api/auth/wallet/login`);
 
         const response = await fetch(`${apiUrl}/api/auth/wallet/login`, {
           method: "POST",
@@ -84,10 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ address }),
         });
 
-        console.log("Login response status:", response.status);
-
         const data = await response.json();
-        console.log("Login response data:", data);
 
         if (!response.ok) {
           const errorMsg = data.error || "Login failed";
@@ -147,7 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        console.log("Calling API:", `${apiUrl}/api/auth/farcaster/login`);
 
         const response = await fetch(`${apiUrl}/api/auth/farcaster/login`, {
           method: "POST",
@@ -162,10 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }),
         });
 
-        console.log("Farcaster login response status:", response.status);
-
         const data = await response.json();
-        console.log("Farcaster login response data:", data);
 
         if (!response.ok) {
           const errorMsg = data.error || "Login failed";

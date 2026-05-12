@@ -59,8 +59,6 @@ export default function UsernameModal({ isOpen, onClose }: UsernameModalProps) {
     }
   };
 
-  console.log("UsernameModal rendered:", { isOpen, mounted });
-
   if (!isOpen || !mounted) return null;
 
   const modalContent = (

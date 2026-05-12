@@ -24,18 +24,9 @@ export default function UsernamePrompt() {
         user.username === undefined ||
         user.username.trim() === "");
 
-    console.log("UsernamePrompt state check:", {
-      isAuthenticated,
-      userId: user?.id,
-      username: user?.username,
-      needsUsername,
-    });
-
     if (needsUsername) {
-      console.log("Showing username modal");
       setShowModal(true);
     } else {
-      console.log("Hiding username modal");
       setShowModal(false);
     }
   }, [mounted, isAuthenticated, user]);

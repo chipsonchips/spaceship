@@ -36,7 +36,6 @@ export default function WalletAuthManager() {
 
       // If we don't have a user and we're not already loading, login
       if (!user && !isLoading && lastProcessedAddress.current !== address) {
-        console.log("Automatically logging in wallet address:", address);
         lastProcessedAddress.current = address;
         loginWithWallet(address).catch((error) => {
           console.error("Auto-login failed:", error);
