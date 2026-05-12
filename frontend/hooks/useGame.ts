@@ -105,19 +105,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
       }
     })();
 
-    // Refresh leaderboard every 10 seconds
-    const leaderboardInterval = setInterval(async () => {
-      try {
-        const r = await import("@/lib/api");
-        const lb = await r.fetchLeaderboard();
-        setLeaderboard(lb);
-      } catch (e) {
-        console.error("Failed to refresh leaderboard:", e);
-      }
-    }, 10000);
-
     return () => {
-      clearInterval(leaderboardInterval);
       // unsubscribe();
     };
   }, [wsUrl]);
