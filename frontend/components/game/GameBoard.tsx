@@ -7,6 +7,7 @@ import { useMultiplierAnimation } from "@/hooks/useGame";
 import usePlaneAnimation from "@/hooks/usePlaneAnimation";
 import { useSound } from "@/hooks/useSound";
 import ParticleEffect from "./ParticleEffect";
+import FlyingEffects from "./FlyingEffects";
 import Image from "next/image";
 
 const GameBoard: React.FC = () => {
@@ -59,13 +60,18 @@ const GameBoard: React.FC = () => {
   ]);
 
   return (
-    <div className="">
+    <div 
+      className={`absolute inset-0 pointer-events-none z-[60] ${
+        roundData?.phase === "FLYING" && displayMultiplier > 5 ? "animate-[cameraShake_0.2s_infinite]" : ""
+      }`}
+    >
       <ParticleEffect
         trigger={crashTrigger}
         x={crashPosition.x}
         y={crashPosition.y}
         type="crash"
       />
+      <FlyingEffects roundData={roundData} multiplier={displayMultiplier} />
       {/* Animated Radar Background - Full viewport coverage */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {/* Radar grid */}
@@ -78,7 +84,7 @@ const GameBoard: React.FC = () => {
               linear-gradient(90deg, rgba(74, 222, 128, 0.1) 1px, transparent 1px)
             `,
               backgroundSize: "50px 50px",
-              animation: "gridPulse 4s ease-in-out infinite",
+              animation: `gridPulse ${Math.max(1, 4 - (displayMultiplier - 1) * 0.5)}s ease-in-out infinite`,
             }}
           />
         </div>
@@ -91,7 +97,7 @@ const GameBoard: React.FC = () => {
             style={{
               background:
                 "conic-gradient(from 0deg, transparent 0deg, rgba(74, 222, 128, 0.3) 90deg, transparent 90deg)",
-              animation: "radarSweep 4s linear infinite",
+              animation: `radarSweep ${Math.max(1, 4 - (displayMultiplier - 1) * 0.5)}s linear infinite`,
             }}
           />
         </div>
@@ -187,9 +193,32 @@ const GameBoard: React.FC = () => {
               opacity: plane.opacity,
               willChange: "transform, opacity, left, bottom",
               zIndex: 20,
+              transition: roundData.phase === "BETTING" ? "none" : "left 0.1s linear, bottom 0.1s linear",
             }}
           >
-            <div style={{ width: "clamp(40px, 12vw, 96px)", height: "auto" }}>
+            {/* Thruster Glow */}
+            {roundData.phase === "FLYING" && (
+              <div className="absolute top-[85%] left-1/2 -translate-x-1/2 w-10 h-20 pointer-events-none -z-10">
+                <div 
+                  className="w-full h-full"
+                  style={{
+                    background: "radial-gradient(ellipse at top, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0) 70%)",
+                    filter: "blur(3px)",
+                    animation: "thrusterPulse 0.1s infinite alternate",
+                    opacity: Math.max(0.5, Math.min(1, 0.5 + (displayMultiplier - 1) * 0.1)),
+                  }}
+                />
+              </div>
+            )}
+            
+            <div 
+              style={{ 
+                width: "clamp(40px, 12vw, 96px)", 
+                height: "auto",
+                filter: roundData.phase === "FLYING" ? `drop-shadow(0 0 ${Math.min(20, displayMultiplier * 2)}px rgba(74, 222, 128, 0.5))` : "none",
+                animation: roundData.phase === "BETTING" ? "float 3s ease-in-out infinite" : "none"
+              }}
+            >
               <Image
                 src="/plane.png"
                 alt="Flying plane"
