@@ -26,7 +26,6 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
   const crashRef = useRef<{ start?: number }>({});
 
   useEffect(() => {
-    console.log("round data from usePlaneAnimation", roundData);
 
     const stop = () => {
       if (rafRef.current !== null) {

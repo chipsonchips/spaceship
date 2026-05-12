@@ -275,25 +275,10 @@ export class GameEngine {
         ? Math.max(0, Number(this.currentRound.flyStartTime) - now)
         : 10000;
 
-    logger.info(
-      `Scheduling flying phase in ${remainingMs}ms for round ${this.currentRound?.roundId}`,
-      {
-        flyStartTime: this.currentRound?.flyStartTime,
-        now,
-        remainingMs,
-        bettingDuration: this.BETTING_DURATION_MS
-      }
-    );
-
     this.bettingTimeout = setTimeout(() => this.startFlyingPhase(), remainingMs);
   }
 
   async startFlyingPhase() {
-    logger.info('startFlyingPhase called', {
-      roundId: this.currentRound?.roundId,
-      phase: this.currentRound?.phase,
-      hasCurrentRound: !!this.currentRound
-    });
 
     if (!this.currentRound || this.currentRound.phase !== 'BETTING') {
       logger.warn('startFlyingPhase aborted: no current betting round', {
@@ -340,11 +325,6 @@ export class GameEngine {
     const clientSeeds = bets
       .map((b) => b.clientSeed)
       .filter((s) => s !== null && s !== undefined) as string[];
-
-    logger.info("Combining seeds for crash calculation", {
-      roundId: this.currentRound.roundId,
-      clientSeedsCount: clientSeeds.length,
-    });
 
     // 3. Combine client seeds
     const combinedClientSeedHash = combineClientSeeds(clientSeeds);
@@ -513,8 +493,6 @@ export class GameEngine {
       clearInterval(this.flyingInterval);
       this.flyingInterval = null;
     }
-
-    logger.info(`Crashing round ${this.currentRound.roundId} at ${crashMultiplier}x`);
 
     // Guard against re-entry by updating phase immediately in-memory
     this.currentRound.phase = 'CRASHED';
