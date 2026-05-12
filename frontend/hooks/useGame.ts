@@ -106,7 +106,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
     })();
 
     return () => {
-      // unsubscribe();
+      unsubscribe();
     };
   }, [wsUrl]);
 
@@ -286,6 +286,13 @@ export function useRoundCountdown(roundData: RoundData | null) {
 export function useMultiplierAnimation(roundData: RoundData | null) {
   const [displayMultiplier, setDisplayMultiplier] = useState(1.0);
   const rafRef = useRef<number | null>(null);
+  const targetMultiplierRef = useRef(1.0);
+
+  useEffect(() => {
+    if (roundData?.currentMultiplier) {
+      targetMultiplierRef.current = roundData.currentMultiplier;
+    }
+  }, [roundData?.currentMultiplier]);
 
   useEffect(() => {
     const stop = () => {
@@ -296,10 +303,10 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
     };
 
     if (roundData?.phase === "FLYING") {
-      setDisplayMultiplier(roundData.currentMultiplier);
+      setDisplayMultiplier(targetMultiplierRef.current);
       const animate = () => {
         setDisplayMultiplier((m) =>
-          Math.max(m, roundData?.currentMultiplier ?? m),
+          Math.max(m, targetMultiplierRef.current),
         );
         rafRef.current = requestAnimationFrame(animate);
       };
@@ -315,7 +322,6 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
     }
   }, [
     roundData?.phase,
-    roundData?.currentMultiplier,
     roundData?.crashMultiplier,
   ]);
 
