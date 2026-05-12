@@ -136,3 +136,53 @@
     }
   }
 }
+@keyframes speedLine {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes thrusterPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+    filter: blur(4px);
+  }
+  50% {
+    transform: scale(1.2, 0.8);
+    opacity: 1;
+    filter: blur(2px);
+  }
+}
+
+@keyframes cameraShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(1px, 1px) rotate(0.1deg); }
+  50% { transform: translate(-1px, -1px) rotate(-0.1deg); }
+  75% { transform: translate(1px, -1px) rotate(0.1deg); }
+}
+
+@keyframes parallaxScroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
