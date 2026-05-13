@@ -8,7 +8,10 @@ interface FlyingEffectsProps {
   multiplier: number;
 }
 
-const FlyingEffects: React.FC<FlyingEffectsProps> = ({ roundData, multiplier }) => {
+const FlyingEffects: React.FC<FlyingEffectsProps> = ({
+  roundData,
+  multiplier,
+}) => {
   const isFlying = roundData?.phase === "FLYING";
 
   // Create stable star positions
@@ -40,9 +43,12 @@ const FlyingEffects: React.FC<FlyingEffectsProps> = ({ roundData, multiplier }) 
   const speedScale = Math.min(3, 1 + (multiplier - 1) * 0.2);
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[55]">
       {/* Parallax Stars/Particles */}
-      <div className="absolute inset-0" style={{ opacity: Math.min(0.5, 0.2 + (multiplier - 1) * 0.1) }}>
+      <div
+        className="absolute inset-0"
+        style={{ opacity: Math.min(0.5, 0.2 + (multiplier - 1) * 0.1) }}
+      >
         {stars.map((star) => (
           <div
             key={star.id}
@@ -85,7 +91,7 @@ const FlyingEffects: React.FC<FlyingEffectsProps> = ({ roundData, multiplier }) 
       )}
 
       {/* Dynamic Glow/Vignette that intensifies with multiplier */}
-      <div 
+      <div
         className="absolute inset-0 transition-opacity duration-1000"
         style={{
           background: `radial-gradient(circle, transparent 40%, rgba(0, 0, 0, ${Math.min(0.6, (multiplier - 1) * 0.05)}) 100%)`,
