@@ -165,7 +165,7 @@ const GameBoard: React.FC = () => {
       {/* Screen tint overlay for tension */}
       {roundData?.phase === "FLYING" && settings.screenTintEnabled && (
         <div
-          className="absolute inset-0 pointer-events-none z-5 transition-colors duration-300"
+          className="fixed inset-0 pointer-events-none z-[55] transition-colors duration-300"
           style={{
             backgroundColor:
               displayMultiplier >= 5
