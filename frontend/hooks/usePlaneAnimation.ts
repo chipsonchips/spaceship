@@ -23,6 +23,7 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
   const [opacity, setOpacity] = useState(1);
   const rafRef = useRef<number | null>(null);
   const prevYRef = useRef<number>(0);
+  const angleRef = useRef<number>(0);
   const crashRef = useRef<{ start?: number }>({});
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
       setAngle(0);
       setOpacity(1);
       prevYRef.current = 0;
+      angleRef.current = 0;
       return;
     }
 
@@ -72,7 +74,8 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
     if (roundData.phase === "FLYING") {
       crashRef.current = {};
       const flyStart = Number(roundData.flyStartTime || Date.now());
-      prevYRef.current = 0; 
+      prevYRef.current = 0;
+      angleRef.current = 0;
 
       const animate = () => {
         const now = Date.now();
@@ -97,8 +100,8 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
           targetAngle = 0 + 10; // Tilt forward slightly if descending
         }
 
-        const currentAngle = angle;
-        const smoothedAngle = currentAngle + (targetAngle - currentAngle) * 0.15;
+        const smoothedAngle = angleRef.current + (targetAngle - angleRef.current) * 0.15;
+        angleRef.current = smoothedAngle;
 
         const smoothFactor = 0.2;
         const nx = 50; 
