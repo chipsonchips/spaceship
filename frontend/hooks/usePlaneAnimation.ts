@@ -92,15 +92,15 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
         // Faster climb = more upward tilt, slower = slight forward tilt
         let targetAngle = 0;
         if (dy > 0) {
-          // Moving up - tilt slightly back for realism based on speed
-          const climbSpeed = Math.min(dy * 2, 15); // Max 15 degree tilt
-          targetAngle = 0 - climbSpeed; // -60 to 0 degrees (more upward when climbing fast)
+          // Moving up - subtle tilt back for realism
+          const climbSpeed = Math.min(dy * 1.5, 5); // Max 5 degree tilt for realism
+          targetAngle = 0 - climbSpeed;
         } else if (dy < 0) {
           // Moving down (shouldn't happen in flying phase, but handle it)
-          targetAngle = 0 + 10; // Tilt forward slightly if descending
+          targetAngle = 0 + 3; // Very slight forward tilt if descending
         }
 
-        const smoothedAngle = angleRef.current + (targetAngle - angleRef.current) * 0.15;
+        const smoothedAngle = angleRef.current + (targetAngle - angleRef.current) * 0.08;
         angleRef.current = smoothedAngle;
 
         const smoothFactor = 0.2;
