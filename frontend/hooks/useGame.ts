@@ -106,7 +106,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
     })();
 
     return () => {
-      // unsubscribe();
+      unsubscribe();
     };
   }, [wsUrl]);
 
@@ -249,6 +249,7 @@ export function useRoundCountdown(roundData: RoundData | null) {
     }
 
     if (roundData.phase === "CRASHED") {
+      // Match the backend's 3s delay before startNewRound() is called
       let timeLeft = 5;
       setCountdown(timeLeft);
       interval = setInterval(() => {
@@ -274,6 +275,7 @@ export function useRoundCountdown(roundData: RoundData | null) {
       update();
       interval = setInterval(update, 1000);
     } else {
+      // FLYING phase - clear countdown
       setCountdown(0);
     }
 
@@ -286,6 +288,13 @@ export function useRoundCountdown(roundData: RoundData | null) {
 export function useMultiplierAnimation(roundData: RoundData | null) {
   const [displayMultiplier, setDisplayMultiplier] = useState(1.0);
   const rafRef = useRef<number | null>(null);
+  const targetMultiplierRef = useRef(1.0);
+
+  useEffect(() => {
+    if (roundData?.currentMultiplier) {
+      targetMultiplierRef.current = roundData.currentMultiplier;
+    }
+  }, [roundData?.currentMultiplier]);
 
   useEffect(() => {
     const stop = () => {
@@ -296,10 +305,10 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
     };
 
     if (roundData?.phase === "FLYING") {
-      setDisplayMultiplier(roundData.currentMultiplier);
+      setDisplayMultiplier(targetMultiplierRef.current);
       const animate = () => {
         setDisplayMultiplier((m) =>
-          Math.max(m, roundData?.currentMultiplier ?? m),
+          Math.max(m, targetMultiplierRef.current),
         );
         rafRef.current = requestAnimationFrame(animate);
       };
@@ -315,7 +324,6 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
     }
   }, [
     roundData?.phase,
-    roundData?.currentMultiplier,
     roundData?.crashMultiplier,
   ]);
 

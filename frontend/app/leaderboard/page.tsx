@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 export default function LeaderboardPage() {
   return (
     <GameProvider>
-      <div className="min-h-screen text-white flex flex-col bg-[linear-gradient(90deg,#1a1a1a_50%,#262626_0%)] bg-size-[200px_100%] bg-repeat">
+      <div className="min-h-screen text-white flex flex-col bg-[#0B0F19] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/30 via-[#0B0F19] to-black relative">
         <Nav />
         <div className="flex-1 flex flex-col p-4 sm:p-6">
           <div className="mb-6 sm:mb-8">

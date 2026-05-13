@@ -74,7 +74,7 @@ const RoundInfo: React.FC = () => {
                   width: `${Math.min(
                     (timeRemaining /
                       (roundData.phase === "CRASHED"
-                        ? 5
+                      ? 5
                         : roundData.flyStartTime && roundData.startTime
                           ? Math.ceil(
                               (Number(roundData.flyStartTime) -

@@ -194,7 +194,7 @@ const Nav = () => {
 
       {/* Mobile Navigation Dropdown */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-[calc(100%+1px)] left-0 w-full bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/50 p-4 flex flex-col gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.7)] z-50 animate-[slideDown_0.2s_ease-out]">
+        <div className="md:hidden absolute top-[calc(100%+1px)] left-0 w-full bg-transparent backdrop-blur-xl border-b border-slate-700/50 p-4 flex flex-col gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.7)] z-50 animate-[slideDown_0.2s_ease-out]">
           <Link
             href="/leaderboard"
             className="flex items-center justify-center px-4 py-2.5 rounded-lg bg-slate-800/60 border border-slate-600/50 hover:border-emerald-500/60 transition-all text-sm font-bold text-emerald-100 font-orbitron uppercase tracking-widest"

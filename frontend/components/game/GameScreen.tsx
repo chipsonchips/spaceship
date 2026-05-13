@@ -16,7 +16,7 @@ import ChainWarning from "@/components/common/ChainWarning";
 const GameScreen = () => {
   return (
     <GameProvider>
-      <div className="min-h-screen text-white flex flex-col bg-[linear-gradient(90deg,#1a1a1a_50%,#262626_0%)] bg-size-[200px_100%] bg-repeat">
+      <div className="min-h-screen text-white flex flex-col bg-[#0B0F19] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/30 via-[#0B0F19] to-black relative">
         <Nav />
         <ErrorBoundary>
           <div className="flex-1 relative">
