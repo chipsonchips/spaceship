@@ -357,6 +357,9 @@ export class GameEngine {
       return;
     }
 
+    // Broadcast phase change immediately
+    await this.broadcastGameState();
+
     this.autoCashedOutBets.clear(); // Reset for new round
     this.previousMultiplier = 1.0; // Reset previous multiplier
 
@@ -559,8 +562,8 @@ export class GameEngine {
 
     this.broadcastGameState();
 
-    // new round after 10s
-    setTimeout(() => this.startNewRound(), 10000);
+    // new round after 5s
+    setTimeout(() => this.startNewRound(), 5000);
   }
 
   async placeBet(

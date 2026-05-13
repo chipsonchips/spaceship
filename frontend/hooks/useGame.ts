@@ -249,6 +249,7 @@ export function useRoundCountdown(roundData: RoundData | null) {
     }
 
     if (roundData.phase === "CRASHED") {
+      // Match the backend's 3s delay before startNewRound() is called
       let timeLeft = 5;
       setCountdown(timeLeft);
       interval = setInterval(() => {
@@ -274,6 +275,7 @@ export function useRoundCountdown(roundData: RoundData | null) {
       update();
       interval = setInterval(update, 1000);
     } else {
+      // FLYING phase - clear countdown
       setCountdown(0);
     }
 
