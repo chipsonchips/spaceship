@@ -573,6 +573,21 @@ export class UserService {
 
         await this.userRepo.save(user);
     }
+
+    /**
+     * Set max bet amount for user
+     */
+    async setMaxBetAmount(userId: string, maxBetAmount: number): Promise<User> {
+        const user = await this.getUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        user.maxBetAmount = maxBetAmount;
+        await this.userRepo.save(user);
+
+        logger.info(`Set max bet amount for user ${userId}: ${maxBetAmount}`);
+
+        return user;
+    }
 }
 
 export const userService = new UserService();

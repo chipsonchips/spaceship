@@ -619,6 +619,15 @@ export class GameEngine {
       // Record free bet usage
       await this.freeBetService.useFreeBet(user.id, amount, this.currentRound.roundId);
     } else {
+      // Check max bet amount for regular bets
+      const user = await this.userService.getUserByAddress(address);
+      if (user) {
+        const maxBetAmount = user.maxBetAmount ?? 0.5; // Default to 0.5 USDC if not set
+        if (amount > maxBetAmount) {
+          throw new Error(`Bet amount exceeds maximum of ${maxBetAmount} USDC`);
+        }
+      }
+
       // Relay to chain for regular bets
       try {
         if (!this.chainServices.has(Number(chainId))) {
