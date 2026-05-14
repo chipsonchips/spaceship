@@ -24,6 +24,7 @@ const BetControls: React.FC = () => {
     null,
   );
   const [useFreeBet, setUseFreeBet] = useState(false);
+  const [maxBetAmount, setMaxBetAmount] = useState<number>(0.5);
 
   const betValidation = useBetValidation(
     betAmount,
@@ -94,6 +95,10 @@ const BetControls: React.FC = () => {
     } else {
       if (!walletBalance || walletBalance <= 0) {
         setError("Insufficient USDC balance");
+        return;
+      }
+      if (parseFloat(betAmount) > maxBetAmount) {
+        setError(`Bet amount exceeds maximum of ${maxBetAmount} USDC`);
         return;
       }
     }
@@ -336,7 +341,7 @@ const BetControls: React.FC = () => {
                   max={
                     useFreeBet
                       ? freeBetMaxAmount.toString()
-                      : walletBalance?.toString() || "0"
+                      : Math.min(walletBalance || 0, maxBetAmount).toString()
                   }
                   className="w-full bg-transparent text-white text-xl sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
                   placeholder="0.00"
@@ -356,8 +361,7 @@ const BetControls: React.FC = () => {
               <span>
                 {useFreeBet
                   ? `Max Allowed: ${freeBetMaxAmount}`
-                  : `Available: ${walletBalance?.toFixed(2) || "0.00"}`}{" "}
-                USDC
+                  : `Max Bet: ${maxBetAmount} USDC`}{" "}
               </span>
               {lastBetAmount && (
                 <button
@@ -374,7 +378,9 @@ const BetControls: React.FC = () => {
           <div className="grid grid-cols-4 gap-2">
             {["0.5", "1", "5", "10"].map((amount) => {
               const amountNum = parseFloat(amount);
-              const isDisabled = useFreeBet && amountNum > freeBetMaxAmount;
+              const isDisabled = useFreeBet
+                ? amountNum > freeBetMaxAmount
+                : amountNum > maxBetAmount;
               return (
                 <button
                   key={amount}

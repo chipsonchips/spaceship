@@ -186,3 +186,18 @@
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50% { transform: translateY(-10px) rotate(2deg); }
 }
+
+/* Force OnchainKit wallet connect modal above game elements (GameBoard z-[60]) */
+[data-radix-portal],
+[data-slot*="portal"],
+[data-slot*="overlay"],
+[data-slot*="dialog"],
+[data-testid*="Modal"],
+[data-testid*="Dialog"],
+[data-testid*="ock"],
+.ock\:z-40,
+.ock\:z-50,
+.ock\:fixed,
+.ock\:absolute {
+  z-index: 9999 !important;
+}
