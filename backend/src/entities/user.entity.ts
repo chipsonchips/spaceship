@@ -154,6 +154,10 @@ export class User {
     @Column({ type: 'timestamp', nullable: true })
     monthlyBetResetAt!: Date | null;
 
+    // Max bet amount (per-user override, null means use global default)
+    @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+    maxBetAmount!: number | null;
+
     // Preferences
     @Column({ type: 'simple-json', default: '{}' })
     preferences!: {
