@@ -592,6 +592,47 @@ router.delete('/:userId/bet-limits', authenticateTokenOrAdminSecret, requireAdmi
 });
 
 /**
+ * POST /api/users/:userId/max-bet-amount
+ * Set max bet amount (admin only)
+ */
+router.post('/:userId/max-bet-amount', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { maxBetAmount } = req.body;
+
+        if (maxBetAmount === undefined || maxBetAmount < 0.1) {
+            return res.status(400).json({
+                success: false,
+                error: 'Max bet amount must be at least 0.1 USDC',
+            });
+        }
+
+        const user = await userService.setMaxBetAmount(req.params.userId as string, maxBetAmount);
+
+        await auditLogService.logAction(
+            req.userId || null,
+            AdminActionType.SETTINGS_CHANGED,
+            `Set max bet amount for user ${user.id} to ${maxBetAmount}`,
+            { userId: user.id, maxBetAmount },
+            req.ipAddress
+        );
+
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                maxBetAmount: user.maxBetAmount,
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to set max bet amount', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to set max bet amount',
+        });
+    }
+});
+
+/**
  * GET /api/users/:userId/restrictions
  * Get user restrictions and limits (admin only)
  */
@@ -622,6 +663,7 @@ router.get('/:userId/restrictions', authenticateTokenOrAdminSecret, requireAdmin
                 dailyBetAmount: user.dailyBetAmount,
                 weeklyBetAmount: user.weeklyBetAmount,
                 monthlyBetAmount: user.monthlyBetAmount,
+                maxBetAmount: user.maxBetAmount ?? 0.5,
             },
         });
     } catch (error) {
