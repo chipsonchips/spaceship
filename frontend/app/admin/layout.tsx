@@ -11,6 +11,7 @@ import {
   KeySquare,
   Menu,
   X,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -111,7 +112,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   CONNECT WALLET
                 </ConnectWallet>
                 <WalletDropdown className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-2xl backdrop-blur-xl">
-                  <Identity className="px-4 pt-3 pb-2 font-inter" hasCopyAddressOnClick>
+                  <Identity
+                    className="px-4 pt-3 pb-2 font-inter"
+                    hasCopyAddressOnClick
+                  >
                     <Avatar className="border border-slate-600/50" />
                     <Name className="text-white font-medium" />
                     <Address className="text-slate-400 text-xs" />
@@ -123,7 +127,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
             {isConnected && (
               <p className="text-amber-400 text-xs mt-2 bg-amber-500/10 border border-amber-500/20 rounded p-2 text-left">
-                Wallet connected but unauthorized. Only accounts with the ADMIN role can access this portal.
+                Wallet connected but unauthorized. Only accounts with the ADMIN
+                role can access this portal.
               </p>
             )}
           </div>
@@ -204,6 +209,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Game Control", href: "/admin/game", icon: Gamepad2 },
     { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Audit Logs", href: "/admin/logs", icon: FileText },
   ];
 
   return (
@@ -229,7 +235,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       >
         <div className="p-6 hidden md:block border-b border-slate-800">
           <div className="font-orbitron font-bold text-2xl tracking-wide text-white text-center">
-            ADMIN<span className="text-emerald-500 truncate block text-sm tracking-[0.2em] mt-1">PORTAL</span>
+            ADMIN
+            <span className="text-emerald-500 truncate block text-sm tracking-[0.2em] mt-1">
+              PORTAL
+            </span>
           </div>
         </div>
 
@@ -247,7 +256,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 }`}
               >
-                <item.icon className={`w-5 h-5 ${isActive ? "text-emerald-400" : "text-slate-500"}`} />
+                <item.icon
+                  className={`w-5 h-5 ${isActive ? "text-emerald-400" : "text-slate-500"}`}
+                />
                 {item.name}
               </Link>
             );
