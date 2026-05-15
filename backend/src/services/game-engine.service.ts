@@ -147,9 +147,25 @@ export class GameEngine {
     try {
       return await operation();
     } catch (error: unknown) {
-      const err = error as Error & { code?: string };
-      if (attempt >= maxRetries) {
-        logger.error('Max retries reached, giving up', { attempt, maxRetries, error });
+      const err = error as Error & { code?: string; driverError?: { code?: string } };
+      const errorMessage = err.message || String(error);
+
+      // Check if this is a retryable error (serialization, connection, or context errors)
+      const isRetryable =
+        errorMessage.includes('serialization') ||
+        errorMessage.includes('context has been closed') ||
+        errorMessage.includes('SERIALIZATION_FAILURE') ||
+        errorMessage.includes('connection') ||
+        err.code === '40P01' || // PostgreSQL serialization failure
+        err.driverError?.code === '40P01';
+
+      if (attempt >= maxRetries || !isRetryable) {
+        logger.error('Operation failed, not retrying', {
+          attempt,
+          maxRetries,
+          isRetryable,
+          error: errorMessage
+        });
         throw error;
       }
 
@@ -160,7 +176,8 @@ export class GameEngine {
       );
 
       logger.warn(`Operation failed, retrying (${attempt}/${maxRetries})`, {
-        error: err.message,
+        error: errorMessage,
+        isRetryable,
         nextRetryIn: `${delayMs}ms`,
       });
 
