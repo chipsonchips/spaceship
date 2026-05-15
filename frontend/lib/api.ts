@@ -3,7 +3,10 @@ const API_BASE =
 
 export async function fetchCurrentRound() {
   const res = await fetch(`${API_BASE}/api/rounds/current`);
-  if (!res.ok) throw new Error("Failed to fetch current round");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch current round: ${res.statusText}`);
+  }
   const j = await res.json();
   return j.round;
 }
@@ -26,7 +29,10 @@ export async function placeBetRest(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error("Failed to place bet");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to place bet: ${res.statusText}`);
+  }
   return res.json();
 }
 
@@ -36,7 +42,10 @@ export async function cashOutRest(betId: number, multiplier?: number, chainId?: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ multiplier, chainId }),
   });
-  if (!res.ok) throw new Error("Failed to cash out");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to cash out: ${res.statusText}`);
+  }
   return res.json();
 }
 

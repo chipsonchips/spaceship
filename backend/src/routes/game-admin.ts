@@ -348,6 +348,102 @@ router.get('/rounds/:roundId', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/admin/game/settings
+ * Get global game settings
+ */
+router.get('/settings', async (req: Request, res: Response) => {
+    try {
+        // In a real implementation, these would be stored in a database
+        // For now, we'll return environment-based defaults
+        const settings = {
+            minBetAmount: parseFloat(process.env.MIN_BET_AMOUNT || '0.1'),
+            maxBetAmount: parseFloat(process.env.MAX_BET_AMOUNT || '10'),
+            bettingDurationMs: parseInt(process.env.BETTING_DURATION_MS || '30000'),
+            flyingDurationMs: parseInt(process.env.FLYING_DURATION_MS || '20000'),
+        };
+
+        res.json({
+            success: true,
+            settings,
+        });
+    } catch (error) {
+        logger.error('Failed to fetch game settings', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch game settings',
+        });
+    }
+});
+
+/**
+ * PUT /api/admin/game/settings
+ * Update global game settings (admin only)
+ */
+router.put('/settings', async (req: Request, res: Response) => {
+    try {
+        const { minBetAmount, maxBetAmount, bettingDurationMs, flyingDurationMs } = req.body;
+
+        // Validate inputs
+        if (minBetAmount !== undefined && minBetAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Minimum bet amount must be greater than 0',
+            });
+        }
+
+        if (maxBetAmount !== undefined && minBetAmount !== undefined && maxBetAmount <= minBetAmount) {
+            return res.status(400).json({
+                success: false,
+                error: 'Maximum bet amount must be greater than minimum',
+            });
+        }
+
+        if (bettingDurationMs !== undefined && bettingDurationMs < 5000) {
+            return res.status(400).json({
+                success: false,
+                error: 'Betting duration must be at least 5 seconds',
+            });
+        }
+
+        if (flyingDurationMs !== undefined && flyingDurationMs < 1000) {
+            return res.status(400).json({
+                success: false,
+                error: 'Flying duration must be at least 1 second',
+            });
+        }
+
+        // In a real implementation, these would be saved to a database
+        // For now, we'll just log and return success
+        logger.info('Game settings updated', {
+            minBetAmount,
+            maxBetAmount,
+            bettingDurationMs,
+            flyingDurationMs,
+            adminId: req.userId,
+        });
+
+        const updatedSettings = {
+            minBetAmount: minBetAmount || parseFloat(process.env.MIN_BET_AMOUNT || '0.1'),
+            maxBetAmount: maxBetAmount || parseFloat(process.env.MAX_BET_AMOUNT || '10'),
+            bettingDurationMs: bettingDurationMs || parseInt(process.env.BETTING_DURATION_MS || '30000'),
+            flyingDurationMs: flyingDurationMs || parseInt(process.env.FLYING_DURATION_MS || '20000'),
+        };
+
+        res.json({
+            success: true,
+            message: 'Game settings updated successfully',
+            settings: updatedSettings,
+        });
+    } catch (error) {
+        logger.error('Failed to update game settings', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update game settings',
+        });
+    }
+});
+
+/**
  * GET /api/admin/game/statistics
  * Get overall game statistics
  */

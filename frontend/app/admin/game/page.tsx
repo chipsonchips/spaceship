@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ExternalLink,
+  Settings,
 } from "lucide-react";
 import { getPlayerDetails, getPlayerBets } from "@/lib/api-auth";
 
@@ -134,10 +135,23 @@ export default function GameAdminPage() {
             <ArrowLeft className="w-5 h-5" />
             Back to Dashboard
           </Link>
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Game Administration
-          </h1>
-          <p className="text-slate-400">Monitor players and game activity</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">
+                Game Administration
+              </h1>
+              <p className="text-slate-400">
+                Monitor players and game activity
+              </p>
+            </div>
+            <Link
+              href="/admin/game/settings"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+            >
+              <Settings className="w-4 h-4" />
+              Game Settings
+            </Link>
+          </div>
         </div>
 
         {error && (
@@ -362,7 +376,11 @@ interface PlayerDetailsModalProps {
   onClose: () => void;
 }
 
-function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps) {
+function PlayerDetailsModal({
+  userId,
+  isOpen,
+  onClose,
+}: PlayerDetailsModalProps) {
   const [playerInfo, setPlayerInfo] = useState<any>(null);
   const [statistics, setStatistics] = useState<any>(null);
   const [recentBets, setRecentBets] = useState<any[]>([]);
@@ -398,7 +416,7 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
+      <div
         className="bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -410,7 +428,9 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">Player Details</h2>
-              <p className="text-slate-400 text-sm">Comprehensive player activity and stats</p>
+              <p className="text-slate-400 text-sm">
+                Comprehensive player activity and stats
+              </p>
             </div>
           </div>
           <button
@@ -426,11 +446,15 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-              <p className="text-slate-400 font-medium">Fetching player data...</p>
+              <p className="text-slate-400 font-medium">
+                Fetching player data...
+              </p>
             </div>
           ) : !playerInfo ? (
             <div className="text-center py-20">
-              <p className="text-slate-400">Failed to load player information</p>
+              <p className="text-slate-400">
+                Failed to load player information
+              </p>
             </div>
           ) : (
             <>
@@ -441,29 +465,47 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="text-xl font-bold text-white mb-1">
-                          {playerInfo.displayName || playerInfo.username || "Anonymous Player"}
+                          {playerInfo.displayName ||
+                            playerInfo.username ||
+                            "Anonymous Player"}
                         </h3>
-                        <p className="text-blue-400 font-mono text-sm break-all">{playerInfo.address}</p>
+                        <p className="text-blue-400 font-mono text-sm break-all">
+                          {playerInfo.address}
+                        </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${playerInfo.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {playerInfo.isActive ? 'Active' : 'Inactive'}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${playerInfo.isActive ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
+                      >
+                        {playerInfo.isActive ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
                       <div className="flex items-center gap-3">
                         <Calendar className="w-4 h-4 text-slate-500" />
                         <div>
-                          <p className="text-xs text-slate-500 uppercase font-semibold">Joined</p>
-                          <p className="text-sm text-slate-300">{new Date(playerInfo.createdAt).toLocaleDateString()}</p>
+                          <p className="text-xs text-slate-500 uppercase font-semibold">
+                            Joined
+                          </p>
+                          <p className="text-sm text-slate-300">
+                            {new Date(
+                              playerInfo.createdAt,
+                            ).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <Activity className="w-4 h-4 text-slate-500" />
                         <div>
-                          <p className="text-xs text-slate-500 uppercase font-semibold">Last Active</p>
+                          <p className="text-xs text-slate-500 uppercase font-semibold">
+                            Last Active
+                          </p>
                           <p className="text-sm text-slate-300">
-                            {playerInfo.lastLoginAt ? new Date(playerInfo.lastLoginAt).toLocaleDateString() : 'Never'}
+                            {playerInfo.lastLoginAt
+                              ? new Date(
+                                  playerInfo.lastLoginAt,
+                                ).toLocaleDateString()
+                              : "Never"}
                           </p>
                         </div>
                       </div>
@@ -472,14 +514,23 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
                 </div>
 
                 <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/20 rounded-2xl p-6 flex flex-col justify-center">
-                  <p className="text-slate-400 text-sm font-medium mb-1">Net Profit</p>
+                  <p className="text-slate-400 text-sm font-medium mb-1">
+                    Net Profit
+                  </p>
                   <div className="flex items-end gap-2">
-                    <h4 className={`text-3xl font-black ${Number(statistics.netProfit) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {Number(statistics.netProfit) >= 0 ? '+' : ''}{parseFloat(statistics.netProfit).toFixed(2)}
+                    <h4
+                      className={`text-3xl font-black ${Number(statistics.netProfit) >= 0 ? "text-green-400" : "text-red-400"}`}
+                    >
+                      {Number(statistics.netProfit) >= 0 ? "+" : ""}
+                      {parseFloat(statistics.netProfit).toFixed(2)}
                     </h4>
-                    <span className="text-slate-400 text-sm mb-1 uppercase font-bold">USDC</span>
+                    <span className="text-slate-400 text-sm mb-1 uppercase font-bold">
+                      USDC
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">Overall house return from this player</p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Overall house return from this player
+                  </p>
                 </div>
               </div>
 
@@ -491,17 +542,40 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
-                    { label: "Total Bets", value: statistics.totalBets, icon: <Activity className="w-4 h-4 text-blue-400" /> },
-                    { label: "Win Rate", value: statistics.winRate, icon: <TrendingUp className="w-4 h-4 text-green-400" /> },
-                    { label: "Total Wagered", value: `$${parseFloat(statistics.totalBetAmount).toFixed(2)}`, icon: <DollarSign className="w-4 h-4 text-orange-400" /> },
-                    { label: "Avg Bet", value: `$${parseFloat(statistics.averageBet).toFixed(2)}`, icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
+                    {
+                      label: "Total Bets",
+                      value: statistics.totalBets,
+                      icon: <Activity className="w-4 h-4 text-blue-400" />,
+                    },
+                    {
+                      label: "Win Rate",
+                      value: statistics.winRate,
+                      icon: <TrendingUp className="w-4 h-4 text-green-400" />,
+                    },
+                    {
+                      label: "Total Wagered",
+                      value: `$${parseFloat(statistics.totalBetAmount).toFixed(2)}`,
+                      icon: <DollarSign className="w-4 h-4 text-orange-400" />,
+                    },
+                    {
+                      label: "Avg Bet",
+                      value: `$${parseFloat(statistics.averageBet).toFixed(2)}`,
+                      icon: <TrendingUp className="w-4 h-4 text-purple-400" />,
+                    },
                   ].map((stat, i) => (
-                    <div key={i} className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4">
+                    <div
+                      key={i}
+                      className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4"
+                    >
                       <div className="flex items-center gap-2 mb-2">
                         {stat.icon}
-                        <p className="text-xs text-slate-500 font-bold uppercase">{stat.label}</p>
+                        <p className="text-xs text-slate-500 font-bold uppercase">
+                          {stat.label}
+                        </p>
                       </div>
-                      <p className="text-xl font-bold text-white">{stat.value}</p>
+                      <p className="text-xl font-bold text-white">
+                        {stat.value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -517,23 +591,39 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-800/50 text-slate-400 border-b border-slate-700/50">
-                        <th className="px-4 py-3 text-left font-semibold">Round</th>
-                        <th className="px-4 py-3 text-right font-semibold">Amount</th>
-                        <th className="px-4 py-3 text-right font-semibold">Multiplier</th>
-                        <th className="px-4 py-3 text-right font-semibold">Payout</th>
-                        <th className="px-4 py-3 text-center font-semibold">TX</th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          Round
+                        </th>
+                        <th className="px-4 py-3 text-right font-semibold">
+                          Amount
+                        </th>
+                        <th className="px-4 py-3 text-right font-semibold">
+                          Multiplier
+                        </th>
+                        <th className="px-4 py-3 text-right font-semibold">
+                          Payout
+                        </th>
+                        <th className="px-4 py-3 text-center font-semibold">
+                          TX
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/30">
                       {recentBets.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-10 text-center text-slate-500 italic">
+                          <td
+                            colSpan={5}
+                            className="px-4 py-10 text-center text-slate-500 italic"
+                          >
                             No recent bets found
                           </td>
                         </tr>
                       ) : (
                         recentBets.map((bet) => (
-                          <tr key={bet.id} className="hover:bg-slate-700/20 transition-colors">
+                          <tr
+                            key={bet.id}
+                            className="hover:bg-slate-700/20 transition-colors"
+                          >
                             <td className="px-4 py-4 text-slate-300 font-mono text-xs">
                               #{bet.id}
                             </td>
@@ -544,7 +634,8 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
                               {bet.cashedOut ? (
                                 <div className="flex items-center justify-end gap-1 text-green-400 font-bold">
                                   <ArrowUpRight className="w-3 h-3" />
-                                  {parseFloat(bet.cashoutMultiplier).toFixed(2)}x
+                                  {parseFloat(bet.cashoutMultiplier).toFixed(2)}
+                                  x
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-end gap-1 text-red-400/70">
@@ -554,23 +645,33 @@ function PlayerDetailsModal({ userId, isOpen, onClose }: PlayerDetailsModalProps
                               )}
                             </td>
                             <td className="px-4 py-4 text-right font-bold">
-                               <span className={Number(bet.payout) > 0 ? "text-green-400" : "text-slate-500"}>
-                                 ${parseFloat(bet.payout || "0").toFixed(2)}
-                               </span>
+                              <span
+                                className={
+                                  Number(bet.payout) > 0
+                                    ? "text-green-400"
+                                    : "text-slate-500"
+                                }
+                              >
+                                ${parseFloat(bet.payout || "0").toFixed(2)}
+                              </span>
                             </td>
                             <td className="px-4 py-4 text-center">
                               {bet.txHash ? (
-                                <a 
-                                  href={`https://basescan.org/tx/${bet.txHash}`} 
-                                  target="_blank" 
+                                <a
+                                  href={`https://basescan.org/tx/${bet.txHash}`}
+                                  target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center p-1 bg-blue-500/10 rounded"
                                 >
-                                  <span className="mr-1 text-xs font-mono">#{bet.id}</span>
+                                  <span className="mr-1 text-xs font-mono">
+                                    #{bet.id}
+                                  </span>
                                   <ExternalLink className="w-3 h-3" />
                                 </a>
                               ) : (
-                                <span className="text-slate-400 font-mono text-xs">#{bet.id}</span>
+                                <span className="text-slate-400 font-mono text-xs">
+                                  #{bet.id}
+                                </span>
                               )}
                             </td>
                           </tr>

@@ -60,9 +60,11 @@ const GameBoard: React.FC = () => {
   ]);
 
   return (
-    <div 
-      className={`absolute inset-0 pointer-events-none z-[60] ${
-        roundData?.phase === "FLYING" && displayMultiplier > 5 ? "animate-[cameraShake_0.2s_infinite]" : ""
+    <div
+      className={`absolute inset-0 pointer-events-none z-[10] ${
+        roundData?.phase === "FLYING" && displayMultiplier > 5
+          ? "animate-[cameraShake_0.2s_infinite]"
+          : ""
       }`}
     >
       <ParticleEffect
@@ -165,7 +167,7 @@ const GameBoard: React.FC = () => {
       {/* Screen tint overlay for tension */}
       {roundData?.phase === "FLYING" && settings.screenTintEnabled && (
         <div
-          className="fixed inset-0 pointer-events-none z-[55] transition-colors duration-300"
+          className="fixed inset-0 pointer-events-none z-[5] transition-colors duration-300"
           style={{
             backgroundColor:
               displayMultiplier >= 5
@@ -193,30 +195,43 @@ const GameBoard: React.FC = () => {
               opacity: plane.opacity,
               willChange: "transform, opacity, left, bottom",
               zIndex: 20,
-              transition: roundData.phase === "BETTING" ? "none" : "left 0.1s linear, bottom 0.1s linear",
+              transition:
+                roundData.phase === "BETTING"
+                  ? "none"
+                  : "left 0.1s linear, bottom 0.1s linear",
             }}
           >
             {/* Thruster Glow */}
             {roundData.phase === "FLYING" && (
               <div className="absolute top-[85%] left-1/2 -translate-x-1/2 w-10 h-20 pointer-events-none -z-10">
-                <div 
+                <div
                   className="w-full h-full"
                   style={{
-                    background: "radial-gradient(ellipse at top, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0) 70%)",
+                    background:
+                      "radial-gradient(ellipse at top, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0) 70%)",
                     filter: "blur(3px)",
                     animation: "thrusterPulse 0.1s infinite alternate",
-                    opacity: Math.max(0.5, Math.min(1, 0.5 + (displayMultiplier - 1) * 0.1)),
+                    opacity: Math.max(
+                      0.5,
+                      Math.min(1, 0.5 + (displayMultiplier - 1) * 0.1),
+                    ),
                   }}
                 />
               </div>
             )}
-            
-            <div 
-              style={{ 
-                width: "clamp(40px, 12vw, 96px)", 
+
+            <div
+              style={{
+                width: "clamp(40px, 12vw, 96px)",
                 height: "auto",
-                filter: roundData.phase === "FLYING" ? `drop-shadow(0 0 ${Math.min(20, displayMultiplier * 2)}px rgba(74, 222, 128, 0.5))` : "none",
-                animation: roundData.phase === "BETTING" ? "float 3s ease-in-out infinite" : "none"
+                filter:
+                  roundData.phase === "FLYING"
+                    ? `drop-shadow(0 0 ${Math.min(20, displayMultiplier * 2)}px rgba(74, 222, 128, 0.5))`
+                    : "none",
+                animation:
+                  roundData.phase === "BETTING"
+                    ? "float 3s ease-in-out infinite"
+                    : "none",
               }}
             >
               <Image

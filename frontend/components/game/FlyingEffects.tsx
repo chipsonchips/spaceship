@@ -43,7 +43,7 @@ const FlyingEffects: React.FC<FlyingEffectsProps> = ({
   const speedScale = Math.min(3, 1 + (multiplier - 1) * 0.2);
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[55]">
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[5]">
       {/* Parallax Stars/Particles */}
       <div
         className="absolute inset-0"
