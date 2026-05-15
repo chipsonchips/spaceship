@@ -13,8 +13,7 @@ import {
   Address,
   EthBalance,
 } from "@coinbase/onchainkit/identity";
-import { useAccount, useConnect } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useAccount, useConnect, useConnectors } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
@@ -34,12 +33,14 @@ const Nav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [connectionAttempted, setConnectionAttempted] = useState(false);
   const { roundData } = useGameContext();
   const { address, isConnected } = useAccount();
   const { chainLabel } = useChainInfo();
   const { walletBalance } = useUSDC();
   const env = useEnvironment();
-  const { connect } = useConnect();
+  const { connectAsync } = useConnect();
+  const connectors = useConnectors();
   const { username } = useUsername(address);
 
   useEffect(() => {
@@ -48,10 +49,41 @@ const Nav = () => {
 
   // MiniPay Auto-Connect Logic
   useEffect(() => {
-    if (env === "minipay" && !isConnected) {
-      connect({ connector: injected({ target: "metaMask" }) });
+    if (
+      env === "minipay" &&
+      !isConnected &&
+      !connectionAttempted &&
+      connectors.length > 0
+    ) {
+      // Use the first connector from wagmi config (injected connector for MiniPay)
+      const injectedConnector = connectors[0];
+      if (injectedConnector) {
+        console.log(
+          "MiniPay: Auto-connecting with connector:",
+          injectedConnector.name,
+          "Available connectors:",
+          connectors.map((c) => c.name),
+        );
+        setConnectionAttempted(true);
+
+        // MiniPay uses Celo network, so we should connect to Celo chain
+        connectAsync({
+          connector: injectedConnector,
+          chainId: 42220, // Celo mainnet
+        })
+          .then(() => {
+            console.log("MiniPay: Connection successful");
+          })
+          .catch((error: Error) => {
+            console.error("MiniPay: Connection failed:", error);
+            // Reset after a delay to allow retry
+            setTimeout(() => {
+              setConnectionAttempted(false);
+            }, 2000);
+          });
+      }
     }
-  }, [env, isConnected, connect]);
+  }, [env, isConnected, connectionAttempted, connectAsync, connectors]);
 
   const isFlying = roundData?.phase === "FLYING";
 
