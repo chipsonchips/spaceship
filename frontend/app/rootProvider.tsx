@@ -24,7 +24,11 @@ const isMiniPay =
   window.ethereum &&
   (window.ethereum as any).isMiniPay;
 
-const connectors: CreateConnectorFn[] = [injected({ target: "metaMask" })];
+// For MiniPay, use injected connector without target specification to auto-detect
+// For other environments, include MetaMask as a fallback
+const connectors: CreateConnectorFn[] = isMiniPay
+  ? [injected()]
+  : [injected({ target: "metaMask" })];
 
 if (!isMiniPay) {
   connectors.push(
@@ -67,9 +71,7 @@ const wagmiConfig = createConfig({
 });
 
 export function RootProvider({ children }: { children: ReactNode }) {
-  // If we are in minipay, we can skip the OnchainKitProvider wrapper to satisfy requirement
-  // without breaking hydration as MiniPay renders strictly client-side within the wallet browser.
-  if (isMiniPay) {
+   if (isMiniPay) {
     return (
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
