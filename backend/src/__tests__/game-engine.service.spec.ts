@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameEngine } from '../services/game-engine.service.ts';
 import { AppDataSource } from '../config/database.ts';
 import { Round } from '../entities/round.entity.ts';
+import { GAME_CONSTANTS } from '../constants.js';
 
 // Mock dependencies
 vi.mock('../config/database.ts', () => ({
@@ -698,7 +699,7 @@ describe('GameEngine', () => {
       expect(mockIo.emit).toHaveBeenCalledWith('HISTORY_UPDATE', mockHistory);
     });
 
-    it('should schedule next round after 10 seconds', async () => {
+    it(`should schedule next round after ${GAME_CONSTANTS.ROUND_RESTART_DELAY_MS / 1000} seconds`, async () => {
       mockBetRepo.find.mockResolvedValue([]);
       mockRoundRepo.save.mockResolvedValue({});
       mockIo.emit = vi.fn();
@@ -709,8 +710,8 @@ describe('GameEngine', () => {
 
       expect(startNewRoundSpy).not.toHaveBeenCalled();
 
-      // Fast forward 10 seconds
-      await vi.advanceTimersByTimeAsync(10000);
+      // Fast forward by the configured delay
+      await vi.advanceTimersByTimeAsync(GAME_CONSTANTS.ROUND_RESTART_DELAY_MS);
 
       expect(startNewRoundSpy).toHaveBeenCalled();
     });

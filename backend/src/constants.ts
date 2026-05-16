@@ -7,7 +7,8 @@
 // ============================================================================
 
 export const GAME_CONSTANTS = {
-    BETTING_DURATION_MS: Number(process.env.BETTING_DURATION_MS) || 15000,
+    BETTING_DURATION_MS: Number(process.env.BETTING_DURATION_MS) || 10000,
+    ROUND_RESTART_DELAY_MS: Number(process.env.ROUND_RESTART_DELAY_MS) || 5000,
     FLYING_DURATION_MS: Number(process.env.FLYING_DURATION_MS) || 60000,
     HOUSE_EDGE: 0.03, // 3% house edge
     MIN_BET_AMOUNT: 0.01,
@@ -51,18 +52,29 @@ export const PAGINATION_CONSTANTS = {
 // ============================================================================
 
 export enum AdminActionType {
-    PAUSE_CONTRACT = 'PAUSE_CONTRACT',
-    UNPAUSE_CONTRACT = 'UNPAUSE_CONTRACT',
-    SET_OPERATOR = 'SET_OPERATOR',
-    WITHDRAW_PROFITS = 'WITHDRAW_PROFITS',
-    FUND_HOUSE = 'FUND_HOUSE',
-    WITHDRAW_ETH = 'WITHDRAW_ETH',
-    ALLOCATE_FREE_BETS = 'ALLOCATE_FREE_BETS',
-    DEACTIVATE_USER = 'DEACTIVATE_USER',
-    ACTIVATE_USER = 'ACTIVATE_USER',
-    UPDATE_USER_ROLE = 'UPDATE_USER_ROLE',
-    CREATE_ADMIN = 'CREATE_ADMIN',
-    VIEW_AUDIT_LOGS = 'VIEW_AUDIT_LOGS',
+    HOUSE_WITHDRAW = 'house_withdraw',
+    HOUSE_FUND = 'house_fund',
+    CONTRACT_PAUSE = 'contract_pause',
+    CONTRACT_UNPAUSE = 'contract_unpause',
+    OPERATOR_SET = 'operator_set',
+    ETH_WITHDRAW = 'eth_withdraw',
+    USER_CREATED = 'user_created',
+    USER_UPDATED = 'user_updated',
+    USER_DELETED = 'user_deleted',
+    USER_ROLE_CHANGED = 'user_role_changed',
+    ADMIN_CREATED = 'admin_created',
+    ADMIN_DELETED = 'admin_deleted',
+    SETTINGS_CHANGED = 'settings_changed',
+    USER_BLOCKED = 'user_blocked',
+    USER_UNBLOCKED = 'user_unblocked',
+    USER_SUSPENDED = 'user_suspended',
+    USER_UNSUSPENDED = 'user_unsuspended',
+    USER_BET_LIMIT_SET = 'user_bet_limit_set',
+    FREE_BET_ASSIGNED = 'free_bet_assigned',
+    SECURITY_ALERT = 'security_alert',
+    SEED_ACCESSED = 'seed_accessed',
+    SUSPICIOUS_ACTIVITY = 'suspicious_activity',
+    VIEW_AUDIT_LOGS = 'view_audit_logs',
 }
 
 // ============================================================================

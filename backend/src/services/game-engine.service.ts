@@ -23,6 +23,7 @@ import { combineClientSeeds, createFinalSeed } from '../utils/provably-fair.js';
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || '';
 import { securityMonitor } from './security-monitor.service.js';
 import { auditLogService } from './audit-log.service.js';
+import { GAME_CONSTANTS } from '../constants.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
 
 export class GameEngine {
@@ -35,7 +36,8 @@ export class GameEngine {
   private activeAutoCashouts: PlayerBet[] = []; // In-memory active bets for current round
   private previousMultiplier = 1.0; // Track previous multiplier for interpolation
   private chainServices = new Map<number, ChainService>();
-  private readonly BETTING_DURATION_MS = Number(process.env.BETTING_DURATION_MS) || 15000;
+  private readonly BETTING_DURATION_MS = GAME_CONSTANTS.BETTING_DURATION_MS;
+  private readonly ROUND_RESTART_DELAY_MS = GAME_CONSTANTS.ROUND_RESTART_DELAY_MS;
 
   leaderboardService = new LeaderboardService();
   historyService = new HistoryService();
@@ -290,7 +292,7 @@ export class GameEngine {
     const remainingMs =
       this.currentRound && this.currentRound.flyStartTime
         ? Math.max(0, Number(this.currentRound.flyStartTime) - now)
-        : 10000;
+        : this.BETTING_DURATION_MS;
 
     this.bettingTimeout = setTimeout(() => this.startFlyingPhase(), remainingMs);
   }
@@ -579,8 +581,8 @@ export class GameEngine {
 
     this.broadcastGameState();
 
-    // new round after 5s
-    setTimeout(() => this.startNewRound(), 5000);
+    // new round after delay
+    setTimeout(() => this.startNewRound(), this.ROUND_RESTART_DELAY_MS);
   }
 
   async placeBet(
@@ -813,12 +815,16 @@ export class GameEngine {
           players: players || [], // Use DB state (authoritative for bets)
         };
 
-        this.io.emit('GAME_STATE_UPDATE', sanitizeRound(roundData, ENCRYPTION_SECRET));
+        const payload = sanitizeRound(roundData, ENCRYPTION_SECRET) as Record<string, any>;
+        if (payload) payload.serverTime = Date.now();
+        this.io.emit('GAME_STATE_UPDATE', payload);
       }
     } catch (error) {
       logger.error('Failed to broadcast game state', { error });
       // Fallback: broadcast current round without updated players if query fails
-      this.io.emit('GAME_STATE_UPDATE', sanitizeRound(this.currentRound, ENCRYPTION_SECRET));
+      const fallbackPayload = sanitizeRound(this.currentRound, ENCRYPTION_SECRET) as Record<string, any>;
+      if (fallbackPayload) fallbackPayload.serverTime = Date.now();
+      this.io.emit('GAME_STATE_UPDATE', fallbackPayload);
     }
   }
 }
