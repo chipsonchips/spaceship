@@ -26,9 +26,11 @@ const FlyingEffects: React.FC<FlyingEffectsProps> = ({
     }));
   }, []);
 
+  const showSpeedLines = multiplier > 1.5;
+
   // Create speed lines that appear at higher multipliers
   const speedLines = useMemo(() => {
-    if (multiplier < 1.5) return [];
+    if (!showSpeedLines) return [];
     return Array.from({ length: 15 }).map((_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
@@ -36,7 +38,7 @@ const FlyingEffects: React.FC<FlyingEffectsProps> = ({
       duration: 0.5 + Math.random() * 0.5,
       height: 50 + Math.random() * 150,
     }));
-  }, [multiplier > 1.5]);
+  }, [showSpeedLines]);
 
   if (!isFlying) return null;
 

@@ -68,6 +68,12 @@ vi.mock('../services/chain.service.ts', () => ({
   })),
 }));
 
+vi.mock('../services/user.service.ts', () => ({
+  UserService: vi.fn(() => ({
+    getUserByAddress: vi.fn(),
+  })),
+}));
+
 vi.mock('@/utils/logger.ts', () => ({
   logger: {
     info: vi.fn(),
@@ -286,6 +292,14 @@ describe('GameEngine', () => {
         phase: 'BETTING',
         totalBets: 100,
       };
+
+      // Mock user service to return a user by default
+      vi.mocked(gameEngine.userService.getUserByAddress).mockResolvedValue({
+        id: 1,
+        address: '0x111',
+        username: 'testuser',
+        maxBetAmount: null,
+      } as any);
     });
 
     it('should throw error when chainId is not provided', async () => {
@@ -295,17 +309,17 @@ describe('GameEngine', () => {
     });
 
     it('should create bet in current round', async () => {
-      const betData = { id: 1, address: '0x111', amount: 50 };
+      const betData = { id: 1, address: '0x111', amount: 5 };
       mockBetRepo.create.mockReturnValue(betData);
       mockBetRepo.save.mockResolvedValue(betData);
       mockRoundRepo.save.mockResolvedValue({});
 
-      await gameEngine.placeBet('0x111', 50, 8453);
+      await gameEngine.placeBet('0x111', 5, 8453);
 
       expect(mockBetRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           address: '0x111',
-          amount: 50,
+          amount: 5,
           cashedOut: false,
         })
       );
@@ -326,42 +340,42 @@ describe('GameEngine', () => {
 
     it('should validate bet amount (minimum)', async () => {
       await expect(gameEngine.placeBet('0x111', 0.05, 8453)).rejects.toThrow(
-        'Invalid bet amount'
+        'Bet amount must be at least 0.1 USDC'
       );
     });
 
     it('should validate bet amount (maximum)', async () => {
       await expect(gameEngine.placeBet('0x111', 1001, 8453)).rejects.toThrow(
-        'Invalid bet amount'
+        'Bet amount exceeds global maximum of 10 USDC'
       );
     });
 
     it('should update round totalBets', async () => {
-      const betData = { id: 1, address: '0x111', amount: 50 };
+      const betData = { id: 1, address: '0x111', amount: 5 };
       mockBetRepo.create.mockReturnValue(betData);
       mockBetRepo.save.mockResolvedValue(betData);
       mockRoundRepo.save.mockResolvedValue({});
 
-      await gameEngine.placeBet('0x111', 50, 8453);
+      await gameEngine.placeBet('0x111', 5, 8453);
 
       expect(mockRoundRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          totalBets: 150, // 100 + 50
+          totalBets: 105, // 100 + 5
         })
       );
     });
 
     it('should update leaderboard', async () => {
-      const betData = { id: 1, address: '0x111', amount: 50 };
+      const betData = { id: 1, address: '0x111', amount: 5 };
       mockBetRepo.create.mockReturnValue(betData);
       mockBetRepo.save.mockResolvedValue(betData);
       mockRoundRepo.save.mockResolvedValue({});
 
-      await gameEngine.placeBet('0x111', 50, 8453);
+      await gameEngine.placeBet('0x111', 5, 8453);
 
       expect(gameEngine.leaderboardService.updateFromBet).toHaveBeenCalledWith({
         address: '0x111',
-        amount: 50,
+        amount: 5,
         cashedOut: false,
       });
     });

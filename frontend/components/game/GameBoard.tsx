@@ -198,7 +198,7 @@ const GameBoard: React.FC = () => {
               transition:
                 roundData.phase === "BETTING"
                   ? "none"
-                  : "left 0.1s linear, bottom 0.1s linear",
+                  : "opacity 0.1s linear",
             }}
           >
             {/* Thruster Glow */}

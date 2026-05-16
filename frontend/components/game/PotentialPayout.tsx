@@ -29,7 +29,7 @@ const PotentialPayout: React.FC = () => {
   const profit = potentialPayout - Number(myBet.amount);
 
   return (
-    <div className="fixed bottom-32 right-4 sm:right-6 z-40 pointer-events-none">
+    <div className="hidden sm:block fixed bottom-32 right-4 sm:right-6 z-40 pointer-events-none">
       <div className="bg-gradient-to-b from-emerald-900/40 to-slate-900/60 backdrop-blur-md border border-emerald-500/40 rounded-lg p-3 sm:p-4 shadow-lg min-w-[180px] sm:min-w-[220px]">
         <div className="text-[10px] sm:text-xs text-emerald-400/80 font-bold font-orbitron uppercase tracking-widest mb-2">
           Potential Payout

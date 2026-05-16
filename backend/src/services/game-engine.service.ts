@@ -597,8 +597,17 @@ export class GameEngine {
     if (!this.currentRound || this.currentRound.phase !== 'BETTING')
       throw new Error('Betting closed');
 
-    if (amount < 0.1 || amount > 1000) {
-      throw new Error('Invalid bet amount: must be between 0.1 and 1000 USDC');
+    // Get global min/max bet amounts from environment
+    const globalMinBet = parseFloat(process.env.MIN_BET_AMOUNT || '0.1');
+    const globalMaxBet = parseFloat(process.env.MAX_BET_AMOUNT || '10');
+
+    // Basic amount validation
+    if (amount < globalMinBet) {
+      throw new Error(`Bet amount must be at least ${globalMinBet} USDC`);
+    }
+
+    if (amount > globalMaxBet) {
+      throw new Error(`Bet amount exceeds global maximum of ${globalMaxBet} USDC`);
     }
 
     if (autoCashoutMultiplier && (autoCashoutMultiplier < 1.01 || autoCashoutMultiplier > 100)) {
@@ -614,15 +623,22 @@ export class GameEngine {
       throw new Error('Your account is under review. Please contact support.');
     }
 
+    // Get user and check user-specific max bet amount
+    const user = await this.userService.getUserByAddress(address);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check user-specific max bet amount (if set, it overrides global max)
+    const userMaxBet = user.maxBetAmount ?? globalMaxBet;
+    if (amount > userMaxBet) {
+      throw new Error(`Bet amount exceeds your maximum of ${userMaxBet} USDC`);
+    }
+
     let finalTxHash: string | null = null;
 
     // Handle free bet
     if (useFreeBet) {
-      const user = await this.userService.getUserByAddress(address);
-      if (!user) {
-        throw new Error('User not found');
-      }
-
       const freeBetsRemaining = await this.freeBetService.getFreeBetsRemaining(user.id);
       if (freeBetsRemaining <= 0) {
         throw new Error('No free bets remaining');
@@ -636,15 +652,6 @@ export class GameEngine {
       // Record free bet usage
       await this.freeBetService.useFreeBet(user.id, amount, this.currentRound.roundId);
     } else {
-      // Check max bet amount for regular bets
-      const user = await this.userService.getUserByAddress(address);
-      if (user) {
-        const maxBetAmount = user.maxBetAmount ?? 0.5; // Default to 0.5 USDC if not set
-        if (amount > maxBetAmount) {
-          throw new Error(`Bet amount exceeds maximum of ${maxBetAmount} USDC`);
-        }
-      }
-
       // Relay to chain for regular bets
       try {
         if (!this.chainServices.has(Number(chainId))) {
