@@ -106,7 +106,7 @@ const PlayerActivityFeed: React.FC = () => {
             activity.type === "cashout" ? "text-emerald-400" : "text-red-400"
           }`}
         >
-          {activity.multiplier.toFixed(2)}x
+          {Number(activity.multiplier).toFixed(2)}x
         </div>
       </div>
     </div>

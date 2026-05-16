@@ -96,11 +96,11 @@ const FairnessVerifier: React.FC = () => {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3 bg-slate-800/30 border border-slate-700/30 rounded-lg">
               <p className="text-slate-500 mb-1 font-orbitron uppercase tracking-tighter">Claimed</p>
-              <p className="text-lg font-black text-slate-200">{result.claimedCrashPoint.toFixed(2)}x</p>
+              <p className="text-lg font-black text-slate-200">{Number(result.claimedCrashPoint).toFixed(2)}x</p>
             </div>
             <div className="p-3 bg-slate-800/30 border border-slate-700/30 rounded-lg">
               <p className="text-slate-500 mb-1 font-orbitron uppercase tracking-tighter">Actual</p>
-              <p className="text-lg font-black text-emerald-400">{result.actualCrashPoint.toFixed(2)}x</p>
+              <p className="text-lg font-black text-emerald-400">{Number(result.actualCrashPoint).toFixed(2)}x</p>
             </div>
           </div>
 

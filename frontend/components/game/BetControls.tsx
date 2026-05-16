@@ -7,6 +7,7 @@ import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
 import AutoCashout from "./AutoCashout";
 import { useMultiplierAnimation } from "@/hooks/useGame";
+import * as api from "@/lib/api";
 
 const BetControls: React.FC = () => {
   const { roundData, cashOut, placeBet } = useGameContext();
@@ -42,37 +43,26 @@ const BetControls: React.FC = () => {
 
   const fetchFreeBetsInfo = async () => {
     try {
-      const apiBase =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      // Get user ID from wallet address
-      const userRes = await fetch(
-        `${apiBase}/api/users/address/${walletAddress}`,
-      );
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        if (userData.user?.id) {
-          const freeBetsRes = await fetch(
-            `${apiBase}/api/free-bets/user/${userData.user.id}`,
-          );
-          if (freeBetsRes.ok) {
-            const freeBetsData = await freeBetsRes.json();
-            setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
-            setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
-            setFreeBetsExpiresAt(freeBetsData.expiresAt);
-          } else {
-            console.error(
-              "Failed to fetch free bets:",
-              freeBetsRes.status,
-              await freeBetsRes.text(),
-            );
-          }
-        }
-      } else {
-        console.error(
-          "Failed to fetch user:",
-          userRes.status,
-          await userRes.text(),
+      if (!walletAddress) return;
+      const userData = await api.fetchUserByAddress(walletAddress);
+      
+      if (userData?.user?.id) {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const freeBetsRes = await fetch(
+          `${apiBase}/api/free-bets/user/${userData.user.id}`,
         );
+        if (freeBetsRes.ok) {
+          const freeBetsData = await freeBetsRes.json();
+          setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
+          setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
+          setFreeBetsExpiresAt(freeBetsData.expiresAt);
+        } else {
+          console.error(
+            "Failed to fetch free bets:",
+            freeBetsRes.status,
+            await freeBetsRes.text(),
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to fetch free bets info:", err);
@@ -81,20 +71,15 @@ const BetControls: React.FC = () => {
 
   const fetchUserMaxBetAmount = async () => {
     try {
-      const apiBase =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      const userRes = await fetch(
-        `${apiBase}/api/users/address/${walletAddress}`,
-      );
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        if (userData.user) {
-          // Use user's maxBetAmount if set, otherwise use global default
-          const globalMaxBet = parseFloat(
-            process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10",
-          );
-          setMaxBetAmount(userData.user.maxBetAmount ?? globalMaxBet);
-        }
+      if (!walletAddress) return;
+      const userData = await api.fetchUserByAddress(walletAddress);
+      
+      if (userData?.user) {
+        // Use user's maxBetAmount if set, otherwise use global default
+        const globalMaxBet = parseFloat(
+          process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10",
+        );
+        setMaxBetAmount(userData.user.maxBetAmount ?? globalMaxBet);
       }
     } catch (err) {
       console.error("Failed to fetch user max bet amount:", err);
@@ -257,17 +242,17 @@ const BetControls: React.FC = () => {
       <div className="flex items-center justify-between text-[9px] sm:text-xs text-slate-400 font-orbitron tracking-wider">
         <span className="flex items-center gap-1">
           <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)] animate-pulse"></span>
-          <span className="hidden sm:inline">{chainLabel}</span>
-          <span className="sm:hidden">{chainLabel.split(" ")[0]}</span>
+          <span className="hidden sm:inline">{mounted ? chainLabel : "Loading..."}</span>
+          <span className="sm:hidden">{mounted ? chainLabel.split(" ")[0] : "..."}</span>
         </span>
         <div className="flex gap-1.5 sm:gap-2">
           <span className="bg-slate-800/80 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-slate-700/50 text-emerald-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
             <span className="text-slate-500 text-[9px] sm:text-[10px]">💰</span>
             <span className="hidden sm:inline">
-              {walletBalance?.toFixed(2) || "0.00"}
+              {mounted ? (walletBalance?.toFixed(2) || "0.00") : "0.00"}
             </span>
             <span className="sm:hidden">
-              {walletBalance?.toFixed(1) || "0"}
+              {mounted ? (walletBalance?.toFixed(1) || "0") : "0"}
             </span>
             <span className="text-[8px] sm:text-[9px] text-emerald-500/70">
               USDC

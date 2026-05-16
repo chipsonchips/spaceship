@@ -261,11 +261,15 @@ export function useRoundCountdown(roundData: RoundData | null) {
         }
       }, 1000);
     } else if (roundData.phase === "BETTING") {
+      // Calculate offset based on the serverTime we received with this roundData
+      const timeOffset = roundData.serverTime ? Date.now() - roundData.serverTime : 0;
       const flyAt = roundData.flyStartTime
         ? Number(roundData.flyStartTime)
-        : Date.now() + 60000;
+        : Date.now() - timeOffset + 60000;
+        
       const update = () => {
-        const secsLeft = Math.max(0, Math.ceil((flyAt - Date.now()) / 1000));
+        const adjustedNow = Date.now() - timeOffset;
+        const secsLeft = Math.max(0, Math.ceil((flyAt - adjustedNow) / 1000));
         setCountdown(secsLeft);
         if (secsLeft <= 0 && interval) {
           clearInterval(interval);
@@ -305,10 +309,10 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
     };
 
     if (roundData?.phase === "FLYING") {
-      setDisplayMultiplier(targetMultiplierRef.current);
+      setDisplayMultiplier(Number(targetMultiplierRef.current));
       const animate = () => {
         setDisplayMultiplier((m) =>
-          Math.max(m, targetMultiplierRef.current),
+          Math.max(Number(m), Number(targetMultiplierRef.current)),
         );
         rafRef.current = requestAnimationFrame(animate);
       };
@@ -317,7 +321,7 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
     } else {
       stop();
       if (roundData?.phase === "CRASHED") {
-        setDisplayMultiplier(roundData.crashMultiplier || 1.0);
+        setDisplayMultiplier(Number(roundData.crashMultiplier || 1.0));
       } else {
         setDisplayMultiplier(1.0);
       }

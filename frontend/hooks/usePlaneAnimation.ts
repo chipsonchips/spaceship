@@ -73,7 +73,11 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
 
     if (roundData.phase === "FLYING") {
       crashRef.current = {};
-      const flyStart = Number(roundData.flyStartTime || Date.now());
+      
+      // Calculate elapsed time from currentMultiplier to avoid client/server clock desync
+      const serverElapsed = Math.pow((roundData.currentMultiplier - 1.0) * 5, 2/3) * 1000;
+      const flyStart = Date.now() - serverElapsed;
+      
       prevYRef.current = 0;
       angleRef.current = 0;
 
@@ -83,27 +87,19 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
         const predicted = calculatePlanePosition(elapsed);
 
         // Calculate rotation based on vertical movement direction
-        // dy > 0 = moving up → plane points up (negative angle)
-        // dy < 0 = moving down → plane points down (positive angle)
         const dy = predicted.y - prevYRef.current;
 
-        // Base angle: 0 degrees (pointing straight up for this plane image)
-        // Add tilt based on rate of climb  
-        // Faster climb = more upward tilt, slower = slight forward tilt
         let targetAngle = 0;
         if (dy > 0) {
-          // Moving up - subtle tilt back for realism
-          const climbSpeed = Math.min(dy * 1.5, 5); // Max 5 degree tilt for realism
+          const climbSpeed = Math.min(dy * 1.5, 5);
           targetAngle = 0 - climbSpeed;
         } else if (dy < 0) {
-          // Moving down (shouldn't happen in flying phase, but handle it)
-          targetAngle = 0 + 3; // Very slight forward tilt if descending
+          targetAngle = 0 + 3;
         }
 
         const smoothedAngle = angleRef.current + (targetAngle - angleRef.current) * 0.08;
         angleRef.current = smoothedAngle;
 
-        const smoothFactor = 0.2;
         const nx = 50; 
         const ny = predicted.y;
 

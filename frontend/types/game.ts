@@ -25,6 +25,7 @@ export interface RoundData {
   settled: boolean;
   players: PlayerBet[];
   planePosition: { x: number; y: number };
+  serverTime?: number;
 }
 
 export interface GameHistory {
