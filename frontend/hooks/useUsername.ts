@@ -15,7 +15,7 @@ export function useUsername(address: string | undefined) {
             setLoading(true);
             try {
                 const response = await api.fetchUserByAddress(address);
-                if (response.success && response.user?.username) {
+                if (response && response.success && response.user?.username) {
                     setUsername(response.user.username);
                 } else {
                     setUsername(null);

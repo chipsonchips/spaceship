@@ -58,6 +58,7 @@ export async function fetchLeaderboard() {
 
 export async function fetchUserByAddress(address: string) {
   const res = await fetch(`${API_BASE}/api/users/address/${address}`);
+  if (res.status === 404) return null;
   if (!res.ok) throw new Error("Failed to fetch user");
   return res.json();
 }

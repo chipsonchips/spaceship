@@ -28,16 +28,16 @@ export default function useUSDC() {
           ? amount
           : parseUnits(amount.toString(), decimals);
 
-      const { request } = await publicClient.simulateContract({
+      const hash = await walletClient.writeContract({
         address: usdcAddress,
-        abi: ERC20_ABI,
+        abi: ERC20_ABI as any,
         functionName: "approve",
         args: [spender, amountInWei],
         account: walletClient.account.address,
       });
-
-      const hash = await walletClient.writeContract(request);
-      await publicClient.waitForTransactionReceipt({ hash });
+      if (publicClient) {
+        await publicClient.waitForTransactionReceipt({ hash });
+      }
       return hash;
     },
     [walletClient, publicClient, usdcAddress, decimals]
