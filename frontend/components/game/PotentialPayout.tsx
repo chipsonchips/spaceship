@@ -3,11 +3,11 @@
 import React from "react";
 import { useGameContext } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
-import { useMultiplierAnimation } from "@/hooks/useGame";
+import { useMultiplierAnimation, usePlayerBet } from "@/hooks/useGame";
 import useUSDC from "@/hooks/useUSDC";
 
 const PotentialPayout: React.FC = () => {
-  const { roundData } = useGameContext();
+  const { roundData, optimisticBets } = useGameContext();
   const { settings } = useSettings();
   const displayMultiplier = useMultiplierAnimation(roundData);
   const { walletAddress } = useUSDC();
@@ -16,16 +16,14 @@ const PotentialPayout: React.FC = () => {
     return null;
   }
 
-  const myBet =
-    roundData?.players?.find(
-      (p: any) => p.address?.toLowerCase() === walletAddress?.toLowerCase(),
-    ) || null;
+  const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
 
   if (!myBet || roundData?.phase !== "FLYING" || myBet.cashedOut) {
     return null;
   }
 
-  const potentialPayout = Number(myBet.amount || 0) * Number(displayMultiplier || 1);
+  const potentialPayout =
+    Number(myBet.amount || 0) * Number(displayMultiplier || 1);
   const profit = potentialPayout - Number(myBet.amount || 0);
 
   return (
@@ -35,7 +33,9 @@ const PotentialPayout: React.FC = () => {
           Potential Payout
         </div>
         <div className="text-2xl sm:text-3xl font-black text-emerald-300 font-orbitron mb-1">
-          {typeof potentialPayout === "number" ? potentialPayout.toFixed(2) : "0.00"}{" "}
+          {typeof potentialPayout === "number"
+            ? potentialPayout.toFixed(2)
+            : "0.00"}{" "}
           <span className="text-sm text-emerald-400">USDC</span>
         </div>
         <div
@@ -48,7 +48,10 @@ const PotentialPayout: React.FC = () => {
         </div>
         <div className="mt-2 pt-2 border-t border-emerald-500/20 text-[9px] text-emerald-300/70 font-courier">
           Bet: {Number(myBet.amount || 0).toFixed(2)} ×{" "}
-          {typeof displayMultiplier === "number" ? displayMultiplier.toFixed(2) : Number(displayMultiplier || 1).toFixed(2)}x
+          {typeof displayMultiplier === "number"
+            ? displayMultiplier.toFixed(2)
+            : Number(displayMultiplier || 1).toFixed(2)}
+          x
         </div>
       </div>
     </div>
