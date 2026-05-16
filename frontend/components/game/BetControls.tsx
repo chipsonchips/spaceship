@@ -6,6 +6,7 @@ import { useBetValidation } from "@/hooks/useBetValidation";
 import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
 import AutoCashout from "./AutoCashout";
+import { useMultiplierAnimation } from "@/hooks/useGame";
 
 const BetControls: React.FC = () => {
   const { roundData, cashOut, placeBet } = useGameContext();
