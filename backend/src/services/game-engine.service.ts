@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import crypto from 'crypto';
 import { Round } from '../entities/round.entity.js';
-import { PlayerBet } from '../entities/player-bet.entity.js';
+import { PlayerBet, BetStatus } from '../entities/player-bet.entity.js';
 import { AppDataSource } from '../config/database.js';
 import {
   generateCrashMultiplier,
@@ -616,7 +616,7 @@ export class GameEngine {
       throw new Error('Auto-cashout multiplier must be between 1.01 and 100');
     }
 
-    // Generate client seed if not provided (should be provided by frontend ideally)
+    // Generate client seed if not provided
     if (!clientSeed) {
       clientSeed = crypto.randomBytes(16).toString('hex');
     }
@@ -625,22 +625,32 @@ export class GameEngine {
       throw new Error('Your account is under review. Please contact support.');
     }
 
-    // Get user and check user-specific max bet amount
+    // Get user
     const user = await this.userService.getUserByAddress(address);
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Check user-specific max bet amount (if set, it overrides global max)
     const userMaxBet = user.maxBetAmount ?? globalMaxBet;
     if (amount > userMaxBet) {
       throw new Error(`Bet amount exceeds your maximum of ${userMaxBet} USDC`);
     }
 
-    let finalTxHash: string | null = null;
-
-    // Handle free bet
-    if (useFreeBet) {
+    let chainService: ChainService | null = null;
+    if (!useFreeBet) {
+      // 1. Pre-validation (Fast RPC read)
+      if (!this.chainServices.has(Number(chainId))) {
+        const { ChainService } = await import('./chain.service.js');
+        this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
+      }
+      chainService = this.chainServices.get(Number(chainId))!;
+      
+      const validation = await chainService.validatePlayerFunds(address, amount);
+      if (!validation.ok) {
+        throw new Error(validation.reason);
+      }
+    } else {
+      // Handle free bet logic
       const freeBetsRemaining = await this.freeBetService.getFreeBetsRemaining(user.id);
       if (freeBetsRemaining <= 0) {
         throw new Error('No free bets remaining');
@@ -653,28 +663,9 @@ export class GameEngine {
 
       // Record free bet usage
       await this.freeBetService.useFreeBet(user.id, amount, this.currentRound.roundId);
-    } else {
-      // Relay to chain for regular bets
-      try {
-        if (!this.chainServices.has(Number(chainId))) {
-          const { ChainService } = await import('./chain.service.js');
-          this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
-        }
-
-        const chainService = this.chainServices.get(Number(chainId));
-        if (chainService) {
-          finalTxHash = await chainService.placeBetFor(this.currentRound.roundId, address, amount);
-        }
-      } catch (err) {
-        logger.error('Failed to relay bet to chain', {
-          error: (err as Error).message,
-          chainId: Number(chainId)
-        });
-        throw new Error('Failed to place bet on chain: ' + (err as Error).message);
-      }
     }
 
-    // Wrap database operations in retry logic
+    // 2. Save bet to DB as PENDING (Instant)
     const bet = await this.executeWithRetry(async () => {
       const newBet = this.betRepo.create({
         address,
@@ -682,7 +673,8 @@ export class GameEngine {
         cashedOut: false,
         cashoutMultiplier: null,
         payout: null,
-        txHash: finalTxHash,
+        status: useFreeBet ? BetStatus.VALIDATED : BetStatus.PENDING,
+        txHash: null,
         autoCashoutMultiplier: autoCashoutMultiplier || null,
         chainId,
         timestamp: Date.now(),
@@ -701,7 +693,71 @@ export class GameEngine {
       return newBet;
     }, 10);
 
+    // 3. Broadcast immediately to show user is in the round
     this.broadcastGameState();
+
+    // 4. Start background on-chain relay (Non-blocking)
+    if (!useFreeBet && chainService) {
+      const roundIdToRelay = this.currentRound!.roundId;
+      (async () => {
+        try {
+          const txHash = await chainService!.placeBetFor(roundIdToRelay, address, amount);
+          
+          // Update bet to VALIDATED
+          await this.executeWithRetry(async () => {
+            const updatedBet = await this.betRepo.findOne({ 
+              where: { id: bet.id },
+              relations: ['round']
+            });
+            if (updatedBet) {
+              updatedBet.status = BetStatus.VALIDATED;
+              updatedBet.txHash = txHash;
+              await this.betRepo.save(updatedBet);
+              
+              // Handle deferred cashout if they cashed out while pending
+              if (updatedBet.cashedOut && updatedBet.payout) {
+                logger.info('Processing deferred cashout settlement', { betId: updatedBet.id });
+                await chainService!.cashOutFor(
+                  updatedBet.round.roundId, 
+                  address, 
+                  Number(updatedBet.payout), 
+                  Number(updatedBet.cashoutMultiplier)
+                );
+              }
+            }
+          });
+          
+          this.broadcastGameState();
+        } catch (err) {
+          logger.error('Background bet relay failed', { 
+            betId: bet.id, 
+            address, 
+            error: (err as Error).message 
+          });
+          
+          await this.executeWithRetry(async () => {
+            const failedBet = await this.betRepo.findOne({ 
+              where: { id: bet.id },
+              relations: ['round']
+            });
+            if (failedBet) {
+              failedBet.status = BetStatus.FAILED;
+              failedBet.validationError = (err as Error).message;
+              await this.betRepo.save(failedBet);
+
+              // Revert totalBets on the round
+              const roundToUpdate = await this.roundRepo.findOne({ where: { id: failedBet.round.id } });
+              if (roundToUpdate) {
+                roundToUpdate.totalBets = Math.max(0, Number(roundToUpdate.totalBets) - Number(failedBet.amount));
+                await this.roundRepo.save(roundToUpdate);
+              }
+            }
+          });
+          
+          this.broadcastGameState();
+        }
+      })();
+    }
 
     return bet;
   }
@@ -718,20 +774,16 @@ export class GameEngine {
     if (bet.cashedOut) throw new Error('Already cashed out');
 
     // Check if the bet's round is still in FLYING phase
-    // For auto-cashout, we allow it to complete even if the round just crashed,
-    // as long as it was triggered during the flight.
     if (!isAutoCashout && bet.round.phase !== 'FLYING') {
       throw new Error('Cannot cash out: round is not in flying phase');
     }
 
-    // Wrap database operations in retry logic to handle serialization errors
+    // Wrap database operations in retry logic
     const result = await this.executeWithRetry(async () => {
       bet.cashedOut = true;
-      // Use exact multiplier if provided (for auto-cashout precision), otherwise use current
       bet.cashoutMultiplier = exactMultiplier ?? bet.round.currentMultiplier;
       bet.payout = Number(bet.amount) * Number(bet.cashoutMultiplier || 1);
 
-      // Save cashout locally
       await this.betRepo.save(bet);
 
       bet.round.totalPayouts =
@@ -747,29 +799,30 @@ export class GameEngine {
       });
 
       return bet;
-    }, 10); // Increase max retries for this critical operation
+    }, 10);
 
-    // Relay cashout to chain (non-blocking, with error handling)
-    let chainError: Error | null = null;
-    try {
-      if (!this.chainServices.has(Number(chainId))) {
-        const { ChainService } = await import('./chain.service.js');
-        this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
-      }
+    // Relay cashout to chain IF validated
+    if (result.status === BetStatus.VALIDATED) {
+      try {
+        if (!this.chainServices.has(Number(chainId))) {
+          const { ChainService } = await import('./chain.service.js');
+          this.chainServices.set(Number(chainId), new ChainService(Number(chainId)));
+        }
 
-      const chainService = this.chainServices.get(Number(chainId));
-      if (chainService) {
-        await chainService.cashOutFor(result.round.roundId, result.address, Number(result.payout), Number(result.cashoutMultiplier));
-        logger.info('Cashout relayed to chain successfully', { betId, chainId: Number(chainId) });
+        const chainService = this.chainServices.get(Number(chainId));
+        if (chainService) {
+          await chainService.cashOutFor(result.round.roundId, result.address, Number(result.payout), Number(result.cashoutMultiplier));
+          logger.info('Cashout relayed to chain successfully', { betId, chainId: Number(chainId) });
+        }
+      } catch (err) {
+        logger.error('Failed to relay cashout to chain', {
+          error: (err as Error).message,
+          chainId: Number(chainId),
+          betId,
+        });
       }
-    } catch (err) {
-      chainError = err as Error;
-      logger.error('Failed to relay cashout to chain', {
-        error: chainError.message,
-        chainId: Number(chainId),
-        betId,
-        note: 'Cashout will still be recorded locally but may need manual on-chain settlement'
-      });
+    } else {
+      logger.info('Cashout recorded but deferred until bet is validated', { betId: result.id });
     }
 
     // Update in-memory active bets if it exists there
@@ -778,7 +831,7 @@ export class GameEngine {
       this.activeAutoCashouts[activeBetIndex] = result;
     }
 
-    // Emit cashout notification to all connected clients
+    // Emit cashout notification immediately for UX feedback
     this.io.emit('CASHOUT_NOTIFICATION', {
       address: result.address,
       multiplier: result.cashoutMultiplier,
@@ -787,15 +840,6 @@ export class GameEngine {
     });
 
     this.broadcastGameState();
-
-    // If there was a chain error, log it but don't fail the cashout
-    if (chainError) {
-      logger.warn('Cashout completed locally but chain relay failed', {
-        betId,
-        chainId,
-        error: chainError.message,
-      });
-    }
 
     return result;
   }

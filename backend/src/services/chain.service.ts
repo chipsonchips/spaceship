@@ -81,6 +81,58 @@ export class ChainService {
    * Build a snapshot for a settled round and submit to chain.
    * Note: rounds' numeric fields are converted to on-chain units here (USDC with 6 decimals, crash scaled by 100).
    */
+  async validatePlayerFunds(player: string, amount: number) {
+    try {
+      await this.ensureProviderReady(2);
+      const chainConfig = getChainConfig(this.chainId);
+      const usdcToken = chainConfig.usdcAddress;
+
+      if (!usdcToken) {
+        throw new Error(`USDC address not configured for chain ${this.chainId}`);
+      }
+
+      const usdcContract = new ethers.Contract(
+        usdcToken,
+        [
+          'function balanceOf(address) view returns (uint256)',
+          'function allowance(address owner, address spender) view returns (uint256)'
+        ],
+        this.provider
+      );
+
+      const contractAddress = await this.contract.getAddress();
+      const betAmountUint = BigInt(Math.round(amount * 1e6)); // USDC 6 decimals
+
+      const [balance, allowance] = await Promise.all([
+        usdcContract.balanceOf(player),
+        usdcContract.allowance(player, contractAddress)
+      ]);
+
+      if (BigInt(balance) < betAmountUint) {
+        return { ok: false, reason: `Insufficient USDC balance. Have ${Number(balance) / 1e6}, need ${amount}` };
+      }
+
+      if (BigInt(allowance) < betAmountUint) {
+        return { ok: false, reason: `Insufficient allowance. Contract not approved to spend your USDC.` };
+      }
+
+      return { ok: true };
+    } catch (err) {
+      logger.error('Failed to validate player funds', { error: (err as Error).message, player, amount });
+      return { ok: false, reason: 'Failed to verify balance/allowance: ' + (err as Error).message };
+    }
+  }
+
+  async getTransactionReceipt(txHash: string) {
+    try {
+      const receipt = await this.provider.getTransactionReceipt(txHash);
+      return receipt;
+    } catch (err) {
+      logger.error('Failed to get transaction receipt', { txHash, error: (err as Error).message });
+      return null;
+    }
+  }
+
   async submitRoundSnapshot(round: Round, players: PlayerBet[]) {
     if (players.length === 0) {
       logger.warn('Cannot submit snapshot: no players in round', {
