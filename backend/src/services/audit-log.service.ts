@@ -25,31 +25,40 @@ export class AuditLogService {
         chainId: number | null = null,
         success: boolean = true,
         errorMessage: string | null = null
-    ): Promise<AdminLog> {
-        const log = this.getRepo().create({
-            adminId,
-            actionType,
-            description,
-            details,
-            ipAddress,
-            chainId,
-            success,
-            errorMessage,
-        });
-
-        await this.getRepo().save(log);
-
-        if (!success) {
-            logger.error(`Admin action failed: ${actionType}`, {
+    ): Promise<AdminLog | null> {
+        try {
+            const log = this.getRepo().create({
                 adminId,
-                error: errorMessage,
+                actionType,
+                description,
+                details,
+                ipAddress,
+                chainId,
+                success,
+                errorMessage,
+            });
+
+            await this.getRepo().save(log);
+
+            if (!success) {
+                logger.error(`Admin action failed: ${actionType}`, {
+                    adminId,
+                    error: errorMessage,
+                    details,
+                });
+            } else {
+                logger.info(`Admin action: ${actionType}`, { adminId, details });
+            }
+
+            return log;
+        } catch (error) {
+            logger.error(`Failed to save audit log for action: ${actionType}`, {
+                error: (error as Error).message,
+                adminId,
                 details,
             });
-        } else {
-            logger.info(`Admin action: ${actionType}`, { adminId, details });
+            return null;
         }
-
-        return log;
     }
 
     /**
