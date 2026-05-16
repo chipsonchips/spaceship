@@ -35,6 +35,7 @@ const BetControls: React.FC = () => {
   useEffect(() => {
     if (walletAddress) {
       fetchFreeBetsInfo();
+      fetchUserMaxBetAmount();
     }
   }, [walletAddress]);
 
@@ -74,6 +75,33 @@ const BetControls: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to fetch free bets info:", err);
+    }
+  };
+
+  const fetchUserMaxBetAmount = async () => {
+    try {
+      const apiBase =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const userRes = await fetch(
+        `${apiBase}/api/users/address/${walletAddress}`,
+      );
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData.user) {
+          // Use user's maxBetAmount if set, otherwise use global default
+          const globalMaxBet = parseFloat(
+            process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10",
+          );
+          setMaxBetAmount(userData.user.maxBetAmount ?? globalMaxBet);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch user max bet amount:", err);
+      // Fallback to global default
+      const globalMaxBet = parseFloat(
+        process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10",
+      );
+      setMaxBetAmount(globalMaxBet);
     }
   };
 
@@ -215,47 +243,68 @@ const BetControls: React.FC = () => {
     ((useFreeBet && freeBetsRemaining > 0) ||
       (!useFreeBet && walletBalance && walletBalance > 0));
 
+  // Calculate potential payout for mobile display
+  const displayMultiplier = useMultiplierAnimation(roundData);
+  const potentialPayout =
+    myBet && roundData?.phase === "FLYING"
+      ? Number(myBet.amount) * Number(displayMultiplier)
+      : 0;
+
   return (
-    <div className="relative bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 p-3 sm:p-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)] space-y-3 rounded-t-2xl sm:rounded-2xl">
+    <div className="relative bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 p-2 sm:p-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)] space-y-2 sm:space-y-3 rounded-t-2xl sm:rounded-2xl">
       {/* Header Info */}
-      <div className="flex items-center justify-between text-[10px] sm:text-xs text-slate-400 font-orbitron tracking-wider">
-        <span className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)] animate-pulse"></span>
-          <span>{chainLabel}</span>
+      <div className="flex items-center justify-between text-[9px] sm:text-xs text-slate-400 font-orbitron tracking-wider">
+        <span className="flex items-center gap-1">
+          <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)] animate-pulse"></span>
+          <span className="hidden sm:inline">{chainLabel}</span>
+          <span className="sm:hidden">{chainLabel.split(" ")[0]}</span>
         </span>
-        <div className="flex gap-2">
-          <span className="bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700/50 text-emerald-400 text-xs font-bold flex items-center gap-1.5">
-            <span className="text-slate-500 text-[10px]">💰</span>
-            {walletBalance?.toFixed(2) || "0.00"}{" "}
-            <span className="text-[9px] text-emerald-500/70">USDC</span>
+        <div className="flex gap-1.5 sm:gap-2">
+          <span className="bg-slate-800/80 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-slate-700/50 text-emerald-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
+            <span className="text-slate-500 text-[9px] sm:text-[10px]">💰</span>
+            <span className="hidden sm:inline">
+              {walletBalance?.toFixed(2) || "0.00"}
+            </span>
+            <span className="sm:hidden">
+              {walletBalance?.toFixed(1) || "0"}
+            </span>
+            <span className="text-[8px] sm:text-[9px] text-emerald-500/70">
+              USDC
+            </span>
           </span>
           {freeBetsRemaining > 0 && (
-            <span className="bg-blue-900/30 px-2 py-1 rounded-md border border-blue-500/30 text-blue-400 text-xs font-bold flex items-center gap-1.5">
-              <span className="text-blue-500 text-[10px]">🎟️</span>
-              {freeBetsRemaining}{" "}
-              <span className="text-[9px] text-blue-500/70">FREE</span>
+            <span className="bg-blue-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-blue-500/30 text-blue-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
+              <span className="text-blue-500 text-[9px] sm:text-[10px]">
+                🎟️
+              </span>
+              {freeBetsRemaining}
+              <span className="hidden sm:inline text-[9px] text-blue-500/70">
+                FREE
+              </span>
             </span>
           )}
         </div>
       </div>
 
       {myBet && (
-        <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-3 sm:p-4 shadow-inner relative overflow-hidden group">
+        <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 sm:p-4 shadow-inner relative overflow-hidden group">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none"></div>
 
-          <div className="relative text-center mb-3 mt-0.5">
-            <div className="text-[10px] font-orbitron text-emerald-400/80 uppercase tracking-widest mb-1 font-semibold">
-              ACTIVE BET
-            </div>
-            <div className="text-2xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
-              {Number(myBet.amount).toFixed(2)}{" "}
-              <span className="text-sm text-emerald-200">USDC</span>
-            </div>
-            {myBet.autoCashoutMultiplier && (
-              <div className="inline-block mt-1.5 bg-slate-800/80 border border-emerald-500/30 rounded-md px-2 py-0.5 text-[10px] text-emerald-400 font-bold font-courier">
-                Auto Cashout: {myBet.autoCashoutMultiplier}x
+          <div className="relative flex flex-row items-center justify-between mb-2 mt-0.5 sm:flex-col sm:justify-center sm:mb-3">
+            <div className="text-left sm:text-center">
+              <div className="text-[10px] font-orbitron text-emerald-400/80 uppercase tracking-widest mb-0 sm:mb-1 font-semibold">
+                ACTIVE BET
               </div>
-            )}
+              {myBet.autoCashoutMultiplier && (
+                <div className="inline-block mt-0.5 sm:mt-1.5 bg-slate-800/80 border border-emerald-500/30 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-400 font-bold font-courier">
+                  Auto: {myBet.autoCashoutMultiplier}x
+                </div>
+              )}
+            </div>
+            <div className="text-xl sm:text-2xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] text-right sm:text-center">
+              {Number(myBet.amount).toFixed(2)}{" "}
+              <span className="text-xs sm:text-sm text-emerald-200">USDC</span>
+            </div>
           </div>
 
           {(myBet.cashedOut || optimisticCashOut) && myBet.payout && (
@@ -283,11 +332,19 @@ const BetControls: React.FC = () => {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
                 <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-150%] group-hover/btn:translate-x-[150%] transition-all duration-700 ease-out z-10"></div>
-                <div className="relative px-4 py-3 flex items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] z-20 gap-2">
-                  <span className="text-xl leading-none group-hover/btn:scale-110 transition-transform">
-                    💰
-                  </span>
-                  <span>{isCashingOut ? "PROCESSING..." : "CASH OUT NOW"}</span>
+                <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex flex-col sm:flex-row items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] z-20 gap-0.5 sm:gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-lg sm:text-xl leading-none group-hover/btn:scale-110 transition-transform">
+                      💰
+                    </span>
+                    <span className="text-base sm:text-lg">{isCashingOut ? "PROCESSING..." : "CASH OUT"}</span>
+                    <span className="hidden sm:inline-block text-base sm:text-lg">NOW</span>
+                  </div>
+                  {!isCashingOut && (
+                     <div className="sm:hidden text-2xl font-black drop-shadow-md leading-none mt-0.5">
+                        {potentialPayout.toFixed(2)} <span className="text-[10px] align-top text-white/80">USDC</span>
+                     </div>
+                  )}
                 </div>
               </button>
             )}
@@ -295,7 +352,7 @@ const BetControls: React.FC = () => {
       )}
 
       {canPlaceBet && (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {freeBetsRemaining > 0 && (
             <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-3 flex items-center justify-between">
               <div>
@@ -328,8 +385,8 @@ const BetControls: React.FC = () => {
 
           <div>
             <div className="relative group">
-              <div className="relative flex items-center bg-slate-800/80 border border-slate-600 rounded-lg px-3 py-2 flex-1 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden">
-                <div className="flex items-center justify-center text-emerald-400 mr-2 font-bold text-base select-none">
+              <div className="relative flex items-center bg-slate-800/80 border border-slate-600 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 flex-1 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden">
+                <div className="flex items-center justify-center text-emerald-400 mr-2 font-bold text-sm sm:text-base select-none">
                   $
                 </div>
                 <input
@@ -343,10 +400,10 @@ const BetControls: React.FC = () => {
                       ? freeBetMaxAmount.toString()
                       : Math.min(walletBalance || 0, maxBetAmount).toString()
                   }
-                  className="w-full bg-transparent text-white text-xl sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
+                  className="w-full bg-transparent text-white text-lg sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
                   placeholder="0.00"
                 />
-                <span className="text-slate-500 text-xs font-bold font-courier ml-2 select-none tracking-wider">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-bold font-courier ml-2 select-none tracking-wider">
                   USDC
                 </span>
               </div>
@@ -375,7 +432,7 @@ const BetControls: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
             {["0.5", "1", "5", "10"].map((amount) => {
               const amountNum = parseFloat(amount);
               const isDisabled = useFreeBet
@@ -410,11 +467,11 @@ const BetControls: React.FC = () => {
           <button
             onClick={handlePlaceBet}
             disabled={!betValidation.isValid || isProcessing}
-            className="w-full mt-1 relative group/play overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-base sm:text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform active:scale-[0.98]"
+            className="w-full mt-1 relative group/play overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-sm sm:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform active:scale-[0.98]"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 bg-[length:200%_auto] hover:bg-right transition-all duration-500"></div>
             <div className="absolute inset-0 bg-black opacity-0 group-active/play:opacity-10 transition-opacity"></div>
-            <div className="relative px-4 py-3 sm:py-3.5 flex items-center justify-center text-slate-950 shadow-[inset_0_1px_rgba(255,255,255,0.4)] z-20">
+            <div className="relative px-3 py-2.5 sm:px-4 sm:py-3.5 flex items-center justify-center text-slate-950 shadow-[inset_0_1px_rgba(255,255,255,0.4)] z-20">
               {isProcessing ? "PROCESSING..." : `PLACE BET`}
             </div>
           </button>

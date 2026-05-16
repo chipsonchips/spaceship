@@ -49,7 +49,7 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
   const isValid = !isNaN(multiplier) && multiplier >= 1.01 && multiplier <= 100;
 
   return (
-    <div className={`rounded-lg p-3 border transition-all duration-300 ${
+    <div className={`rounded-lg p-2.5 sm:p-3 border transition-all duration-300 ${
       isEnabled 
         ? "bg-slate-800/80 border-emerald-500/30" 
         : "bg-slate-800/40 border-slate-700/50"
