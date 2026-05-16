@@ -6,6 +6,7 @@ import { PlayerBet } from '../entities/player-bet.entity.js';
 import { Round } from '../entities/round.entity.js';
 import { User, UserRole } from '../entities/user.entity.js';
 import { GameHistory } from '../entities/game-history.entity.js';
+import { GAME_CONSTANTS } from '../constants.js';
 
 const router = Router();
 
@@ -398,10 +399,10 @@ router.put('/settings', async (req: Request, res: Response) => {
             });
         }
 
-        if (bettingDurationMs !== undefined && bettingDurationMs < 5000) {
+        if (bettingDurationMs !== undefined && bettingDurationMs < GAME_CONSTANTS.ROUND_RESTART_DELAY_MS) {
             return res.status(400).json({
                 success: false,
-                error: 'Betting duration must be at least 5 seconds',
+                error: `Betting duration must be at least ${GAME_CONSTANTS.ROUND_RESTART_DELAY_MS / 1000} seconds`,
             });
         }
 
