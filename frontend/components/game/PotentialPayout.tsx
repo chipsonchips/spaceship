@@ -11,12 +11,11 @@ const PotentialPayout: React.FC = () => {
   const { settings } = useSettings();
   const displayMultiplier = useMultiplierAnimation(roundData);
   const { walletAddress } = useUSDC();
+  const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
 
   if (!settings.potentialPayoutEnabled) {
     return null;
   }
-
-  const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
 
   if (!myBet || roundData?.phase !== "FLYING" || myBet.cashedOut) {
     return null;
