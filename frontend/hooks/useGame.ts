@@ -49,9 +49,26 @@ export function useGame(options: { wsUrl?: string } = {}) {
     }
   }, []);
 
+  // 1. Fetch initial REST API states exactly once on mount
   useEffect(() => {
     fetchInitialHistory();
 
+    (async () => {
+      try {
+        const r = await import("@/lib/api");
+        const round = await r.fetchCurrentRound();
+        if (round) setRoundData(round);
+        const lb = await r.fetchLeaderboard();
+        console.log("Fetched leaderboard:", lb);
+        setLeaderboard(lb);
+      } catch (e) {
+        console.error("Failed to fetch initial state via REST:", e);
+      }
+    })();
+  }, [fetchInitialHistory]);
+
+  // 2. Purely handle socket manager subscription and connection
+  useEffect(() => {
     const handler = (message: any) => {
       if (message.type === "_OPEN") {
         setIsConnected(true);
@@ -90,21 +107,6 @@ export function useGame(options: { wsUrl?: string } = {}) {
 
     const unsubscribe = manager.subscribe(handler);
     manager.connect(wsUrl);
-
-    // fetch initial server state via REST as a fallback
-    (async () => {
-      try {
-        const r = await import("@/lib/api");
-        const round = await r.fetchCurrentRound();
-        if (round) setRoundData(round);
-        const lb = await r.fetchLeaderboard();
-        console.log("Fetched leaderboard:", lb);
-        setLeaderboard(lb);
-      } catch (e) {
-        console.error("Failed to fetch leaderboard:", e);
-        // ignore; socket will update state when ready
-      }
-    })();
 
     return () => {
       unsubscribe();
