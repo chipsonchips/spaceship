@@ -66,6 +66,7 @@ vi.mock('../services/chain.service.ts', () => ({
     submitRoundSnapshot: vi.fn(),
     placeBetFor: vi.fn(() => '0xtxhash'),
     cashOutFor: vi.fn(() => '0xcashouttx'),
+    validatePlayerFunds: vi.fn(() => Promise.resolve({ ok: true })),
   })),
 }));
 
