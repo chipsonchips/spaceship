@@ -1,4 +1,12 @@
 import 'reflect-metadata';
+import dns from 'node:dns';
+
+// Force DNS resolution to prefer IPv4 over IPv6.
+// This resolves the common Node.js v17+ timeout issue when connecting to public blockchain RPCs.
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 import express, {
   type Express,
   type Request,
