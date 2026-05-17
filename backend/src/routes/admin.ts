@@ -306,4 +306,49 @@ router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async
   }
 });
 
+// GET /api/admin/settlements/pending - Get pending settlements
+router.get('/settlements/pending', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { AppDataSource } = await import('../config/database.js');
+    const { PlayerBet } = await import('../entities/player-bet.entity.js');
+    const { SettlementStatus } = await import('../entities/player-bet.entity.js');
+
+    const betRepo = AppDataSource.getRepository(PlayerBet);
+
+    const pendingSettlements = await betRepo.find({
+      where: {
+        cashedOut: true,
+        settlementStatus: SettlementStatus.PENDING_FUNDS
+      },
+      relations: ['round'],
+      order: { createdAt: 'DESC' },
+      take: 100
+    });
+
+    const totalPending = pendingSettlements.reduce((sum, bet) => sum + Number(bet.payout || 0), 0);
+
+    res.json({
+      success: true,
+      count: pendingSettlements.length,
+      totalPendingPayout: totalPending,
+      settlements: pendingSettlements.map(bet => ({
+        betId: bet.id,
+        address: bet.address,
+        payout: bet.payout,
+        cashoutMultiplier: bet.cashoutMultiplier,
+        chainId: bet.chainId,
+        roundId: bet.round.roundId,
+        timestamp: bet.timestamp,
+        createdAt: bet.createdAt
+      }))
+    });
+  } catch (err) {
+    logger.error('Failed to get pending settlements', { error: (err as Error).message });
+    res.status(500).json({
+      success: false,
+      error: (err as Error).message
+    });
+  }
+});
+
 export default router;
