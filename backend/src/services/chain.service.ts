@@ -1,9 +1,17 @@
-import { ethers, type InterfaceAbi } from 'ethers';
+import { ethers, type InterfaceAbi, FetchRequest } from 'ethers';
+import https from 'node:https';
 import { computePlayersMerkleRoot } from './merkle.js';
 import aviatorAbi from '../abi/aviator.json' with { type: 'json' };
 import { getChainConfig } from '../config/chains.js';
 
 const aviatorAbiTyped = aviatorAbi as unknown as InterfaceAbi;
+
+// Shared HTTP/HTTPS agent configured to force IPv4 connection.
+// This works around Node.js v18/v20 happy eyeballs and undici IPv6 connection timeout issues.
+const ipv4Agent = new https.Agent({
+  family: 4,
+  keepAlive: true,
+});
 import type { Round } from '../entities/round.entity.js';
 import type { PlayerBet } from '../entities/player-bet.entity.js';
 import { logger } from '../utils/logger.js';
@@ -31,7 +39,13 @@ export class ChainService {
       contractAddress: addr,
     });
 
-    this.provider = new ethers.JsonRpcProvider(rpc);
+    // Create a FetchRequest with our custom IPv4 agent to bypass IPv6 timeout issues
+    const fetchReq = new FetchRequest(rpc);
+    fetchReq.getUrlFunc = FetchRequest.createGetUrlFunc({
+      agent: ipv4Agent,
+    });
+
+    this.provider = new ethers.JsonRpcProvider(fetchReq);
     this.signer = new ethers.Wallet(key, this.provider);
     this.contract = new ethers.Contract(addr, aviatorAbiTyped, this.signer);
 

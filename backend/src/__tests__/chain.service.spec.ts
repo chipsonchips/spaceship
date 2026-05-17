@@ -106,7 +106,7 @@ describe('ChainService', () => {
       const service = new ChainService(8453);
 
       expect(ethers.JsonRpcProvider).toHaveBeenCalledWith(
-        'https://test-rpc.example.com'
+        expect.objectContaining({ url: 'https://test-rpc.example.com' })
       );
       expect(ethers.Wallet).toHaveBeenCalledWith(
         '0x1111111111111111111111111111111111111111111111111111111111111111',
