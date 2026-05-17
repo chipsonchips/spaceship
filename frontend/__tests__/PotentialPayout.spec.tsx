@@ -9,6 +9,11 @@ let mockWalletAddress = "0x1234567890123456789012345678901234567890";
 
 vi.mock("@/hooks/useGame", () => ({
   useMultiplierAnimation: () => 2.5,
+  usePlayerBet: (roundData: any, address: string) => {
+    return roundData?.players?.find(
+      (p: any) => p.address.toLowerCase() === address?.toLowerCase()
+    ) || null;
+  },
 }));
 
 vi.mock("@/hooks/useUSDC", () => ({

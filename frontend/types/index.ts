@@ -16,6 +16,8 @@ export interface PlayerBet {
     cashedOut: boolean;
     cashoutMultiplier: number | null;
     payout: number | null;
+    status?: "PENDING" | "VALIDATED" | "FAILED";
+    validationError?: string | null;
     txHash?: string | null;
     autoCashoutMultiplier?: number | null;
 }
@@ -124,6 +126,7 @@ export interface GameContextType {
     leaderboard: LeaderboardEntry[];
     isConnected: boolean;
     error: string | null;
+    optimisticBets: any[];
     placeBet: (
         address: string,
         amount: number,

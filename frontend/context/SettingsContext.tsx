@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   animationsEnabled: true,
   screenTintEnabled: true,
   activityFeedEnabled: true,
-  sessionStatsEnabled: false,
+  sessionStatsEnabled: true,
   potentialPayoutEnabled: true,
   autoHideUI: false,
   uiScale: 1,

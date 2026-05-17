@@ -6,13 +6,16 @@ import { useBetValidation } from "@/hooks/useBetValidation";
 import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
 import AutoCashout from "./AutoCashout";
-import { useMultiplierAnimation } from "@/hooks/useGame";
+import { useMultiplierAnimation, usePlayerBet } from "@/hooks/useGame";
 import * as api from "@/lib/api";
 
 const BetControls: React.FC = () => {
-  const { roundData, cashOut, placeBet } = useGameContext();
+  const { roundData, cashOut, placeBet, optimisticBets } = useGameContext();
   const { walletBalance, walletAddress, refreshBalance } = useUSDC();
   const { chainLabel, explorerUrl } = useChainInfo();
+
+  const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
+
   const [betAmount, setBetAmount] = useState("0.10");
   const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState<
     number | null
@@ -45,9 +48,10 @@ const BetControls: React.FC = () => {
     try {
       if (!walletAddress) return;
       const userData = await api.fetchUserByAddress(walletAddress);
-      
+
       if (userData?.user?.id) {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const apiBase =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
         const freeBetsRes = await fetch(
           `${apiBase}/api/free-bets/user/${userData.user.id}`,
         );
@@ -73,7 +77,7 @@ const BetControls: React.FC = () => {
     try {
       if (!walletAddress) return;
       const userData = await api.fetchUserByAddress(walletAddress);
-      
+
       if (userData?.user) {
         // Use user's maxBetAmount if set, otherwise use global default
         const globalMaxBet = parseFloat(
@@ -155,11 +159,6 @@ const BetControls: React.FC = () => {
     }
   };
 
-  const myBet =
-    roundData?.players?.find(
-      (p: any) => p.address?.toLowerCase() === walletAddress?.toLowerCase(),
-    ) || null;
-
   const [isCashingOut, setIsCashingOut] = useState(false);
   const [optimisticCashOut, setOptimisticCashOut] = useState(false);
   const [cashoutTimer, setCashoutTimer] = useState<number | null>(null);
@@ -214,6 +213,17 @@ const BetControls: React.FC = () => {
     return () => clearInterval(interval);
   }, [cashoutTimer]);
 
+  // Auto-clear error messages after 2 seconds
+  useEffect(() => {
+    if (!error) return;
+
+    const timer = setTimeout(() => {
+      setError(null);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const [mounted, setMounted] = useState(false);
   const [lastBetAmount, setLastBetAmount] = useState<string | null>(null);
 
@@ -242,17 +252,21 @@ const BetControls: React.FC = () => {
       <div className="flex items-center justify-between text-[9px] sm:text-xs text-slate-400 font-orbitron tracking-wider">
         <span className="flex items-center gap-1">
           <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)] animate-pulse"></span>
-          <span className="hidden sm:inline">{mounted ? chainLabel : "Loading..."}</span>
-          <span className="sm:hidden">{mounted ? chainLabel.split(" ")[0] : "..."}</span>
+          <span className="hidden sm:inline">
+            {mounted ? chainLabel : "Loading..."}
+          </span>
+          <span className="sm:hidden">
+            {mounted ? chainLabel.split(" ")[0] : "..."}
+          </span>
         </span>
         <div className="flex gap-1.5 sm:gap-2">
           <span className="bg-slate-800/80 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-slate-700/50 text-emerald-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
             <span className="text-slate-500 text-[9px] sm:text-[10px]">💰</span>
             <span className="hidden sm:inline">
-              {mounted ? (walletBalance?.toFixed(2) || "0.00") : "0.00"}
+              {mounted ? walletBalance?.toFixed(2) || "0.00" : "0.00"}
             </span>
             <span className="sm:hidden">
-              {mounted ? (walletBalance?.toFixed(1) || "0") : "0"}
+              {mounted ? walletBalance?.toFixed(1) || "0" : "0"}
             </span>
             <span className="text-[8px] sm:text-[9px] text-emerald-500/70">
               USDC
@@ -278,9 +292,24 @@ const BetControls: React.FC = () => {
 
           <div className="relative flex flex-row items-center justify-between mb-2 mt-0.5 sm:flex-col sm:justify-center sm:mb-3">
             <div className="text-left sm:text-center">
-              <div className="text-[10px] font-orbitron text-emerald-400/80 uppercase tracking-widest mb-0 sm:mb-1 font-semibold">
-                ACTIVE BET
+              <div className="text-[10px] font-orbitron text-emerald-400/80 uppercase tracking-widest mb-0 sm:mb-1 font-semibold flex items-center gap-2 flex-wrap">
+                <span>ACTIVE BET</span>
+                {myBet.status === "PENDING" && (
+                  <span className="text-amber-500 animate-pulse text-[8px] sm:text-[9px] bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    VALIDATING...
+                  </span>
+                )}
+                {myBet.status === "FAILED" && (
+                  <span className="text-red-500 text-[8px] sm:text-[9px] bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+                    FAILED
+                  </span>
+                )}
               </div>
+              {myBet.status === "FAILED" && myBet.validationError && (
+                <div className="text-[8px] text-red-400 font-medium max-w-[150px] leading-tight mt-1">
+                  {myBet.validationError}
+                </div>
+              )}
               {myBet.autoCashoutMultiplier && (
                 <div className="inline-block mt-0.5 sm:mt-1.5 bg-slate-800/80 border border-emerald-500/30 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-400 font-bold font-courier">
                   Auto: {myBet.autoCashoutMultiplier}x
@@ -323,13 +352,20 @@ const BetControls: React.FC = () => {
                     <span className="text-lg sm:text-xl leading-none group-hover/btn:scale-110 transition-transform">
                       💰
                     </span>
-                    <span className="text-base sm:text-lg">{isCashingOut ? "PROCESSING..." : "CASH OUT"}</span>
-                    <span className="hidden sm:inline-block text-base sm:text-lg">NOW</span>
+                    <span className="text-base sm:text-lg">
+                      {isCashingOut ? "PROCESSING..." : "CASH OUT"}
+                    </span>
+                    <span className="hidden sm:inline-block text-base sm:text-lg">
+                      NOW
+                    </span>
                   </div>
                   {!isCashingOut && (
-                     <div className="sm:hidden text-2xl font-black drop-shadow-md leading-none mt-0.5">
-                        {potentialPayout.toFixed(2)} <span className="text-[10px] align-top text-white/80">USDC</span>
-                     </div>
+                    <div className="sm:hidden text-2xl font-black drop-shadow-md leading-none mt-0.5">
+                      {potentialPayout.toFixed(2)}{" "}
+                      <span className="text-[10px] align-top text-white/80">
+                        USDC
+                      </span>
+                    </div>
                   )}
                 </div>
               </button>

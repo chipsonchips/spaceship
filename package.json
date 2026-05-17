@@ -28,7 +28,7 @@
     "frontend:test": "pnpm --filter aviator test:run",
     "frontend:test:watch": "pnpm --filter aviator test",
     "frontend:test:ui": "pnpm --filter aviator test:ui",
-    "migration:run": "pnpm --filter aviator-backend exec npx tsx src/scripts/run-migrations.ts"
+    "migration:run": "pnpm --filter aviator-backend exec tsx src/scripts/run-migrations.ts"
   },
   "engines": {
     "node": ">=18.0.0",

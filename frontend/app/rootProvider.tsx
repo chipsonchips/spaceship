@@ -1,6 +1,6 @@
 "use client";
 import { ReactNode } from "react";
-import { base } from "wagmi/chains";
+import { base, mainnet, celo } from "wagmi/chains";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -55,17 +55,16 @@ if (!isMiniPay) {
   }
 }
 
-// Build transports map from all supported chains
-const transports = Object.fromEntries(
-  SUPPORTED_CHAINS.map((chain) => [chain.id, http()]),
-);
+// Build transports map with high-quality RPC endpoints to prevent CORS issues
+const transports = {
+  [base.id]: http("https://mainnet.base.org"),
+  [celo.id]: http("https://forno.celo.org"),
+  [mainnet.id]: http("https://cloudflare-eth.com"),
+};
 
 const wagmiConfig = createConfig({
   ssr: true,
-  chains: SUPPORTED_CHAINS as [
-    (typeof SUPPORTED_CHAINS)[0],
-    ...typeof SUPPORTED_CHAINS,
-  ],
+  chains: [base, celo, mainnet] as const,
   connectors,
   transports,
 });

@@ -62,29 +62,57 @@ export default function useUSDC() {
   );
 
   const fetchBalance = useCallback(async () => {
-    if (!walletClient?.account?.address || !publicClient) return null;
+    if (!address || !publicClient) return null;
     try {
       const raw = await publicClient.readContract({
         address: usdcAddress,
         abi: ERC20_ABI,
         functionName: "balanceOf",
-        args: [walletClient.account.address],
+        args: [address],
       });
       return Number(raw) / 10 ** decimals;
-    } catch {
+    } catch (err) {
+      console.error("Error fetching balance:", err);
       return null;
     }
-  }, [walletClient?.account?.address, publicClient, usdcAddress, decimals]);
+  }, [address, publicClient, usdcAddress, decimals]);
 
   useEffect(() => {
-    fetchBalance().then((b) => setBalance(b));
+    if (!address || !publicClient) {
+      setBalance(null);
+      return;
+    }
 
-    const interval = setInterval(() => {
-      fetchBalance().then((b) => setBalance(b));
-    }, 5000);
+    let isMounted = true;
 
-    return () => clearInterval(interval);
-  }, [fetchBalance]);
+    const updateBalance = async () => {
+      try {
+        const raw = await publicClient.readContract({
+          address: usdcAddress,
+          abi: ERC20_ABI,
+          functionName: "balanceOf",
+          args: [address],
+        });
+        if (isMounted) {
+          setBalance(Number(raw) / 10 ** decimals);
+        }
+      } catch (err) {
+        console.error("Error in balance update loop:", err);
+        if (isMounted) {
+          setBalance(null);
+        }
+      }
+    };
+
+    updateBalance();
+
+    const interval = setInterval(updateBalance, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [address, publicClient, usdcAddress, decimals]);
 
   const transferUSDC = useCallback(
     async (to: string, amount: number) => {

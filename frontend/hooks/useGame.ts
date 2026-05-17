@@ -34,6 +34,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [optimisticBets, setOptimisticBets] = useState<any[]>([]);
 
   const fetchInitialHistory = useCallback(async () => {
     try {
@@ -48,9 +49,26 @@ export function useGame(options: { wsUrl?: string } = {}) {
     }
   }, []);
 
+  // 1. Fetch initial REST API states exactly once on mount
   useEffect(() => {
     fetchInitialHistory();
 
+    (async () => {
+      try {
+        const r = await import("@/lib/api");
+        const round = await r.fetchCurrentRound();
+        if (round) setRoundData(round);
+        const lb = await r.fetchLeaderboard();
+        console.log("Fetched leaderboard:", lb);
+        setLeaderboard(lb);
+      } catch (e) {
+        console.error("Failed to fetch initial state via REST:", e);
+      }
+    })();
+  }, [fetchInitialHistory]);
+
+  // 2. Purely handle socket manager subscription and connection
+  useEffect(() => {
     const handler = (message: any) => {
       if (message.type === "_OPEN") {
         setIsConnected(true);
@@ -90,25 +108,23 @@ export function useGame(options: { wsUrl?: string } = {}) {
     const unsubscribe = manager.subscribe(handler);
     manager.connect(wsUrl);
 
-    // fetch initial server state via REST as a fallback
-    (async () => {
-      try {
-        const r = await import("@/lib/api");
-        const round = await r.fetchCurrentRound();
-        if (round) setRoundData(round);
-        const lb = await r.fetchLeaderboard();
-        console.log("Fetched leaderboard:", lb);
-        setLeaderboard(lb);
-      } catch (e) {
-        console.error("Failed to fetch leaderboard:", e);
-        // ignore; socket will update state when ready
-      }
-    })();
-
     return () => {
       unsubscribe();
     };
   }, [wsUrl]);
+
+  // Clear optimistic bets once they appear in roundData or when round changes
+  useEffect(() => {
+    if (!roundData?.players) return;
+    
+    setOptimisticBets(prev => prev.filter(opt => {
+      // Keep only if same round and not yet in server list
+      const inServerList = roundData.players.some(
+        p => p.address.toLowerCase() === opt.address.toLowerCase()
+      );
+      return opt.roundId === roundData.roundId && !inServerList;
+    }));
+  }, [roundData?.players, roundData?.roundId]);
 
   const placeBet = useCallback(
     async (address: string, amount: number, useFreeBet: boolean = false, autoCashoutMultiplier?: number) => {
@@ -157,6 +173,14 @@ export function useGame(options: { wsUrl?: string } = {}) {
         if (res.success && res.bet) {
           // Generate new seed for next bet
           setClientSeed(Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2));
+          
+          // Add to optimistic bets
+          setOptimisticBets(prev => [...prev, {
+            ...res.bet,
+            roundId: roundData.roundId,
+            address: address
+          }]);
+          
           return { success: true, txHash: res.bet.txHash };
         } else {
           return { success: false, error: res.error || 'Failed to place bet' };
@@ -212,6 +236,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
     leaderboard,
     isConnected,
     error,
+    optimisticBets,
 
     placeBet,
     cashOut,
@@ -223,13 +248,22 @@ export function useGame(options: { wsUrl?: string } = {}) {
 export function usePlayerBet(
   roundData: RoundData | null,
   playerAddress: string | null,
+  optimisticBets: any[] = []
 ) {
-  if (!roundData || !playerAddress) return null;
-  return (
-    roundData.players.find(
-      (p) => p.address.toLowerCase() === playerAddress.toLowerCase(),
-    ) || null
+  if (!playerAddress) return null;
+
+  // 1. Check roundData (authoritative)
+  const serverBet = roundData?.players.find(
+    (p) => p.address.toLowerCase() === playerAddress.toLowerCase(),
   );
+  if (serverBet) return serverBet;
+
+  // 2. Check optimistic bets (fallback)
+  const optimisticBet = optimisticBets.find(
+    (p) => p.address.toLowerCase() === playerAddress.toLowerCase() && p.roundId === roundData?.roundId
+  );
+
+  return optimisticBet || null;
 }
 
 export function useRoundCountdown(roundData: RoundData | null) {

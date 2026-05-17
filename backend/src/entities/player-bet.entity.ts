@@ -7,6 +7,19 @@ import {
 } from 'typeorm';
 import { Round } from './round.entity.js';
 
+export enum BetStatus {
+  PENDING = 'PENDING',
+  VALIDATED = 'VALIDATED',
+  FAILED = 'FAILED',
+}
+
+export enum SettlementStatus {
+  PENDING = 'PENDING',
+  SETTLED = 'SETTLED',
+  FAILED = 'FAILED',
+  PENDING_FUNDS = 'PENDING_FUNDS',
+}
+
 @Entity({ name: 'player_bets' })
 export class PlayerBet {
   @PrimaryGeneratedColumn()
@@ -20,6 +33,24 @@ export class PlayerBet {
 
   @Column({ type: 'boolean', default: false })
   cashedOut!: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: BetStatus,
+    default: BetStatus.PENDING
+  })
+  status!: BetStatus;
+
+  @Column({
+    type: 'enum',
+    enum: SettlementStatus,
+    default: SettlementStatus.PENDING,
+    nullable: true
+  })
+  settlementStatus!: SettlementStatus | null;
+
+  @Column({ type: 'text', nullable: true })
+  validationError!: string | null;
 
   @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
   cashoutMultiplier!: number | null;
