@@ -213,6 +213,17 @@ const BetControls: React.FC = () => {
     return () => clearInterval(interval);
   }, [cashoutTimer]);
 
+  // Auto-clear error messages after 2 seconds
+  useEffect(() => {
+    if (!error) return;
+
+    const timer = setTimeout(() => {
+      setError(null);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const [mounted, setMounted] = useState(false);
   const [lastBetAmount, setLastBetAmount] = useState<string | null>(null);
 
