@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, AlertCircle, CheckCircle } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +15,8 @@ interface GameSettings {
 }
 
 export default function GameSettingsPage() {
-  const { isAuthenticated } = useAdminAuth();
+  const { isAuthenticated, adminSecret } = useAdminAuth();
+  const { tokens } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -26,11 +28,31 @@ export default function GameSettingsPage() {
   const [settings, setSettings] = useState<GameSettings>({
     minBetAmount: 0.1,
     maxBetAmount: 10,
-    bettingDurationMs: 30000,
+    bettingDurationMs: 10000,
     flyingDurationMs: 20000,
   });
 
   const [formData, setFormData] = useState<GameSettings>(settings);
+
+  // Helper to get auth headers
+  const getAuthHeaders = () => {
+    const headers: Record<string, string> = {};
+
+    // Prefer JWT token if available (wallet auth)
+    if (tokens?.accessToken) {
+      headers["Authorization"] = `Bearer ${tokens.accessToken}`;
+    }
+    // Fall back to admin secret (legacy auth)
+    else if (adminSecret) {
+      headers["Authorization"] = `Bearer ${adminSecret}`;
+    }
+    // Last resort: use env admin secret
+    else if (process.env.NEXT_PUBLIC_ADMIN_SECRET) {
+      headers["X-Admin-Secret"] = process.env.NEXT_PUBLIC_ADMIN_SECRET;
+    }
+
+    return headers;
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,16 +64,14 @@ export default function GameSettingsPage() {
     if (isAuthenticated) {
       fetchSettings();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, tokens, adminSecret]);
 
   const fetchSettings = async () => {
     setLoading(true);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
       const response = await fetch(`${apiUrl}/api/admin/game/settings`, {
-        headers: {
-          "X-Admin-Secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "",
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) throw new Error("Failed to fetch settings");
@@ -113,7 +133,7 @@ export default function GameSettingsPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-Admin-Secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(formData),
       });
@@ -280,7 +300,7 @@ export default function GameSettingsPage() {
                   type="number"
                   step="1000"
                   min="5000"
-                  value={formData.bettingDurationMs || 30000}
+                  value={formData.bettingDurationMs ?? 30000}
                   onChange={(e) =>
                     handleChange(
                       "bettingDurationMs",
@@ -291,7 +311,7 @@ export default function GameSettingsPage() {
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Time allowed for players to place bets (
-                  {(formData.bettingDurationMs / 1000).toFixed(1)}s)
+                  {((formData.bettingDurationMs ?? 30000) / 1000).toFixed(1)}s)
                 </p>
               </div>
 
@@ -304,7 +324,7 @@ export default function GameSettingsPage() {
                   type="number"
                   step="1000"
                   min="1000"
-                  value={formData.flyingDurationMs || 20000}
+                  value={formData.flyingDurationMs ?? 20000}
                   onChange={(e) =>
                     handleChange(
                       "flyingDurationMs",
@@ -315,7 +335,7 @@ export default function GameSettingsPage() {
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Maximum flight time before crash (
-                  {(formData.flyingDurationMs / 1000).toFixed(1)}s)
+                  {((formData.flyingDurationMs ?? 20000) / 1000).toFixed(1)}s)
                 </p>
               </div>
             </div>
@@ -358,25 +378,25 @@ export default function GameSettingsPage() {
               <div>
                 <p className="text-slate-500">Min Bet</p>
                 <p className="text-emerald-400 font-semibold">
-                  ${settings.minBetAmount.toFixed(2)}
+                  ${(settings.minBetAmount ?? 0.1).toFixed(2)}
                 </p>
               </div>
               <div>
                 <p className="text-slate-500">Max Bet</p>
                 <p className="text-emerald-400 font-semibold">
-                  ${settings.maxBetAmount.toFixed(2)}
+                  ${(settings.maxBetAmount ?? 10).toFixed(2)}
                 </p>
               </div>
               <div>
                 <p className="text-slate-500">Betting Time</p>
                 <p className="text-emerald-400 font-semibold">
-                  {(settings.bettingDurationMs / 1000).toFixed(1)}s
+                  {((settings.bettingDurationMs ?? 30000) / 1000).toFixed(1)}s
                 </p>
               </div>
               <div>
                 <p className="text-slate-500">Flying Time</p>
                 <p className="text-emerald-400 font-semibold">
-                  {(settings.flyingDurationMs / 1000).toFixed(1)}s
+                  {((settings.flyingDurationMs ?? 20000) / 1000).toFixed(1)}s
                 </p>
               </div>
             </div>
