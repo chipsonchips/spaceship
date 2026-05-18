@@ -17,6 +17,18 @@ export class GameSettings {
     @Column('int', { default: 20000 })
     flyingDurationMs!: number;
 
+    @Column('int', { default: 5000 })
+    roundRestartDelayMs!: number;
+
+    @Column('decimal', { precision: 5, scale: 4, default: 0.03 })
+    houseEdge!: number;
+
+    @Column('decimal', { precision: 6, scale: 2, default: 1.01 })
+    minCrashMultiplier!: number;
+
+    @Column('decimal', { precision: 6, scale: 2, default: 100.00 })
+    maxCrashMultiplier!: number;
+
     @CreateDateColumn()
     createdAt!: Date;
 

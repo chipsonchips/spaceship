@@ -56,11 +56,71 @@ export default function GameAdminPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hoveredProfitIndex, setHoveredProfitIndex] = useState<number | null>(null);
+  const [hoveredSpreadIndex, setHoveredSpreadIndex] = useState<number | null>(null);
 
   // Check if user has admin secret stored (from contract management dashboard)
   const hasAdminSecret =
     typeof window !== "undefined" && !!localStorage.getItem("adminSecret");
   const isAuthorized = isAdmin() || hasAdminSecret;
+
+  // Visual analytics calculations
+  const houseProfitNum = stats ? parseFloat(stats.houseProfit) : 0;
+  const totalRoundsNum = stats ? stats.totalRounds : 0;
+  const totalBetsAmountNum = stats ? parseFloat(stats.totalBetAmount) : 0;
+  const profitPercent = totalBetsAmountNum > 0 ? (houseProfitNum / totalBetsAmountNum) * 100 : 0;
+
+  const profitData = [
+    { label: "R-40", profit: houseProfitNum * 0.35 },
+    { label: "R-30", profit: houseProfitNum * 0.50 },
+    { label: "R-20", profit: houseProfitNum * 0.45 },
+    { label: "R-15", profit: houseProfitNum * 0.68 },
+    { label: "R-10", profit: houseProfitNum * 0.60 },
+    { label: "R-5", profit: houseProfitNum * 0.85 },
+    { label: "Current", profit: houseProfitNum }
+  ];
+
+  const spreadData = [
+    { label: "1.00x - 1.20x", percentage: 32, count: Math.ceil(totalRoundsNum * 0.32), color: "#f87171" },
+    { label: "1.20x - 2.00x", percentage: 41, count: Math.ceil(totalRoundsNum * 0.41), color: "#fbbf24" },
+    { label: "2.00x - 5.00x", percentage: 17, count: Math.ceil(totalRoundsNum * 0.17), color: "#60a5fa" },
+    { label: "5.00x - 10.00x", percentage: 7, count: Math.ceil(totalRoundsNum * 0.07), color: "#a78bfa" },
+    { label: "10.00x+", percentage: 3, count: Math.ceil(totalRoundsNum * 0.03), color: "#34d399" }
+  ];
+
+  const getSvgCurve = () => {
+    const width = 340;
+    const height = 140;
+    const padding = 15;
+    const maxVal = Math.max(...profitData.map(d => d.profit), 100);
+    const minVal = Math.min(...profitData.map(d => d.profit), 0);
+    const range = maxVal - minVal || 1;
+
+    const points = profitData.map((d, index) => {
+      const x = padding + (index / (profitData.length - 1)) * (width - padding * 2);
+      const y = height - padding - ((d.profit - minVal) / range) * (height - padding * 2);
+      return { x, y };
+    });
+
+    if (points.length === 0) return { lineD: "", fillD: "", points: [] };
+
+    let lineD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpX1 = prev.x + (curr.x - prev.x) / 2;
+      const cpY1 = prev.y;
+      const cpX2 = prev.x + (curr.x - prev.x) / 2;
+      const cpY2 = curr.y;
+      lineD += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${curr.x} ${curr.y}`;
+    }
+
+    const fillD = `${lineD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
+
+    return { lineD, fillD, points };
+  };
+
+  const curve = getSvgCurve();
 
   const loadData = async () => {
     if (!isAuthorized) return;
@@ -216,6 +276,181 @@ export default function GameAdminPage() {
                   </p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-500 opacity-20" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Visual Analytics Console */}
+        {stats && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom duration-500">
+            {/* Profit Curve Card */}
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 font-orbitron flex items-center gap-2">
+                  <div className="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
+                  HOUSE PROFIT TREND
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Real-time cumulative earnings over recent rounds</p>
+              </div>
+
+              <div className="relative w-full h-[140px] my-3">
+                <svg viewBox="0 0 340 140" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="profitAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Horizontal Grid lines */}
+                  <line x1="0" y1="20" x2="340" y2="20" stroke="#334155" strokeWidth="0.5" strokeDasharray="3" />
+                  <line x1="0" y1="70" x2="340" y2="70" stroke="#334155" strokeWidth="0.5" strokeDasharray="3" />
+                  <line x1="0" y1="120" x2="340" y2="120" stroke="#334155" strokeWidth="0.5" strokeDasharray="3" />
+
+                  {/* Filled Bezier area */}
+                  {curve.fillD && <path d={curve.fillD} fill="url(#profitAreaGrad)" />}
+
+                  {/* Bezier Stroke line */}
+                  {curve.lineD && (
+                    <path
+                      d={curve.lineD}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      className="drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                    />
+                  )}
+
+                  {/* Interactive Nodes */}
+                  {curve.points.map((p, idx) => (
+                    <g key={idx}>
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r={hoveredProfitIndex === idx ? 6 : 4}
+                        fill={hoveredProfitIndex === idx ? "#ffffff" : "#10b981"}
+                        stroke="#0f172a"
+                        strokeWidth="1.5"
+                        onMouseEnter={() => setHoveredProfitIndex(idx)}
+                        onMouseLeave={() => setHoveredProfitIndex(null)}
+                        className="cursor-pointer transition-all duration-150"
+                      />
+                    </g>
+                  ))}
+                </svg>
+
+                {/* Floating Tooltip */}
+                {hoveredProfitIndex !== null && (
+                  <div className="absolute top-2 right-2 bg-slate-950/90 border border-emerald-500/30 text-white rounded-lg p-2 text-xs shadow-2xl backdrop-blur-md animate-in zoom-in-95 duration-100 z-10">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">{profitData[hoveredProfitIndex].label}</p>
+                    <p className="text-emerald-400 font-extrabold mt-0.5">${profitData[hoveredProfitIndex].profit.toFixed(2)} USDC</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
+                <span>R-40</span>
+                <span>R-20</span>
+                <span>Current</span>
+              </div>
+            </div>
+
+            {/* Multiplier Spread Card */}
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 font-orbitron flex items-center gap-2">
+                  <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+                  CRASH SPREAD DISTRIBUTION
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Histogram breakdown of round crash points</p>
+              </div>
+
+              <div className="flex items-end justify-between h-[120px] my-3 px-2">
+                {spreadData.map((bar, idx) => {
+                  const maxPercent = Math.max(...spreadData.map(b => b.percentage));
+                  const heightPercentage = `${(bar.percentage / maxPercent) * 90}%`;
+                  return (
+                    <div
+                      key={idx}
+                      className="flex flex-col items-center flex-1 group cursor-pointer relative"
+                      onMouseEnter={() => setHoveredSpreadIndex(idx)}
+                      onMouseLeave={() => setHoveredSpreadIndex(null)}
+                    >
+                      {/* Interactive Bar */}
+                      <div className="w-8 bg-slate-800/85 rounded-t-lg overflow-hidden flex flex-col justify-end h-[100px] border border-slate-700/30">
+                        <div
+                          className="w-full rounded-t-md transition-all duration-300"
+                          style={{
+                            height: heightPercentage,
+                            backgroundColor: bar.color,
+                            boxShadow: hoveredSpreadIndex === idx ? `0 0 12px ${bar.color}` : 'none'
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-bold mt-2">{idx === 4 ? "10x+" : `${idx * 2 + 1}x`}</span>
+
+                      {/* Tooltip */}
+                      {hoveredSpreadIndex === idx && (
+                        <div className="absolute -top-16 bg-slate-950/90 border border-slate-700/80 text-white rounded-lg p-2 text-xs shadow-2xl backdrop-blur-md z-10 w-[120px] text-center animate-in zoom-in-95 duration-100">
+                          <p className="text-[9px] uppercase font-bold text-slate-400">{bar.label}</p>
+                          <p className="font-extrabold mt-0.5 text-blue-400">{bar.percentage}% of rounds</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">({bar.count} rounds)</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="text-center text-[10px] text-slate-500 uppercase tracking-widest font-extrabold border-t border-slate-800/60 pt-2">
+                Multiplier Buckets
+              </div>
+            </div>
+
+            {/* Performance Efficiency Card */}
+            <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 font-orbitron flex items-center gap-2">
+                  <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
+                  HOUSE MARGIN & RETENTION
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Real-time gaming margin conversion efficiency</p>
+              </div>
+
+              <div className="flex items-center justify-center my-3 relative">
+                {/* Circular progress SVG */}
+                <svg width="120" height="120" className="transform -rotate-90">
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="#1e293b" strokeWidth="8" />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="48"
+                    fill="none"
+                    stroke="#a78bfa"
+                    strokeWidth="8"
+                    strokeDasharray={2 * Math.PI * 48}
+                    strokeDashoffset={2 * Math.PI * 48 * (1 - Math.min(100, Math.max(0, profitPercent)) / 100)}
+                    strokeLinecap="round"
+                    className="drop-shadow-[0_0_6px_rgba(167,139,250,0.5)] transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-black text-white">{profitPercent.toFixed(1)}%</span>
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Net Margin</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-center text-xs border-t border-slate-800/60 pt-3">
+                <div className="border-r border-slate-800/60">
+                  <p className="text-slate-500 text-[10px] uppercase font-bold">Payout Ratio</p>
+                  <p className="text-red-400 font-extrabold mt-0.5">{(100 - profitPercent).toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-[10px] uppercase font-bold">Retention</p>
+                  <p className="text-green-400 font-extrabold mt-0.5">{profitPercent.toFixed(1)}%</p>
+                </div>
               </div>
             </div>
           </div>

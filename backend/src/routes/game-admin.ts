@@ -6,7 +6,6 @@ import { PlayerBet } from '../entities/player-bet.entity.js';
 import { Round } from '../entities/round.entity.js';
 import { User, UserRole } from '../entities/user.entity.js';
 import { GameHistory } from '../entities/game-history.entity.js';
-import { GAME_CONSTANTS } from '../constants.js';
 
 const router = Router();
 
@@ -364,6 +363,10 @@ router.get('/settings', async (req: Request, res: Response) => {
                 maxBetAmount: Number(settings.maxBetAmount),
                 bettingDurationMs: settings.bettingDurationMs,
                 flyingDurationMs: settings.flyingDurationMs,
+                roundRestartDelayMs: settings.roundRestartDelayMs,
+                houseEdge: Number(settings.houseEdge),
+                minCrashMultiplier: Number(settings.minCrashMultiplier),
+                maxCrashMultiplier: Number(settings.maxCrashMultiplier),
             },
         });
     } catch (error) {
@@ -381,44 +384,28 @@ router.get('/settings', async (req: Request, res: Response) => {
  */
 router.put('/settings', async (req: Request, res: Response) => {
     try {
-        const { minBetAmount, maxBetAmount, bettingDurationMs, flyingDurationMs } = req.body;
+        const {
+            minBetAmount,
+            maxBetAmount,
+            bettingDurationMs,
+            flyingDurationMs,
+            roundRestartDelayMs,
+            houseEdge,
+            minCrashMultiplier,
+            maxCrashMultiplier
+        } = req.body;
 
-        // Validate inputs
-        if (minBetAmount !== undefined && minBetAmount <= 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'Minimum bet amount must be greater than 0',
-            });
-        }
-
-        if (maxBetAmount !== undefined && minBetAmount !== undefined && maxBetAmount <= minBetAmount) {
-            return res.status(400).json({
-                success: false,
-                error: 'Maximum bet amount must be greater than minimum',
-            });
-        }
-
-        if (bettingDurationMs !== undefined && bettingDurationMs < GAME_CONSTANTS.ROUND_RESTART_DELAY_MS) {
-            return res.status(400).json({
-                success: false,
-                error: `Betting duration must be at least ${GAME_CONSTANTS.ROUND_RESTART_DELAY_MS / 1000} seconds`,
-            });
-        }
-
-        if (flyingDurationMs !== undefined && flyingDurationMs < 1000) {
-            return res.status(400).json({
-                success: false,
-                error: 'Flying duration must be at least 1 second',
-            });
-        }
-
-        // Save to database
+        // Save to database (service performs full range & integrity validations)
         const { gameSettingsService } = await import('../services/game-settings.service.js');
         const updatedSettings = await gameSettingsService.updateSettings({
             minBetAmount,
             maxBetAmount,
             bettingDurationMs,
             flyingDurationMs,
+            roundRestartDelayMs,
+            houseEdge,
+            minCrashMultiplier,
+            maxCrashMultiplier
         });
 
         logger.info('Game settings updated', {
@@ -434,13 +421,17 @@ router.put('/settings', async (req: Request, res: Response) => {
                 maxBetAmount: Number(updatedSettings.maxBetAmount),
                 bettingDurationMs: updatedSettings.bettingDurationMs,
                 flyingDurationMs: updatedSettings.flyingDurationMs,
+                roundRestartDelayMs: updatedSettings.roundRestartDelayMs,
+                houseEdge: Number(updatedSettings.houseEdge),
+                minCrashMultiplier: Number(updatedSettings.minCrashMultiplier),
+                maxCrashMultiplier: Number(updatedSettings.maxCrashMultiplier),
             },
         });
     } catch (error) {
         logger.error('Failed to update game settings', { error: (error as Error).message });
-        res.status(500).json({
+        res.status(400).json({
             success: false,
-            error: 'Failed to update game settings',
+            error: (error as Error).message || 'Failed to update game settings',
         });
     }
 });

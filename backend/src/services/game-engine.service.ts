@@ -25,6 +25,7 @@ import { securityMonitor } from './security-monitor.service.js';
 import { auditLogService } from './audit-log.service.js';
 import { GAME_CONSTANTS } from '../constants.js';
 import { AdminActionType } from '../entities/admin-log.entity.js';
+import { gameSettingsService } from './game-settings.service.js';
 
 export class GameEngine {
   private isRunning = false;
@@ -338,6 +339,10 @@ export class GameEngine {
           await queryRunner.connect();
           await queryRunner.startTransaction('SERIALIZABLE'); // Use SERIALIZABLE isolation level
 
+          // Get active database settings
+          const settings = await gameSettingsService.getSettings();
+          const bettingDuration = Number(settings.bettingDurationMs || 10000);
+
           // Get the latest round with a lock
           const last = await queryRunner.manager.findOne(Round, {
             where: {},
@@ -375,7 +380,7 @@ export class GameEngine {
             roundId: nextId,
             phase: 'BETTING',
             startTime: Date.now(),
-            flyStartTime: Date.now() + this.BETTING_DURATION_MS,
+            flyStartTime: Date.now() + bettingDuration,
             crashMultiplier: null,
             currentMultiplier: 1.0,
             serverSeed: encryptedSeed,
@@ -393,7 +398,7 @@ export class GameEngine {
 
           this.currentRound = round;
           this.broadcastGameState();
-          this.scheduleFlyingPhase();
+          await this.scheduleFlyingPhase();
 
           logger.info(
             `Successfully created new round with ID: ${round.id}, Round ID: ${round.roundId}`
@@ -426,14 +431,17 @@ export class GameEngine {
     ); // 5 retries, starting with 100ms delay
   }
 
-  private scheduleFlyingPhase() {
+  private async scheduleFlyingPhase() {
     if (this.bettingTimeout) clearTimeout(this.bettingTimeout);
     // If a scheduled flyStartTime exists (e.g., after restart), use the remaining time
     const now = Date.now();
+    const settings = await gameSettingsService.getSettings();
+    const bettingDuration = Number(settings.bettingDurationMs || 10000);
+
     const remainingMs =
       this.currentRound && this.currentRound.flyStartTime
         ? Math.max(0, Number(this.currentRound.flyStartTime) - now)
-        : this.BETTING_DURATION_MS;
+        : bettingDuration;
 
     this.bettingTimeout = setTimeout(() => this.startFlyingPhase(), remainingMs);
   }
@@ -447,6 +455,12 @@ export class GameEngine {
       });
       return;
     }
+
+    // Load active settings dynamically
+    const settings = await gameSettingsService.getSettings();
+    const houseEdge = Number(settings.houseEdge || 0.03);
+    const minCrashMultiplier = Number(settings.minCrashMultiplier || 1.01);
+    const maxCrashMultiplier = Number(settings.maxCrashMultiplier || 100.00);
 
     // 1. Decrypt server seed
     let serverSeed = this.currentRound.serverSeed || '';
@@ -493,28 +507,41 @@ export class GameEngine {
     const nonce = this.currentRound.roundId;
     const finalSeed = createFinalSeed(serverSeed, combinedClientSeedHash, nonce);
 
-    // 5. Calculate crash point from final seed
-    const targetCrash = generateCrashMultiplier(finalSeed);
+    // 5. Calculate crash point from final seed using dynamic configurations
+    const targetCrash = generateCrashMultiplier(finalSeed, houseEdge, minCrashMultiplier, maxCrashMultiplier);
 
     // 6. Store for verification
     this.currentRound.combinedClientSeedHash = combinedClientSeedHash;
     this.currentRound.finalSeed = finalSeed;
 
-    const flyingDuration = Math.min(20000, Math.max(2000, targetCrash * 2000));
+    const maxFlyingDuration = Number(settings.flyingDurationMs || 20000);
+    const flyingDuration = Math.min(maxFlyingDuration, Math.max(2000, targetCrash * 2000));
 
-    // Update round phase with retry logic for transaction conflicts
-    this.currentRound.phase = 'FLYING';
-    this.currentRound.flyStartTime = Date.now();
-
+    // Update round phase with atomic query-builder update to eliminate serialization locks/conflicts!
+    const flyStartTime = Date.now();
     try {
       await this.executeWithRetry(async () => {
         if (this.currentRound) {
-          await this.roundRepo.save(this.currentRound);
+          await this.roundRepo.createQueryBuilder()
+            .update(Round)
+            .set({
+              phase: 'FLYING',
+              flyStartTime,
+              combinedClientSeedHash,
+              finalSeed
+            })
+            .where('id = :id', { id: this.currentRound.id })
+            .execute();
         }
       });
+
+      this.currentRound.phase = 'FLYING';
+      this.currentRound.flyStartTime = flyStartTime;
     } catch (err) {
-      logger.error('Failed to update round phase to FLYING', { error: (err as Error).message });
-      return;
+      logger.error('Failed to update round phase to FLYING in DB. Force continuing in-memory to prevent game freeze!', { error: (err as Error).message });
+      // CRITICAL FALLBACK: Force-update the in-memory state to guarantee the game engine loop does not halt.
+      this.currentRound.phase = 'FLYING';
+      this.currentRound.flyStartTime = flyStartTime;
     }
 
     // Broadcast phase change immediately
@@ -533,10 +560,11 @@ export class GameEngine {
     if (this.flyingInterval) clearInterval(this.flyingInterval);
 
     this.flyingInterval = setInterval(async () => {
+      if (!this.currentRound) return;
       const elapsed = Date.now() - startTime;
 
-      this.currentRound!.currentMultiplier = calculateCurrentMultiplier(elapsed);
-      this.currentRound!.planePosition = calculatePlanePosition(elapsed);
+      this.currentRound.currentMultiplier = calculateCurrentMultiplier(elapsed, maxCrashMultiplier);
+      this.currentRound.planePosition = calculatePlanePosition(elapsed);
 
       // Check for auto-cashouts (fire-and-forget, non-blocking)
       this.processAutoCashouts().catch((err) => {
@@ -544,13 +572,20 @@ export class GameEngine {
       });
 
       // Update previous multiplier for next iteration
-      this.previousMultiplier = this.currentRound!.currentMultiplier;
+      this.previousMultiplier = this.currentRound.currentMultiplier;
 
-      // persist small updates occasionally with retry logic
+      // Persist updates occasionally using targeted atomic updates to avoid transaction deadlock conflicts!
       if (elapsed % 1000 < 60) {
         this.executeWithRetry(async () => {
           if (this.currentRound) {
-            await this.roundRepo.save(this.currentRound);
+            await this.roundRepo.createQueryBuilder()
+              .update(Round)
+              .set({
+                currentMultiplier: this.currentRound.currentMultiplier,
+                planePosition: this.currentRound.planePosition
+              })
+              .where('id = :id', { id: this.currentRound.id })
+              .execute();
           }
         }).catch((err) => {
           logger.warn('Failed to persist round state update', { error: (err as Error).message });
@@ -561,7 +596,7 @@ export class GameEngine {
 
       if (
         elapsed >= flyingDuration ||
-        this.currentRound!.currentMultiplier >= targetCrash
+        this.currentRound.currentMultiplier >= targetCrash
       ) {
         await this.crashRound(targetCrash);
       }
@@ -686,8 +721,19 @@ export class GameEngine {
         }
       }
 
+      // Perform atomic database update for round finalization!
+      await this.roundRepo.createQueryBuilder()
+        .update(Round)
+        .set({
+          phase: 'CRASHED',
+          crashMultiplier: crashMultiplier,
+          currentMultiplier: crashMultiplier,
+          settled: true
+        })
+        .where('id = :id', { id: this.currentRound.id })
+        .execute();
+
       this.currentRound!.settled = true;
-      await this.roundRepo.save(this.currentRound!);
 
       // record history
       await this.historyService.record({
@@ -722,8 +768,9 @@ export class GameEngine {
 
     this.broadcastGameState();
 
-    // new round after delay
-    setTimeout(() => this.startNewRound(), this.ROUND_RESTART_DELAY_MS);
+    // Query active settings for dynamic round restart delay
+    const settings = await gameSettingsService.getSettings();
+    setTimeout(() => this.startNewRound(), Number(settings.roundRestartDelayMs || 5000));
   }
 
   async placeBet(
@@ -740,9 +787,11 @@ export class GameEngine {
     if (!this.currentRound || this.currentRound.phase !== 'BETTING')
       throw new Error('Betting closed');
 
-    // Get global min/max bet amounts from environment
-    const globalMinBet = parseFloat(process.env.MIN_BET_AMOUNT || '0.1');
-    const globalMaxBet = parseFloat(process.env.MAX_BET_AMOUNT || '10');
+    // Get active settings from database dynamically
+    const settings = await gameSettingsService.getSettings();
+    const globalMinBet = Number(settings.minBetAmount || 0.1);
+    const globalMaxBet = Number(settings.maxBetAmount || 10);
+    const maxCrashMultiplier = Number(settings.maxCrashMultiplier || 100);
 
     // Basic amount validation
     if (amount < globalMinBet) {
@@ -753,8 +802,8 @@ export class GameEngine {
       throw new Error(`Bet amount exceeds global maximum of ${globalMaxBet} USDC`);
     }
 
-    if (autoCashoutMultiplier && (autoCashoutMultiplier < 1.01 || autoCashoutMultiplier > 100)) {
-      throw new Error('Auto-cashout multiplier must be between 1.01 and 100');
+    if (autoCashoutMultiplier && (autoCashoutMultiplier < 1.01 || autoCashoutMultiplier > maxCrashMultiplier)) {
+      throw new Error(`Auto-cashout multiplier must be between 1.01 and ${maxCrashMultiplier}`);
     }
 
     // Generate client seed if not provided
@@ -824,9 +873,17 @@ export class GameEngine {
       });
       await this.betRepo.save(newBet);
 
-      this.currentRound!.totalBets =
-        Number(this.currentRound!.totalBets || 0) + Number(amount);
-      await this.roundRepo.save(this.currentRound!);
+      // Perform atomic database increment for totalBets to avoid round serialization/locking conflicts!
+      await this.roundRepo.createQueryBuilder()
+        .update(Round)
+        .set({
+          totalBets: () => `"totalBets" + ${amount}`
+        })
+        .where('id = :id', { id: this.currentRound!.id })
+        .execute();
+
+      // Update the in-memory state cleanly
+      this.currentRound!.totalBets = Number(this.currentRound!.totalBets || 0) + Number(amount);
 
       // keep leaderboard updated with wager
       await this.leaderboardService.updateFromBet({ address, amount, cashedOut: false });
@@ -914,11 +971,17 @@ export class GameEngine {
               failedBet.validationError = (err as Error).message;
               await this.betRepo.save(failedBet);
 
-              // Revert totalBets on the round
-              const roundToUpdate = await this.roundRepo.findOne({ where: { id: failedBet.round.id } });
-              if (roundToUpdate) {
-                roundToUpdate.totalBets = Math.max(0, Number(roundToUpdate.totalBets) - Number(failedBet.amount));
-                await this.roundRepo.save(roundToUpdate);
+              // Revert totalBets on the round atomically
+              await this.roundRepo.createQueryBuilder()
+                .update(Round)
+                .set({
+                  totalBets: () => `GREATEST(0, "totalBets" - ${failedBet.amount})`
+                })
+                .where('id = :id', { id: failedBet.round.id })
+                .execute();
+
+              if (this.currentRound && this.currentRound.id === failedBet.round.id) {
+                this.currentRound.totalBets = Math.max(0, Number(this.currentRound.totalBets) - Number(failedBet.amount));
               }
             }
           });
@@ -955,9 +1018,19 @@ export class GameEngine {
 
       await this.betRepo.save(bet);
 
-      bet.round.totalPayouts =
-        Number(bet.round.totalPayouts || 0) + Number(bet.payout || 0);
-      await this.roundRepo.save(bet.round);
+      // Perform atomic database increment for totalPayouts to avoid round serialization/locking conflicts!
+      await this.roundRepo.createQueryBuilder()
+        .update(Round)
+        .set({
+          totalPayouts: () => `"totalPayouts" + ${bet.payout}`
+        })
+        .where('id = :id', { id: bet.round.id })
+        .execute();
+
+      // Update the in-memory state cleanly if it matches our active round
+      if (this.currentRound && this.currentRound.id === bet.round.id) {
+        this.currentRound.totalPayouts = Number(this.currentRound.totalPayouts || 0) + Number(bet.payout || 0);
+      }
 
       await this.leaderboardService.updateFromBet({
         address: bet.address,
@@ -1067,21 +1140,30 @@ export class GameEngine {
           where: { round: { id: this.currentRound.id } },
         });
 
+        // Fetch dynamic settings
+        const settings = await gameSettingsService.getSettings();
+
         // 2. Construct the payload using in-memory state for high-frequency data (phase, multiplier, etc.)
         //    and DB data for the players list.
         const roundData = {
           ...this.currentRound, // Use in-memory state (authoritative for phase/multiplier)
           players: players || [], // Use DB state (authoritative for bets)
+          minBetAmount: Number(settings.minBetAmount || 0.1),
+          maxBetAmount: Number(settings.maxBetAmount || 10),
+          bettingDurationMs: Number(settings.bettingDurationMs || 10000),
+          flyingDurationMs: Number(settings.flyingDurationMs || 20000),
+          roundRestartDelayMs: Number(settings.roundRestartDelayMs || 5000),
+          maxCrashMultiplier: Number(settings.maxCrashMultiplier || 100.00),
         };
 
-        const payload = sanitizeRound(roundData, ENCRYPTION_SECRET) as Record<string, any>;
+        const payload = sanitizeRound(roundData, ENCRYPTION_SECRET) as Record<string, unknown>;
         if (payload) payload.serverTime = Date.now();
         this.io.emit('GAME_STATE_UPDATE', payload);
       }
     } catch (error) {
       logger.error('Failed to broadcast game state', { error });
       // Fallback: broadcast current round without updated players if query fails
-      const fallbackPayload = sanitizeRound(this.currentRound, ENCRYPTION_SECRET) as Record<string, any>;
+      const fallbackPayload = sanitizeRound(this.currentRound, ENCRYPTION_SECRET) as Record<string, unknown>;
       if (fallbackPayload) fallbackPayload.serverTime = Date.now();
       this.io.emit('GAME_STATE_UPDATE', fallbackPayload);
     }
