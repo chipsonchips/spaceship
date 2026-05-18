@@ -1,4 +1,4 @@
-import { ethers, type InterfaceAbi, FetchRequest } from 'ethers';
+import { ethers, type InterfaceAbi, FetchRequest, NonceManager } from 'ethers';
 import https from 'node:https';
 import { computePlayersMerkleRoot } from './merkle.js';
 import aviatorAbi from '../abi/aviator.json' with { type: 'json' };
@@ -18,7 +18,7 @@ import { logger } from '../utils/logger.js';
 
 export class ChainService {
   provider: ethers.JsonRpcProvider;
-  signer: ethers.Wallet;
+  signer: NonceManager;
   contract: ethers.Contract;
   chainId: number;
   private providerReady = false;
@@ -46,7 +46,8 @@ export class ChainService {
     });
 
     this.provider = new ethers.JsonRpcProvider(fetchReq);
-    this.signer = new ethers.Wallet(key, this.provider);
+    const baseSigner = new ethers.Wallet(key, this.provider);
+    this.signer = new NonceManager(baseSigner);
     this.contract = new ethers.Contract(addr, aviatorAbiTyped, this.signer);
 
     // Initialize provider connection in background
@@ -446,7 +447,7 @@ export class ChainService {
       );
 
       const currentAllowance = await usdcContract.allowance(
-        this.signer.address,
+        await this.signer.getAddress(),
         await this.contract.getAddress()
       );
 

@@ -115,11 +115,10 @@ describe('ChainService', () => {
       expect(ethers.Contract).toHaveBeenCalledWith(
         '0x2222222222222222222222222222222222222222',
         expect.any(Object),
-        mockSigner
+        expect.any(ethers.NonceManager)
       );
       expect(service.provider).toBe(mockProvider);
-      expect(service.signer).toBe(mockSigner);
-      expect(service.contract).toBe(mockContract);
+      expect(service.signer).toBeInstanceOf(ethers.NonceManager);
     });
 
     it('should throw error if chainId is not provided', () => {
