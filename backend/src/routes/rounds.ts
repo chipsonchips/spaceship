@@ -8,6 +8,30 @@ export const createRoundsRouter = (gameEngine: GameEngine) => {
   const router = Router();
   const roundService = new RoundService();
 
+  router.get('/settings', async (req, res) => {
+    try {
+      const { gameSettingsService } = await import('../services/game-settings.service.js');
+      const settings = await gameSettingsService.getSettings();
+      res.json({
+        success: true,
+        settings: {
+          minBetAmount: Number(settings.minBetAmount),
+          maxBetAmount: Number(settings.maxBetAmount),
+          bettingDurationMs: settings.bettingDurationMs,
+          flyingDurationMs: settings.flyingDurationMs,
+          roundRestartDelayMs: settings.roundRestartDelayMs,
+          houseEdge: Number(settings.houseEdge),
+          minCrashMultiplier: Number(settings.minCrashMultiplier),
+          maxCrashMultiplier: Number(settings.maxCrashMultiplier),
+        }
+      });
+    } catch (err) {
+      const errorMsg = (err as Error).message || 'Failed to fetch settings';
+      console.error('Get public settings error:', err);
+      res.status(500).json({ success: false, error: errorMsg });
+    }
+  });
+
   router.get('/current', async (req, res) => {
     try {
       const round = await roundService.getCurrentRound();
