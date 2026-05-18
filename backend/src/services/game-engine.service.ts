@@ -1156,14 +1156,14 @@ export class GameEngine {
           maxCrashMultiplier: Number(settings.maxCrashMultiplier || 100.00),
         };
 
-        const payload = sanitizeRound(roundData, ENCRYPTION_SECRET) as Record<string, any>;
+        const payload = sanitizeRound(roundData, ENCRYPTION_SECRET) as Record<string, unknown>;
         if (payload) payload.serverTime = Date.now();
         this.io.emit('GAME_STATE_UPDATE', payload);
       }
     } catch (error) {
       logger.error('Failed to broadcast game state', { error });
       // Fallback: broadcast current round without updated players if query fails
-      const fallbackPayload = sanitizeRound(this.currentRound, ENCRYPTION_SECRET) as Record<string, any>;
+      const fallbackPayload = sanitizeRound(this.currentRound, ENCRYPTION_SECRET) as Record<string, unknown>;
       if (fallbackPayload) fallbackPayload.serverTime = Date.now();
       this.io.emit('GAME_STATE_UPDATE', fallbackPayload);
     }
