@@ -73,25 +73,6 @@ cp .env.example .env.local
 cp .env.example backend/.env
 ```
 
-### Configuration
-
-**Frontend (`.env.local`):**
-```env
-NEXT_PUBLIC_BASE_CHAIN_ID=0x2105
-NEXT_PUBLIC_USDC_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-NEXT_PUBLIC_GAME_CONTRACT_ADDRESS=0x<contract>
-NEXT_PUBLIC_PAYMASTER_PROXY_URL=http://localhost:3001/paymaster
-NEXT_PUBLIC_WS_URL=ws://localhost:3001
-```
-
-**Backend (`backend/.env`):**
-```env
-DATABASE_URL=postgresql://user:pass@localhost:5432/aviator
-BASE_RPC_URL=https://mainnet.base.org
-USDC_TOKEN_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-SERVER_OPERATOR_ADDRESS=0x<your-address>
-```
-
 ### Development
 
 ```bash
@@ -139,20 +120,6 @@ BETTING (10s) → FLYING (variable) → CRASHED → SETTLE
 Place bets    Cash out          Record results
 Countdown     Pay out USDC       Next round
 ```
-
-## 📱 Farcaster
-
-- ✅ MiniApp SDK initialized
-- ✅ Frame responsive design
-- 🔜 Cast-to-play actions
-- 🔜 Leaderboard frame
-
-## 📚 Full Docs
-
-- See `.env.example` for all configuration
-- Smart contract code in `contracts/src/`
-- API endpoints documented in backend
-- Component usage in frontend
 
 ## 📄 License
 
