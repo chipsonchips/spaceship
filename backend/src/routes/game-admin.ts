@@ -9,8 +9,7 @@ import { GameHistory } from '../entities/game-history.entity.js';
 
 const router = Router();
 
-// GET /settings is public (needed for game initialization)
-// All other endpoints require admin authentication (supports both JWT and admin secret)
+
 router.get('/settings', async (req: Request, res: Response) => {
     try {
         const { gameSettingsService } = await import('../services/game-settings.service.js');
@@ -38,7 +37,6 @@ router.get('/settings', async (req: Request, res: Response) => {
     }
 });
 
-// All other endpoints require admin authentication (supports both JWT and admin secret)
 router.use(authenticateTokenOrAdminSecret);
 router.use(requireAdmin);
 
