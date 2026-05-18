@@ -354,18 +354,17 @@ router.get('/rounds/:roundId', async (req: Request, res: Response) => {
  */
 router.get('/settings', async (req: Request, res: Response) => {
     try {
-        // In a real implementation, these would be stored in a database
-        // For now, we'll return environment-based defaults
-        const settings = {
-            minBetAmount: parseFloat(process.env.MIN_BET_AMOUNT || '0.1'),
-            maxBetAmount: parseFloat(process.env.MAX_BET_AMOUNT || '10'),
-            bettingDurationMs: parseInt(process.env.BETTING_DURATION_MS || '30000'),
-            flyingDurationMs: parseInt(process.env.FLYING_DURATION_MS || '20000'),
-        };
+        const { gameSettingsService } = await import('../services/game-settings.service.js');
+        const settings = await gameSettingsService.getSettings();
 
         res.json({
             success: true,
-            settings,
+            settings: {
+                minBetAmount: Number(settings.minBetAmount),
+                maxBetAmount: Number(settings.maxBetAmount),
+                bettingDurationMs: settings.bettingDurationMs,
+                flyingDurationMs: settings.flyingDurationMs,
+            },
         });
     } catch (error) {
         logger.error('Failed to fetch game settings', { error: (error as Error).message });
@@ -413,27 +412,29 @@ router.put('/settings', async (req: Request, res: Response) => {
             });
         }
 
-        // In a real implementation, these would be saved to a database
-        // For now, we'll just log and return success
-        logger.info('Game settings updated', {
+        // Save to database
+        const { gameSettingsService } = await import('../services/game-settings.service.js');
+        const updatedSettings = await gameSettingsService.updateSettings({
             minBetAmount,
             maxBetAmount,
             bettingDurationMs,
             flyingDurationMs,
-            adminId: req.userId,
         });
 
-        const updatedSettings = {
-            minBetAmount: minBetAmount || parseFloat(process.env.MIN_BET_AMOUNT || '0.1'),
-            maxBetAmount: maxBetAmount || parseFloat(process.env.MAX_BET_AMOUNT || '10'),
-            bettingDurationMs: bettingDurationMs || parseInt(process.env.BETTING_DURATION_MS || '30000'),
-            flyingDurationMs: flyingDurationMs || parseInt(process.env.FLYING_DURATION_MS || '20000'),
-        };
+        logger.info('Game settings updated', {
+            settings: updatedSettings,
+            adminId: req.userId,
+        });
 
         res.json({
             success: true,
             message: 'Game settings updated successfully',
-            settings: updatedSettings,
+            settings: {
+                minBetAmount: Number(updatedSettings.minBetAmount),
+                maxBetAmount: Number(updatedSettings.maxBetAmount),
+                bettingDurationMs: updatedSettings.bettingDurationMs,
+                flyingDurationMs: updatedSettings.flyingDurationMs,
+            },
         });
     } catch (error) {
         logger.error('Failed to update game settings', { error: (error as Error).message });
