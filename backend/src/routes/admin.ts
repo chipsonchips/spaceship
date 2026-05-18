@@ -8,23 +8,31 @@ import { AdminActionType } from '../entities/admin-log.entity.js';
 
 const router = Router();
 
-
-// Helper to get chain service for a specific chain
 const getChainServiceForRequest = (req: Request): ChainService => {
   const chainId = req.body?.chainId || req.query?.chainId;
-  const numChainId = chainId ? Number(chainId) : 8453; // Default to Base mainnet
+  const numChainId = chainId ? Number(chainId) : 8453;
   return new ChainService(numChainId);
 };
 
-// GET /api/admin/house/balance - Get current house balance
+const isValidAddress = (address: string): boolean =>
+  typeof address === 'string' && /^0x[a-fA-F0-9]{40}$/.test(address);
+
+const isValidAmount = (amount: unknown): boolean =>
+  typeof amount === 'number' && amount > 0;
+
+const sendError = (res: Response, statusCode: number, error: string) =>
+  res.status(statusCode).json({ success: false, error });
+
+const sendSuccess = (res: Response, data: Record<string, unknown>) =>
+  res.json({ success: true, ...data });
+
 router.get('/house/balance', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const balance = await chainService.getHouseBalance();
     const chainConfig = getChainConfig(chainService.chainId);
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       balance,
       balanceFormatted: `${balance.toFixed(2)} USDC`,
       chain: chainConfig.label,
@@ -32,41 +40,28 @@ router.get('/house/balance', authenticateTokenOrAdminSecret, requireAdmin, async
     });
   } catch (err) {
     logger.error('Failed to get house balance', { error: (err as Error).message });
-    res.status(500).json({
-      success: false,
-      error: "failed to get house balance"
-    });
+    sendError(res, 500, 'failed to get house balance');
   }
 });
 
-// POST /api/admin/house/withdraw - Withdraw house profits to owner
 router.post('/house/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { amount } = req.body;
 
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid amount - must be a positive number'
-      });
+    if (!isValidAmount(amount)) {
+      return sendError(res, 400, 'Invalid amount - must be a positive number');
     }
 
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
-
-    // Get current balance before withdrawal
     const currentBalance = await chainService.getHouseBalance();
 
     if (amount > currentBalance) {
-      return res.status(400).json({
-        success: false,
-        error: `Insufficient balance. Current balance: ${currentBalance} USDC, Requested: ${amount} USDC`
-      });
+      return sendError(res, 400, `Insufficient balance. Current balance: ${currentBalance} USDC, Requested: ${amount} USDC`);
     }
 
     const txHash = await chainService.withdrawHouseProfits(amount);
 
-    // Log admin action
     await auditLogService.logAction(
       req.userId || null,
       AdminActionType.HOUSE_WITHDRAW,
@@ -76,8 +71,7 @@ router.post('/house/withdraw', authenticateTokenOrAdminSecret, requireAdmin, asy
       chainService.chainId
     );
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       txHash,
       amount,
       chain: chainConfig.label,
@@ -86,22 +80,17 @@ router.post('/house/withdraw', authenticateTokenOrAdminSecret, requireAdmin, asy
     });
   } catch (err) {
     logger.error('Failed to withdraw house profits', { error: (err as Error).message });
-    res.status(500).json({
-      success: false,
-      error: (err as Error).message
-    });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// GET /api/admin/contract/status - Get contract status
 router.get('/contract/status', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const status = await chainService.getContractStatus();
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       chain: chainConfig.label,
       chainId: chainService.chainId,
       ...status
@@ -111,21 +100,16 @@ router.get('/contract/status', authenticateTokenOrAdminSecret, requireAdmin, asy
       error: (err as Error).message,
       stack: (err as Error).stack
     });
-    res.status(500).json({
-      success: false,
-      error: (err as Error).message
-    });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// POST /api/admin/contract/pause - Pause contract
 router.post('/contract/pause', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.pauseContract();
 
-    // Log admin action
     await auditLogService.logAction(
       req.userId || null,
       AdminActionType.CONTRACT_PAUSE,
@@ -135,8 +119,7 @@ router.post('/contract/pause', authenticateTokenOrAdminSecret, requireAdmin, asy
       chainService.chainId
     );
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       txHash,
       chain: chainConfig.label,
       chainId: chainService.chainId,
@@ -144,18 +127,16 @@ router.post('/contract/pause', authenticateTokenOrAdminSecret, requireAdmin, asy
     });
   } catch (err) {
     logger.error('Failed to pause contract', { error: (err as Error).message });
-    res.status(500).json({ success: false, error: (err as Error).message });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// POST /api/admin/contract/unpause - Unpause contract
 router.post('/contract/unpause', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.unpauseContract();
 
-    // Log admin action
     await auditLogService.logAction(
       req.userId || null,
       AdminActionType.CONTRACT_UNPAUSE,
@@ -165,8 +146,7 @@ router.post('/contract/unpause', authenticateTokenOrAdminSecret, requireAdmin, a
       chainService.chainId
     );
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       txHash,
       chain: chainConfig.label,
       chainId: chainService.chainId,
@@ -174,27 +154,22 @@ router.post('/contract/unpause', authenticateTokenOrAdminSecret, requireAdmin, a
     });
   } catch (err) {
     logger.error('Failed to unpause contract', { error: (err as Error).message });
-    res.status(500).json({ success: false, error: (err as Error).message });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// POST /api/admin/contract/operator - Set server operator
 router.post('/contract/operator', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { address } = req.body;
 
-    if (!address || typeof address !== 'string' || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid address format'
-      });
+    if (!isValidAddress(address)) {
+      return sendError(res, 400, 'Invalid address format');
     }
 
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.setServerOperator(address);
 
-    // Log admin action
     await auditLogService.logAction(
       req.userId || null,
       AdminActionType.OPERATOR_SET,
@@ -204,8 +179,7 @@ router.post('/contract/operator', authenticateTokenOrAdminSecret, requireAdmin, 
       chainService.chainId
     );
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       txHash,
       address,
       chain: chainConfig.label,
@@ -214,27 +188,22 @@ router.post('/contract/operator', authenticateTokenOrAdminSecret, requireAdmin, 
     });
   } catch (err) {
     logger.error('Failed to set server operator', { error: (err as Error).message });
-    res.status(500).json({ success: false, error: (err as Error).message });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// POST /api/admin/house/fund - Fund the house
 router.post('/house/fund', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { amount } = req.body;
 
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid amount - must be a positive number'
-      });
+    if (!isValidAmount(amount)) {
+      return sendError(res, 400, 'Invalid amount - must be a positive number');
     }
 
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.fundHouse(amount);
 
-    // Log admin action
     await auditLogService.logAction(
       req.userId || null,
       AdminActionType.HOUSE_FUND,
@@ -244,8 +213,7 @@ router.post('/house/fund', authenticateTokenOrAdminSecret, requireAdmin, async (
       chainService.chainId
     );
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       txHash,
       amount,
       chain: chainConfig.label,
@@ -254,34 +222,26 @@ router.post('/house/fund', authenticateTokenOrAdminSecret, requireAdmin, async (
     });
   } catch (err) {
     logger.error('Failed to fund house', { error: (err as Error).message });
-    res.status(500).json({ success: false, error: (err as Error).message });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// POST /api/admin/eth/withdraw - Withdraw ETH from contract
 router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { to, amount } = req.body;
 
-    if (!to || typeof to !== 'string' || !to.match(/^0x[a-fA-F0-9]{40}$/)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid recipient address'
-      });
+    if (!isValidAddress(to)) {
+      return sendError(res, 400, 'Invalid recipient address');
     }
 
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid amount - must be a positive number'
-      });
+    if (!isValidAmount(amount)) {
+      return sendError(res, 400, 'Invalid amount - must be a positive number');
     }
 
     const chainService = getChainServiceForRequest(req);
     const chainConfig = getChainConfig(chainService.chainId);
     const txHash = await chainService.withdrawETH(to, amount);
 
-    // Log admin action
     await auditLogService.logAction(
       req.userId || null,
       AdminActionType.ETH_WITHDRAW,
@@ -291,8 +251,7 @@ router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async
       chainService.chainId
     );
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       txHash,
       to,
       amount,
@@ -302,12 +261,11 @@ router.post('/eth/withdraw', authenticateTokenOrAdminSecret, requireAdmin, async
     });
   } catch (err) {
     logger.error('Failed to withdraw ETH', { error: (err as Error).message });
-    res.status(500).json({ success: false, error: (err as Error).message });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
-// GET /api/admin/settlements/pending - Get pending settlements
-router.get('/settlements/pending', authenticateTokenOrAdminSecret, requireAdmin, async (req: Request, res: Response) => {
+router.get('/settlements/pending', authenticateTokenOrAdminSecret, requireAdmin, async (_req: Request, res: Response) => {
   try {
     const { AppDataSource } = await import('../config/database.js');
     const { PlayerBet } = await import('../entities/player-bet.entity.js');
@@ -327,8 +285,7 @@ router.get('/settlements/pending', authenticateTokenOrAdminSecret, requireAdmin,
 
     const totalPending = pendingSettlements.reduce((sum, bet) => sum + Number(bet.payout || 0), 0);
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       count: pendingSettlements.length,
       totalPendingPayout: totalPending,
       settlements: pendingSettlements.map(bet => ({
@@ -344,10 +301,7 @@ router.get('/settlements/pending', authenticateTokenOrAdminSecret, requireAdmin,
     });
   } catch (err) {
     logger.error('Failed to get pending settlements', { error: (err as Error).message });
-    res.status(500).json({
-      success: false,
-      error: (err as Error).message
-    });
+    sendError(res, 500, (err as Error).message);
   }
 });
 
