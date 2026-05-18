@@ -283,8 +283,9 @@ export function useRoundCountdown(roundData: RoundData | null) {
     }
 
     if (roundData.phase === "CRASHED") {
-      // Match the backend's 3s delay before startNewRound() is called
-      let timeLeft = 5;
+      // Use dynamic round restart delay set by admin (default to 5s)
+      const restartDelay = Number(roundData.roundRestartDelayMs || 5000);
+      let timeLeft = Math.max(1, Math.ceil(restartDelay / 1000));
       setCountdown(timeLeft);
       interval = setInterval(() => {
         timeLeft--;

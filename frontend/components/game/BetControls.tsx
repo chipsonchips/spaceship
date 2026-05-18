@@ -42,7 +42,7 @@ const BetControls: React.FC = () => {
       fetchFreeBetsInfo();
       fetchUserMaxBetAmount();
     }
-  }, [walletAddress]);
+  }, [walletAddress, roundData?.maxBetAmount]);
 
   const fetchFreeBetsInfo = async () => {
     try {
@@ -78,19 +78,22 @@ const BetControls: React.FC = () => {
       if (!walletAddress) return;
       const userData = await api.fetchUserByAddress(walletAddress);
 
+      const globalMaxBet = Number(roundData?.maxBetAmount ?? parseFloat(
+        process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"
+      ));
+
       if (userData?.user) {
         // Use user's maxBetAmount if set, otherwise use global default
-        const globalMaxBet = parseFloat(
-          process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10",
-        );
         setMaxBetAmount(userData.user.maxBetAmount ?? globalMaxBet);
+      } else {
+        setMaxBetAmount(globalMaxBet);
       }
     } catch (err) {
       console.error("Failed to fetch user max bet amount:", err);
       // Fallback to global default
-      const globalMaxBet = parseFloat(
-        process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10",
-      );
+      const globalMaxBet = Number(roundData?.maxBetAmount ?? parseFloat(
+        process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"
+      ));
       setMaxBetAmount(globalMaxBet);
     }
   };
@@ -124,8 +127,9 @@ const BetControls: React.FC = () => {
       }
     }
 
-    if (parseFloat(amountToBet) < 0.1) {
-      setError("Minimum bet is 0.10 USDC");
+    const minBet = Number(roundData?.minBetAmount ?? 0.1);
+    if (parseFloat(amountToBet) < minBet) {
+      setError(`Minimum bet is ${minBet.toFixed(2)} USDC`);
       return;
     }
 

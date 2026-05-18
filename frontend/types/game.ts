@@ -26,6 +26,14 @@ export interface RoundData {
   players: PlayerBet[];
   planePosition: { x: number; y: number };
   serverTime?: number;
+  minBetAmount?: number;
+  maxBetAmount?: number;
+  roundRestartDelayMs?: number;
+  bettingDurationMs?: number;
+  flyingDurationMs?: number;
+  houseEdge?: number;
+  minCrashMultiplier?: number;
+  maxCrashMultiplier?: number;
 }
 
 export interface GameHistory {
