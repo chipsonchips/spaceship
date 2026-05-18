@@ -18,6 +18,7 @@ import { config } from 'dotenv';
 import { Server } from 'socket.io';
 import morgan from 'morgan';
 import cors from 'cors';
+import helmet from 'helmet';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { GameEngine } from './services/game-engine.service.js';
 import { logger } from './utils/logger.js';
@@ -52,6 +53,7 @@ if (process.env.NGROK_URL) {
 corsOrigins.push(/^https:\/\/.*\.ngrok(?:-free)?\.app$/);
 
 // Middleware
+app.use(helmet());
 app.use(cors({
   origin: corsOrigins as (string | RegExp)[],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

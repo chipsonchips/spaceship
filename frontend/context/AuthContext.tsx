@@ -8,6 +8,7 @@ import React, {
   useCallback,
 } from "react";
 import { UserRole, AuthUser, AuthTokens, AuthContextType } from "@/types";
+import { useSignMessage } from "wagmi";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -16,6 +17,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { signMessageAsync } = useSignMessage();
 
   // Load tokens from localStorage on mount
   useEffect(() => {
@@ -66,13 +69,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(true);
         setError(null);
 
+        const timestamp = Date.now();
+        const message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+        let signature = "";
+
+        try {
+          signature = await signMessageAsync({ message });
+        } catch (signErr) {
+          console.error("Message signing failed:", signErr);
+          throw new Error("Failed to sign authentication message. Please approve the signature request in your wallet.");
+        }
+
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
         const response = await fetch(`${apiUrl}/api/auth/wallet/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address }),
+          body: JSON.stringify({ address, signature, message }),
         });
 
         const data = await response.json();
@@ -116,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [saveAuth],
+    [saveAuth, signMessageAsync],
   );
 
   const loginWithFarcaster = useCallback(
@@ -133,6 +147,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(true);
         setError(null);
 
+        let signature: string | undefined = undefined;
+        let message: string | undefined = undefined;
+
+        if (address) {
+          try {
+            const timestamp = Date.now();
+            message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+            signature = await signMessageAsync({ message });
+          } catch (signErr) {
+            console.error("Wallet signature for Farcaster link failed:", signErr);
+            throw new Error("Failed to sign message to link wallet. Please approve the signature request in your wallet.");
+          }
+        }
+
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -146,6 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             avatarUrl,
             bio,
             address,
+            signature,
+            message,
           }),
         });
 
@@ -190,7 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [saveAuth],
+    [saveAuth, signMessageAsync],
   );
 
   const refreshToken = useCallback(async () => {

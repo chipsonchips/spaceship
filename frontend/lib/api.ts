@@ -1,3 +1,5 @@
+import { authenticatedFetch } from "./api-auth";
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -24,7 +26,7 @@ export async function placeBetRest(
   if (autoCashoutMultiplier) {
     body.autoCashoutMultiplier = autoCashoutMultiplier;
   }
-  const res = await fetch(`${API_BASE}/api/rounds/${roundId}/bets`, {
+  const res = await authenticatedFetch(`${API_BASE}/api/rounds/${roundId}/bets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -37,7 +39,7 @@ export async function placeBetRest(
 }
 
 export async function cashOutRest(betId: number, multiplier?: number, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/rounds/bets/${betId}/cashout`, {
+  const res = await authenticatedFetch(`${API_BASE}/api/rounds/bets/${betId}/cashout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ multiplier, chainId }),
