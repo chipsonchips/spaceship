@@ -11,7 +11,7 @@ export class GameSettings {
     @Column('decimal', { precision: 10, scale: 2, default: 10 })
     maxBetAmount!: number;
 
-    @Column('int', { default: 30000 })
+    @Column('int', { default: 10000 })
     bettingDurationMs!: number;
 
     @Column('int', { default: 20000 })
