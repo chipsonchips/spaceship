@@ -307,7 +307,7 @@ describe('Game Admin Routes - Service Layer Tests', () => {
         });
 
         it('should validate betting duration minimum', () => {
-            const bettingDurationMs = 30000;
+            const bettingDurationMs = 10000;
             const isValid = bettingDurationMs >= 5000;
 
             expect(isValid).toBe(true);

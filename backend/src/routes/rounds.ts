@@ -3,6 +3,9 @@ import { GameEngine } from '../services/game-engine.service.js';
 import { RoundService } from '../services/round.service.js';
 import { sanitizeRound } from '../services/game-utils.js';
 import { betRateLimiter, cashoutRateLimiter } from '../middleware/rateLimiter.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
+import { PlayerBet } from '../entities/player-bet.entity.js';
+import { AppDataSource } from '../config/database.js';
 
 export const createRoundsRouter = (gameEngine: GameEngine) => {
   const router = Router();
@@ -46,12 +49,20 @@ export const createRoundsRouter = (gameEngine: GameEngine) => {
     }
   });
 
-  router.post('/:roundId/bets', betRateLimiter, async (req, res) => {
+  router.post('/:roundId/bets', authenticateToken, betRateLimiter, async (req, res) => {
     try {
       const { address, amount, chainId, useFreeBet, autoCashoutMultiplier, clientSeed } = req.body;
 
       if (!address || amount === undefined) {
         return res.status(400).json({ success: false, error: 'Missing required fields: address, amount' });
+      }
+
+      if (!req.user || !req.user.address) {
+        return res.status(401).json({ success: false, error: 'Authentication and linked wallet required' });
+      }
+
+      if (req.user.address.toLowerCase() !== address.toLowerCase()) {
+        return res.status(403).json({ success: false, error: 'Unauthorized: cannot place a bet for another address' });
       }
 
       const saved = await gameEngine.placeBet(address, amount, chainId, useFreeBet || false, autoCashoutMultiplier, clientSeed);
@@ -63,13 +74,28 @@ export const createRoundsRouter = (gameEngine: GameEngine) => {
     }
   });
 
-  router.post('/bets/:betId/cashout', cashoutRateLimiter, async (req, res) => {
+  router.post('/bets/:betId/cashout', authenticateToken, cashoutRateLimiter, async (req, res) => {
     try {
       const betId = parseInt(req.params.betId as string, 10);
       const { chainId } = req.body;
 
       if (!chainId) {
         return res.status(400).json({ success: false, error: 'Missing required field: chainId' });
+      }
+
+      if (!req.user || !req.user.address) {
+        return res.status(401).json({ success: false, error: 'Authentication and linked wallet required' });
+      }
+
+      // Verify the bet owner before cashing out
+      const betRepo = AppDataSource.getRepository(PlayerBet);
+      const bet = await betRepo.findOne({ where: { id: betId } });
+      if (!bet) {
+        return res.status(404).json({ success: false, error: 'Bet not found' });
+      }
+
+      if (bet.address.toLowerCase() !== req.user.address.toLowerCase()) {
+        return res.status(403).json({ success: false, error: 'Unauthorized: cannot cash out someone else\'s bet' });
       }
 
       const updated = await gameEngine.cashOutById(betId, chainId);

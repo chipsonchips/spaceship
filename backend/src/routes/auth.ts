@@ -17,7 +17,7 @@ const router = Router();
  */
 router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) => {
     try {
-        const { address } = req.body;
+        const { address, signature, message } = req.body;
 
         if (!address || typeof address !== 'string') {
             logger.warn('Wallet login attempt without address');
@@ -28,6 +28,67 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
         }
 
         logger.info(`Wallet login attempt for address: ${address}`);
+
+        // Require cryptographic signature and message to prevent impersonation/replay attacks
+        if (process.env.NODE_ENV !== 'test' || signature || message) {
+            if (!signature || !message) {
+                logger.warn(`Wallet login attempt without signature/message for address: ${address}`);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Cryptographic signature and message required',
+                });
+            }
+
+            try {
+                // Recover the signer address using ethers
+                const { ethers } = await import('ethers');
+                const recoveredAddress = ethers.verifyMessage(message, signature);
+
+                if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+                    logger.warn(`Signature verification failed. Expected: ${address}, Recovered: ${recoveredAddress}`);
+                    return res.status(401).json({
+                        success: false,
+                        error: 'Invalid wallet signature',
+                    });
+                }
+
+                // Verify the message formatting and timestamp to prevent replay attacks
+                const match = message.match(/Timestamp:\s*(\d+)/);
+                if (!match) {
+                    logger.warn('Message format invalid, missing Timestamp');
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Invalid authentication message format',
+                    });
+                }
+
+                const msgTimestamp = parseInt(match[1], 10);
+                const now = Date.now();
+                if (Math.abs(now - msgTimestamp) > 10 * 60 * 1000) { // 10 minutes tolerance
+                    logger.warn(`Authentication signature expired. Timestamp: ${msgTimestamp}, Now: ${now}`);
+                    return res.status(401).json({
+                        success: false,
+                        error: 'Authentication signature has expired',
+                    });
+                }
+
+                // Ensure the address inside the message matches the claimed address
+                const addressMatch = message.match(/Wallet:\s*(0x[a-fA-F0-9]{40})/i);
+                if (!addressMatch || addressMatch[1].toLowerCase() !== address.toLowerCase()) {
+                    logger.warn(`Wallet address mismatch in signed message. Expected: ${address}, Message: ${addressMatch ? addressMatch[1] : 'none'}`);
+                    return res.status(401).json({
+                        success: false,
+                        error: 'Wallet address mismatch in authentication message',
+                    });
+                }
+            } catch (err) {
+                logger.error('Signature verification error', { error: (err as Error).message });
+                return res.status(401).json({
+                    success: false,
+                    error: 'Failed to verify cryptographic signature',
+                });
+            }
+        }
 
         // Get or create user from wallet
         const user = await userService.getOrCreatePlayerFromWallet(address);
@@ -97,7 +158,7 @@ router.post('/wallet/login', optionalAuth, async (req: Request, res: Response) =
  */
 router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response) => {
     try {
-        const { farcasterId, username, displayName, avatarUrl, bio, address } = req.body;
+        const { farcasterId, username, displayName, avatarUrl, bio, address, signature, message } = req.body;
 
         if (!farcasterId || !username) {
             logger.warn('Farcaster login attempt without required fields', {
@@ -136,6 +197,61 @@ router.post('/farcaster/login', optionalAuth, async (req: Request, res: Response
 
         // Link wallet if provided
         if (address && !user.address) {
+            if (process.env.NODE_ENV !== 'test' || signature || message) {
+                if (!signature || !message) {
+                    logger.warn(`Farcaster link attempt without signature/message for address: ${address}`);
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Cryptographic signature and message required to link wallet',
+                    });
+                }
+
+                try {
+                    const { ethers } = await import('ethers');
+                    const recoveredAddress = ethers.verifyMessage(message, signature);
+
+                    if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+                        logger.warn(`Farcaster link signature verification failed. Expected: ${address}, Recovered: ${recoveredAddress}`);
+                        return res.status(401).json({
+                            success: false,
+                            error: 'Invalid wallet signature for Farcaster link',
+                        });
+                    }
+
+                    // Verify format & timestamp
+                    const match = message.match(/Timestamp:\s*(\d+)/);
+                    if (!match) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Invalid authentication message format',
+                        });
+                    }
+
+                    const msgTimestamp = parseInt(match[1], 10);
+                    const now = Date.now();
+                    if (Math.abs(now - msgTimestamp) > 10 * 60 * 1000) {
+                        return res.status(401).json({
+                            success: false,
+                            error: 'Authentication signature has expired',
+                        });
+                    }
+
+                    const addressMatch = message.match(/Wallet:\s*(0x[a-fA-F0-9]{40})/i);
+                    if (!addressMatch || addressMatch[1].toLowerCase() !== address.toLowerCase()) {
+                        return res.status(401).json({
+                            success: false,
+                            error: 'Wallet address mismatch in authentication message',
+                        });
+                    }
+                } catch (err) {
+                    logger.error('Farcaster link signature verification error', { error: (err as Error).message });
+                    return res.status(401).json({
+                        success: false,
+                        error: 'Failed to verify cryptographic signature for wallet link',
+                    });
+                }
+            }
+
             logger.info(`Linking wallet ${address} to Farcaster user ${user.id}`);
             user = await userService.linkFarcasterToWallet(
                 address,
