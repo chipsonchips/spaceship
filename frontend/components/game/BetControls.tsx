@@ -95,7 +95,10 @@ const BetControls: React.FC = () => {
     }
   };
 
-  const handlePlaceBet = async () => {
+  const handlePlaceBet = async (overrideAmount?: string) => {
+    const amountToBet =
+      typeof overrideAmount === "string" ? overrideAmount : betAmount;
+
     if (!walletAddress) {
       setError("Please connect your wallet to place bets");
       return;
@@ -106,7 +109,7 @@ const BetControls: React.FC = () => {
         setError("No free bets remaining");
         return;
       }
-      if (parseFloat(betAmount) > freeBetMaxAmount) {
+      if (parseFloat(amountToBet) > freeBetMaxAmount) {
         setError(`Free bet amount exceeds maximum of ${freeBetMaxAmount} USDC`);
         return;
       }
@@ -115,13 +118,18 @@ const BetControls: React.FC = () => {
         setError("Insufficient USDC balance");
         return;
       }
-      if (parseFloat(betAmount) > maxBetAmount) {
+      if (parseFloat(amountToBet) > maxBetAmount) {
         setError(`Bet amount exceeds maximum of ${maxBetAmount} USDC`);
         return;
       }
     }
 
-    if (!betValidation.isValid) {
+    if (parseFloat(amountToBet) < 0.1) {
+      setError("Minimum bet is 0.10 USDC");
+      return;
+    }
+
+    if (typeof overrideAmount !== "string" && !betValidation.isValid) {
       setError(betValidation.error);
       return;
     }
@@ -132,7 +140,7 @@ const BetControls: React.FC = () => {
     try {
       const res = await placeBet(
         walletAddress,
-        parseFloat(betAmount),
+        parseFloat(amountToBet),
         useFreeBet,
         autoCashoutMultiplier || undefined,
       );
@@ -141,7 +149,7 @@ const BetControls: React.FC = () => {
       }
       if (res?.success) {
         setTxHash(res.txHash || null);
-        setLastBetAmount(betAmount); // Track last bet
+        setLastBetAmount(amountToBet); // Track last bet
         setBetAmount("0.10");
         setUseFreeBet(false);
         setAutoCashoutMultiplier(null);
@@ -428,6 +436,19 @@ const BetControls: React.FC = () => {
                 <span className="text-slate-500 text-[10px] sm:text-xs font-bold font-courier ml-2 select-none tracking-wider">
                   USDC
                 </span>
+                {lastBetAmount && (
+                  <button
+                    onClick={() => {
+                      setBetAmount(lastBetAmount);
+                      handlePlaceBet(lastBetAmount);
+                    }}
+                    disabled={isProcessing || !canPlaceBet}
+                    className="ml-2 px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-black font-orbitron uppercase text-[10px] sm:text-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                    title={`Rebet previous amount: ${lastBetAmount} USDC`}
+                  >
+                    REBET
+                  </button>
+                )}
               </div>
             </div>
             {!betValidation.isValid && (
@@ -442,15 +463,6 @@ const BetControls: React.FC = () => {
                   ? `Max Allowed: ${freeBetMaxAmount}`
                   : `Max Bet: ${maxBetAmount} USDC`}{" "}
               </span>
-              {lastBetAmount && (
-                <button
-                  onClick={() => setBetAmount(lastBetAmount)}
-                  className="text-emerald-400 hover:text-emerald-300 transition-colors text-[10px]"
-                  title="Repeat last bet"
-                >
-                  ↻ {lastBetAmount}
-                </button>
-              )}
             </div>
           </div>
 
@@ -487,7 +499,7 @@ const BetControls: React.FC = () => {
           />
 
           <button
-            onClick={handlePlaceBet}
+            onClick={() => handlePlaceBet()}
             disabled={!betValidation.isValid || isProcessing}
             className="w-full mt-1 relative group/play overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-sm sm:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform active:scale-[0.98]"
           >
