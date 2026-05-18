@@ -9,7 +9,36 @@ import { GameHistory } from '../entities/game-history.entity.js';
 
 const router = Router();
 
-// All endpoints require admin authentication (supports both JWT and admin secret)
+// GET /settings is public (needed for game initialization)
+// All other endpoints require admin authentication (supports both JWT and admin secret)
+router.get('/settings', async (req: Request, res: Response) => {
+    try {
+        const { gameSettingsService } = await import('../services/game-settings.service.js');
+        const settings = await gameSettingsService.getSettings();
+
+        res.json({
+            success: true,
+            settings: {
+                minBetAmount: Number(settings.minBetAmount),
+                maxBetAmount: Number(settings.maxBetAmount),
+                bettingDurationMs: settings.bettingDurationMs,
+                flyingDurationMs: settings.flyingDurationMs,
+                roundRestartDelayMs: settings.roundRestartDelayMs,
+                houseEdge: Number(settings.houseEdge),
+                minCrashMultiplier: Number(settings.minCrashMultiplier),
+                maxCrashMultiplier: Number(settings.maxCrashMultiplier),
+            },
+        });
+    } catch (error) {
+        logger.error('Failed to fetch game settings', { error: (error as Error).message });
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch game settings',
+        });
+    }
+});
+
+// All other endpoints require admin authentication (supports both JWT and admin secret)
 router.use(authenticateTokenOrAdminSecret);
 router.use(requireAdmin);
 
@@ -343,37 +372,6 @@ router.get('/rounds/:roundId', async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             error: 'Failed to fetch round details',
-        });
-    }
-});
-
-/**
- * GET /api/admin/game/settings
- * Get global game settings
- */
-router.get('/settings', async (req: Request, res: Response) => {
-    try {
-        const { gameSettingsService } = await import('../services/game-settings.service.js');
-        const settings = await gameSettingsService.getSettings();
-
-        res.json({
-            success: true,
-            settings: {
-                minBetAmount: Number(settings.minBetAmount),
-                maxBetAmount: Number(settings.maxBetAmount),
-                bettingDurationMs: settings.bettingDurationMs,
-                flyingDurationMs: settings.flyingDurationMs,
-                roundRestartDelayMs: settings.roundRestartDelayMs,
-                houseEdge: Number(settings.houseEdge),
-                minCrashMultiplier: Number(settings.minCrashMultiplier),
-                maxCrashMultiplier: Number(settings.maxCrashMultiplier),
-            },
-        });
-    } catch (error) {
-        logger.error('Failed to fetch game settings', { error: (error as Error).message });
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch game settings',
         });
     }
 });
