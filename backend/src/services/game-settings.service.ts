@@ -23,8 +23,34 @@ export class GameSettingsService {
                     maxBetAmount: parseFloat(process.env.MAX_BET_AMOUNT || '10'),
                     bettingDurationMs: parseInt(process.env.BETTING_DURATION_MS || '30000'),
                     flyingDurationMs: parseInt(process.env.FLYING_DURATION_MS || '20000'),
+                    roundRestartDelayMs: parseInt(process.env.ROUND_RESTART_DELAY_MS || '5000'),
+                    houseEdge: 0.03,
+                    minCrashMultiplier: 1.01,
+                    maxCrashMultiplier: 100.00,
                 });
                 settings = await this.settingsRepo.save(settings);
+            } else {
+                // Self-heal/ensure default settings values are populated for new columns
+                let needsSave = false;
+                if (settings.roundRestartDelayMs === null || settings.roundRestartDelayMs === undefined) {
+                    settings.roundRestartDelayMs = 5000;
+                    needsSave = true;
+                }
+                if (settings.houseEdge === null || settings.houseEdge === undefined) {
+                    settings.houseEdge = 0.03;
+                    needsSave = true;
+                }
+                if (settings.minCrashMultiplier === null || settings.minCrashMultiplier === undefined) {
+                    settings.minCrashMultiplier = 1.01;
+                    needsSave = true;
+                }
+                if (settings.maxCrashMultiplier === null || settings.maxCrashMultiplier === undefined) {
+                    settings.maxCrashMultiplier = 100.00;
+                    needsSave = true;
+                }
+                if (needsSave) {
+                    settings = await this.settingsRepo.save(settings);
+                }
             }
 
             return settings;
@@ -41,18 +67,74 @@ export class GameSettingsService {
         try {
             const settings = await this.getSettings();
 
-            // Update fields
+            // Validate and Update fields
             if (updates.minBetAmount !== undefined) {
-                settings.minBetAmount = updates.minBetAmount;
+                const val = Number(updates.minBetAmount);
+                if (isNaN(val) || val < 0.01 || val > 100.00) {
+                    throw new Error('Minimum bet must be between 0.01 and 100.00 USDC');
+                }
+                settings.minBetAmount = val;
             }
+
             if (updates.maxBetAmount !== undefined) {
-                settings.maxBetAmount = updates.maxBetAmount;
+                const val = Number(updates.maxBetAmount);
+                const minBet = updates.minBetAmount !== undefined ? Number(updates.minBetAmount) : Number(settings.minBetAmount);
+                if (isNaN(val) || val < minBet) {
+                    throw new Error('Maximum bet must be greater than or equal to the minimum bet');
+                }
+                if (val > 100000.00) {
+                    throw new Error('Maximum bet cannot exceed 100,000.00 USDC');
+                }
+                settings.maxBetAmount = val;
             }
+
             if (updates.bettingDurationMs !== undefined) {
-                settings.bettingDurationMs = updates.bettingDurationMs;
+                const val = Number(updates.bettingDurationMs);
+                if (isNaN(val) || val < 3000 || val > 120000) {
+                    throw new Error('Betting duration must be between 3,000ms (3s) and 120,000ms (2 minutes)');
+                }
+                settings.bettingDurationMs = val;
             }
+
             if (updates.flyingDurationMs !== undefined) {
-                settings.flyingDurationMs = updates.flyingDurationMs;
+                const val = Number(updates.flyingDurationMs);
+                if (isNaN(val) || val < 5000 || val > 300000) {
+                    throw new Error('Max flying duration must be between 5,000ms (5s) and 300,000ms (5 minutes)');
+                }
+                settings.flyingDurationMs = val;
+            }
+
+            if (updates.roundRestartDelayMs !== undefined) {
+                const val = Number(updates.roundRestartDelayMs);
+                if (isNaN(val) || val < 2000 || val > 30000) {
+                    throw new Error('Round restart delay must be between 2,000ms (2s) and 30,000ms (30s)');
+                }
+                settings.roundRestartDelayMs = val;
+            }
+
+            if (updates.houseEdge !== undefined) {
+                const val = Number(updates.houseEdge);
+                if (isNaN(val) || val < 0.00 || val > 0.20) {
+                    throw new Error('House edge must be between 0.00 (0%) and 0.20 (20%)');
+                }
+                settings.houseEdge = val;
+            }
+
+            if (updates.minCrashMultiplier !== undefined) {
+                const val = Number(updates.minCrashMultiplier);
+                if (isNaN(val) || val < 1.01 || val > 1.50) {
+                    throw new Error('Minimum crash multiplier must be between 1.01 and 1.50');
+                }
+                settings.minCrashMultiplier = val;
+            }
+
+            if (updates.maxCrashMultiplier !== undefined) {
+                const val = Number(updates.maxCrashMultiplier);
+                const minCrash = updates.minCrashMultiplier !== undefined ? Number(updates.minCrashMultiplier) : Number(settings.minCrashMultiplier);
+                if (isNaN(val) || val < minCrash || val > 10000.00) {
+                    throw new Error(`Maximum crash multiplier must be between the minimum crash multiplier (${minCrash}) and 10,000.00`);
+                }
+                settings.maxCrashMultiplier = val;
             }
 
             const updated = await this.settingsRepo.save(settings);

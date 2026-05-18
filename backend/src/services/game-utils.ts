@@ -10,26 +10,29 @@ export function hashServerSeed(seed: string): string {
   return ethers.keccak256(ethers.toUtf8Bytes(seed));
 }
 
-const HOUSE_EDGE = 0.03; // 3%
-
-export function generateCrashMultiplier(serverSeed: string): number {
+export function generateCrashMultiplier(
+  serverSeed: string,
+  houseEdge = 0.03,
+  minCrash = 1.01,
+  maxCrash = 100.00
+): number {
   const hash = crypto.createHash('sha256').update(serverSeed).digest('hex');
   const hashNumber = parseInt(hash.substring(0, 13), 16);
   const maxNumber = parseInt('fffffffffffff', 16);
   let random = hashNumber / maxNumber;
 
   // Apply house edge
-  random = random * (1 - HOUSE_EDGE);
+  random = random * (1 - houseEdge);
 
   if (random === 0) random = 0.0001;
   const crashPoint = Math.floor((99 / (1 - random) / 100) * 100) / 100;
 
-  return Math.max(1.01, Math.min(100, crashPoint));
+  return Math.max(minCrash, Math.min(maxCrash, crashPoint));
 }
 
-export function calculateCurrentMultiplier(elapsedMs: number): number {
+export function calculateCurrentMultiplier(elapsedMs: number, maxCrash = 100.00): number {
   const t = elapsedMs / 1000;
-  return Math.min(1.0 + Math.pow(t, 1.5) / 5, 100);
+  return Math.min(1.0 + Math.pow(t, 1.5) / 5, maxCrash);
 }
 
 export function calculatePlanePosition(elapsedMs: number): { x: number; y: number } {
