@@ -106,8 +106,8 @@ export class GameSettingsService {
 
             if (updates.roundRestartDelayMs !== undefined) {
                 const val = Number(updates.roundRestartDelayMs);
-                if (isNaN(val) || val < 2000 || val > 30000) {
-                    throw new Error('Round restart delay must be between 2,000ms (2s) and 30,000ms (30s)');
+                if (isNaN(val) || val < 2000 || val > 20000) {
+                    throw new Error('Round restart delay must be between 2,000ms (2s) and 20,000ms (20s)');
                 }
                 settings.roundRestartDelayMs = val;
             }
