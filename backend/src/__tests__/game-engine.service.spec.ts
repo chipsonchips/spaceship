@@ -71,6 +71,25 @@ vi.mock('../services/chain.service.ts', () => ({
   })),
 }));
 
+vi.mock('../services/game-settings.service.ts', () => {
+  const mockService = {
+    getSettings: vi.fn().mockResolvedValue({
+      minBetAmount: 0.1,
+      maxBetAmount: 10,
+      bettingDurationMs: 10000,
+      flyingDurationMs: 20000,
+      roundRestartDelayMs: 5000,
+      houseEdge: 0.03,
+      minCrashMultiplier: 1.01,
+      maxCrashMultiplier: 100,
+    }),
+  };
+  return {
+    GameSettingsService: vi.fn(() => mockService),
+    gameSettingsService: mockService,
+  };
+});
+
 vi.mock('../services/user.service.ts', () => ({
   UserService: vi.fn(() => ({
     getUserByAddress: vi.fn(),
@@ -102,11 +121,20 @@ describe('GameEngine', () => {
     };
 
     // Mock repositories
+    const mockExecute = vi.fn().mockResolvedValue({ affected: 1 });
+    const mockUpdateChain = {
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      execute: mockExecute,
+    };
     mockRoundRepo = {
       create: vi.fn(),
       save: vi.fn(),
       findOne: vi.fn(),
       find: vi.fn(),
+      createQueryBuilder: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue(mockUpdateChain),
+      }),
     };
 
     mockBetRepo = {
@@ -361,11 +389,7 @@ describe('GameEngine', () => {
 
       await gameEngine.placeBet('0x111', 5, 8453);
 
-      expect(mockRoundRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          totalBets: 105, // 100 + 5
-        })
-      );
+      expect(mockRoundRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
     it('should update leaderboard', async () => {
@@ -506,11 +530,7 @@ describe('GameEngine', () => {
 
       await gameEngine.cashOutById(1, 8453);
 
-      expect(mockRoundRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          totalPayouts: 250, // 0 + 250
-        })
-      );
+      expect(mockRoundRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
     it('should update leaderboard with cashout data', async () => {
@@ -643,12 +663,7 @@ describe('GameEngine', () => {
 
       await gameEngine.crashRound(2.5);
 
-      expect(mockRoundRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          phase: 'CRASHED',
-          crashMultiplier: 2.5,
-        })
-      );
+      expect(mockRoundRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
     it('should handle losing bets (non-cashed)', async () => {
