@@ -29,6 +29,7 @@ import { gameSettingsService } from './game-settings.service.js';
 
 export class GameEngine {
   private isRunning = false;
+  private initPromise: Promise<void>;
   private io: Server;
   private currentRound: Round | null = null;
   private flyingInterval: NodeJS.Timeout | null = null;
@@ -51,8 +52,9 @@ export class GameEngine {
   constructor(io: Server) {
     this.io = io;
 
-    this.initializeEngine().catch((error) => {
+    this.initPromise = this.initializeEngine().catch((error) => {
       logger.error('Failed to initialize game engine', { error });
+      throw error;
     });
 
     this.io.on('connection', (socket) => {
@@ -116,8 +118,6 @@ export class GameEngine {
 
       // Start settlement retry background job
       this.startSettlementRetryJob();
-
-      await this.startNewRound();
     } catch (error) {
       logger.error('Failed to initialize game engine', { error });
       throw error;
@@ -268,6 +268,10 @@ export class GameEngine {
   }
 
   async start() {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+
     // ensure there is at least one round
     const r = await this.roundRepo.findOne({ where: {}, order: { roundId: 'DESC' } });
     if (!r) {
@@ -275,10 +279,14 @@ export class GameEngine {
     } else if (r.phase === 'BETTING') {
       this.currentRound = r;
       this.broadcastGameState();
-      this.scheduleFlyingPhase();
+      await this.scheduleFlyingPhase();
     } else if (r.phase === 'FLYING') {
       this.currentRound = r;
       this.broadcastGameState();
+      logger.info('Existing round is in FLYING phase, crashing it to reset');
+      await this.crashRound(1.0);
+    } else {
+      await this.startNewRound();
     }
   }
 
