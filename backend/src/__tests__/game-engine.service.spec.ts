@@ -256,6 +256,7 @@ describe('GameEngine', () => {
 
     it('should increment roundId from last round', async () => {
       const lastRound = { id: 5, roundId: 10 };
+      mockRoundRepo.findOne.mockResolvedValue(lastRound);
       mockQueryRunner.manager.findOne.mockResolvedValue(lastRound);
       mockRoundRepo.create.mockImplementation((data: any) => data);
       mockQueryRunner.manager.save.mockResolvedValue({ id: 6, roundId: 11 });
@@ -283,14 +284,14 @@ describe('GameEngine', () => {
       );
     });
 
-    it('should use transaction with SERIALIZABLE isolation', async () => {
+    it('should use transaction with READ COMMITTED isolation', async () => {
       mockQueryRunner.manager.findOne.mockResolvedValue(null);
       mockRoundRepo.create.mockImplementation((data: any) => data);
       mockQueryRunner.manager.save.mockResolvedValue({ id: 1, roundId: 1 });
 
       await gameEngine.startNewRound();
 
-      expect(mockQueryRunner.startTransaction).toHaveBeenCalledWith('SERIALIZABLE');
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledWith('READ COMMITTED');
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(mockQueryRunner.release).toHaveBeenCalled();
     });
@@ -566,6 +567,7 @@ describe('GameEngine', () => {
 
       gameEngine = new GameEngine(mockIo);
       await vi.waitUntil(() => (gameEngine as any).isRunning === true, { timeout: 1000 });
+      vi.clearAllMocks();
     });
 
     it('should emit game state via Socket.IO', async () => {
@@ -635,7 +637,6 @@ describe('GameEngine', () => {
 
   describe('crashRound', () => {
     beforeEach(async () => {
-      vi.useFakeTimers();
       mockRoundRepo.findOne.mockResolvedValue(null);
       mockQueryRunner.manager.findOne.mockResolvedValue(null);
       mockQueryRunner.manager.save.mockResolvedValue({ id: 1, roundId: 1 });
@@ -650,10 +651,6 @@ describe('GameEngine', () => {
         totalBets: 300,
         totalPayouts: 250,
       };
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
     });
 
     it('should set phase to CRASHED', async () => {
@@ -717,6 +714,7 @@ describe('GameEngine', () => {
     });
 
     it(`should schedule next round after ${GAME_CONSTANTS.ROUND_RESTART_DELAY_MS / 1000} seconds`, async () => {
+      vi.useFakeTimers();
       mockBetRepo.find.mockResolvedValue([]);
       mockRoundRepo.save.mockResolvedValue({});
       mockIo.emit = vi.fn();
@@ -727,10 +725,10 @@ describe('GameEngine', () => {
 
       expect(startNewRoundSpy).not.toHaveBeenCalled();
 
-      // Fast forward by the configured delay
       await vi.advanceTimersByTimeAsync(GAME_CONSTANTS.ROUND_RESTART_DELAY_MS);
 
       expect(startNewRoundSpy).toHaveBeenCalled();
+      vi.useRealTimers();
     });
 
     it('should only record history once when called concurrently', async () => {
