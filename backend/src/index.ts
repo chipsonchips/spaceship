@@ -73,8 +73,34 @@ app.use(
   })
 );
 
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok' });
+app.get('/health', async (req: Request, res: Response) => {
+  try {
+    // Check database connection
+    const isDbConnected = AppDataSource.isInitialized;
+    if (!isDbConnected) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        database: 'disconnected',
+        message: 'Database not initialized'
+      });
+    }
+
+    // Test database query
+    await AppDataSource.query('SELECT 1');
+
+    res.status(200).json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error: (error as Error).message });
+    res.status(503).json({
+      status: 'unhealthy',
+      database: 'error',
+      error: (error as Error).message
+    });
+  }
 });
 
 app.get('/', (req: Request, res: Response) => {
