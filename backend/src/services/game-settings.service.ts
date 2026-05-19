@@ -149,6 +149,8 @@ export class GameSettingsService {
             }
 
             const updated = await this.settingsRepo.save(settings);
+            const { invalidateSettingsCache } = await import('./game/settings.cache.js');
+            invalidateSettingsCache();
             logger.info('Game settings updated', { settings: updated });
 
             return updated;

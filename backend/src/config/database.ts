@@ -30,13 +30,11 @@ export const AppDataSource = new DataSource({
     rejectUnauthorized: false,
   } : false,
   extra: {
-    max: 20, // Increased pool size for production
-    min: 5, // Minimum connections to maintain
-    connectionTimeoutMillis: 30000,
-    idleTimeoutMillis: 30000,
-    query_timeout: 30000,
-    // Add connection retry logic
-    retryAttempts: 5,
-    retryDelay: 3000,
+    max: Number(process.env.DB_POOL_MAX || 15),
+    min: Number(process.env.DB_POOL_MIN || 2),
+    connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT_MS || 15_000),
+    idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30_000),
+    // Statement timeout for individual queries (ms). Keep moderate for serverless Postgres.
+    statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT_MS || 15_000),
   },
 });
