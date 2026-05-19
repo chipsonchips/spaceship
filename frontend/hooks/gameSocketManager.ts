@@ -16,12 +16,27 @@ class GameSocketManager {
   private url: string = "";
   private subscribers = new Set<MessageHandler>();
   private isManuallyDisconnected = false;
+  private isConnecting = false;
 
   connect(url: string) {
     this.url = url;
     this.isManuallyDisconnected = false;
 
-    if (this.socket && this.socket.connected) return;
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) return;
+
+    // If already connected to the same URL, don't reconnect
+    if (this.socket && this.socket.connected && this.url === url) return;
+
+    this.isConnecting = true;
+
+    // Clean up existing socket if URL changed or socket exists but not connected
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      if (!this.socket.connected) {
+        this.socket.disconnect();
+      }
+    }
 
     this.socket = io(url, {
       transports: ["websocket", "polling"],
@@ -32,14 +47,20 @@ class GameSocketManager {
     });
 
     this.socket.on("connect", () => {
+      this.isConnecting = false;
       this.broadcast({ type: "_OPEN" });
     });
 
     this.socket.on("disconnect", (reason: string) => {
-      this.broadcast({ type: "_CLOSE", reason });
+      this.isConnecting = false;
+      // Only broadcast disconnect if not manually disconnected
+      if (!this.isManuallyDisconnected) {
+        this.broadcast({ type: "_CLOSE", reason });
+      }
     });
 
     this.socket.on("connect_error", (err: Error & { message?: string }) => {
+      this.isConnecting = false;
       this.broadcast({ type: "_ERROR", error: err.message || String(err) });
     });
 

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { RoundData } from "@/types/game";
-import { PlaneState } from "@/types/game";
 
 // Mirror backend implementation so client can predict/smooth locally
 export function calculatePlanePosition(elapsedMs: number): {
@@ -8,13 +7,20 @@ export function calculatePlanePosition(elapsedMs: number): {
   y: number;
 } {
   const progress = Math.min(elapsedMs / 10000, 1);
-  // Fixed horizontal center position
   const x = 50;
-  // Vertical movement: y=0 at bottom, y=100 at top
-  // Start at 0 (bottom) and move to 100 (top)
-  const eased = 1 - Math.pow(1 - progress, 2); // ease-out quad
+  const eased = 1 - Math.pow(1 - progress, 2);
   const y = eased * 100;
   return { x, y };
+}
+
+function flyStartFromRound(round: RoundData): number {
+  if (round.flyStartTime) {
+    const clockOffset = round.serverTime ? Date.now() - round.serverTime : 0;
+    return Number(round.flyStartTime) + clockOffset;
+  }
+  const mult = Number(round.currentMultiplier) || 1;
+  const serverElapsed = Math.pow((mult - 1.0) * 5, 2 / 3) * 1000;
+  return Date.now() - serverElapsed;
 }
 
 export default function usePlaneAnimation(roundData: RoundData | null) {
@@ -24,10 +30,15 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
   const rafRef = useRef<number | null>(null);
   const prevYRef = useRef<number>(0);
   const angleRef = useRef<number>(0);
-  const crashRef = useRef<{ start?: number }>({});
+  const bettingStartRef = useRef<number | null>(null);
+  const positionRef = useRef(position);
+
+  positionRef.current = position;
+
+  const phase = roundData?.phase;
+  const roundId = roundData?.roundId;
 
   useEffect(() => {
-
     const stop = () => {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
@@ -35,80 +46,67 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
       }
     };
 
-    if (!roundData) {
+    if (!roundData || !phase) {
       stop();
       setPosition({ x: 50, y: 0 });
       setAngle(0);
       setOpacity(1);
       prevYRef.current = 0;
       angleRef.current = 0;
+      bettingStartRef.current = null;
       return;
     }
 
-    if (roundData.phase === "BETTING") {
-      if (!crashRef.current.start) {
-        crashRef.current.start = Date.now();
+    if (phase === "BETTING") {
+      if (!bettingStartRef.current) {
+        bettingStartRef.current = Date.now();
       }
 
       const animateBetting = () => {
-        const now = Date.now();
-        const elapsed = now - (crashRef.current.start || now);
-
-        const tx = 50; 
-        const t = (elapsed / 1000);
-        const ty = 2 + Math.sin(t * 1.5) * 2; 
-
-        const ta = Math.sin(t * 1.5) * 5; 
-
-        setPosition({ x: tx, y: ty });
-        setAngle(ta);
+        const elapsed = Date.now() - (bettingStartRef.current || Date.now());
+        const t = elapsed / 1000;
+        setPosition({ x: 50, y: 2 + Math.sin(t * 1.5) * 2 });
+        setAngle(Math.sin(t * 1.5) * 5);
         setOpacity(1);
-
         rafRef.current = requestAnimationFrame(animateBetting);
       };
 
       rafRef.current = requestAnimationFrame(animateBetting);
-      return () => stop();
+      return () => {
+        stop();
+        bettingStartRef.current = null;
+      };
     }
 
-    if (roundData.phase === "FLYING") {
-      crashRef.current = {};
-      
-      // Calculate elapsed time from currentMultiplier to avoid client/server clock desync
-      const serverElapsed = Math.pow((roundData.currentMultiplier - 1.0) * 5, 2/3) * 1000;
-      const flyStart = Date.now() - serverElapsed;
-      
-      prevYRef.current = 0;
+    bettingStartRef.current = null;
+
+    if (phase === "FLYING") {
+      const flyStart = flyStartFromRound(roundData);
+      prevYRef.current = calculatePlanePosition(
+        Math.max(0, Date.now() - flyStart),
+      ).y;
       angleRef.current = 0;
 
       const animate = () => {
-        const now = Date.now();
-        const elapsed = Math.max(0, now - flyStart);
+        const elapsed = Math.max(0, Date.now() - flyStart);
         const predicted = calculatePlanePosition(elapsed);
-
-        // Calculate rotation based on vertical movement direction
         const dy = predicted.y - prevYRef.current;
 
         let targetAngle = 0;
         if (dy > 0) {
-          const climbSpeed = Math.min(dy * 1.5, 5);
-          targetAngle = 0 - climbSpeed;
+          targetAngle = 0 - Math.min(dy * 1.5, 5);
         } else if (dy < 0) {
-          targetAngle = 0 + 3;
+          targetAngle = 3;
         }
 
-        const smoothedAngle = angleRef.current + (targetAngle - angleRef.current) * 0.08;
+        const smoothedAngle =
+          angleRef.current + (targetAngle - angleRef.current) * 0.08;
         angleRef.current = smoothedAngle;
+        prevYRef.current = predicted.y;
 
-        const nx = 50; 
-        const ny = predicted.y;
-
-        prevYRef.current = ny;
-
-        setPosition({ x: nx, y: ny });
+        setPosition({ x: 50, y: predicted.y });
         setAngle(smoothedAngle);
         setOpacity(1);
-
         rafRef.current = requestAnimationFrame(animate);
       };
 
@@ -116,30 +114,17 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
       return () => stop();
     }
 
-    // CRASHED PHASE: Fall and spin animation
-    if (roundData.phase === "CRASHED") {
-      stop();
+    if (phase === "CRASHED") {
       const crashStart = Date.now();
-      crashRef.current.start = crashStart;
-
-      const startPos = roundData.planePosition || position;
-      const startAngle = angle;
-
-      const duration = 1000; // ms
+      const startPos = roundData.planePosition ?? positionRef.current;
+      const startAngle = angleRef.current;
+      const duration = 1000;
 
       const tick = () => {
-        const now = Date.now();
-        const t = Math.min(1, (now - crashStart) / duration);
-
-        // Exponential fall down (accelerating)
-        const fallProgress = t * t; // Quadratic easing
-        const y = startPos.y - fallProgress * (startPos.y + 20); // Fall below screen
-
-        // Rotate plane to point downward and spin
-        // From current angle to 135 degrees (pointing down-right) + extra spin
-        const ang = startAngle + (135 - startAngle) * t + (t * 180); // Spin 180 degrees extra
-
-        // Fade out
+        const t = Math.min(1, (Date.now() - crashStart) / duration);
+        const fallProgress = t * t;
+        const y = startPos.y - fallProgress * (startPos.y + 20);
+        const ang = startAngle + (135 - startAngle) * t + t * 180;
         const op = 1 - t;
 
         setPosition({ x: startPos.x, y });
@@ -155,8 +140,8 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
       return () => stop();
     }
 
-    return undefined;
-  }, [roundData]);
+    return () => stop();
+  }, [phase, roundId, roundData?.flyStartTime]);
 
   return { position, angle, opacity };
 }

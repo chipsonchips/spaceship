@@ -68,6 +68,15 @@ export function useGame(options: { wsUrl?: string } = {}) {
   }, [fetchInitialHistory]);
 
   // 2. Purely handle socket manager subscription and connection
+  const wsUrlRef = useRef(wsUrl);
+  const lastUpdateRef = useRef<number>(0);
+  const lastPhaseRef = useRef<string | null>(null);
+  const lastRoundIdRef = useRef<number | null>(null);
+  const UPDATE_THROTTLE_MS = 50; // Throttle in-flight ticks only; never drop phase changes
+
+  // Update ref when wsUrl changes, but don't trigger re-subscription
+  wsUrlRef.current = wsUrl;
+
   useEffect(() => {
     const handler = (message: any) => {
       if (message.type === "_OPEN") {
@@ -86,10 +95,30 @@ export function useGame(options: { wsUrl?: string } = {}) {
         return;
       }
 
+      // Throttle rapid updates to prevent infinite loops
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastUpdateRef.current;
+
       switch (message.type) {
-        case "GAME_STATE_UPDATE":
-          setRoundData(message.data);
+        case "GAME_STATE_UPDATE": {
+          const incoming = message.data as RoundData | null;
+          if (!incoming) break;
+
+          const phaseChanged = incoming.phase !== lastPhaseRef.current;
+          const roundChanged = incoming.roundId !== lastRoundIdRef.current;
+          const mustApply =
+            phaseChanged ||
+            roundChanged ||
+            timeSinceLastUpdate >= UPDATE_THROTTLE_MS;
+
+          if (mustApply) {
+            setRoundData(incoming);
+            lastPhaseRef.current = incoming.phase;
+            lastRoundIdRef.current = incoming.roundId;
+            lastUpdateRef.current = now;
+          }
           break;
+        }
         case "HISTORY_UPDATE":
           setGameHistory(message.data || []);
           break;
@@ -106,17 +135,17 @@ export function useGame(options: { wsUrl?: string } = {}) {
     };
 
     const unsubscribe = manager.subscribe(handler);
-    manager.connect(wsUrl);
+    manager.connect(wsUrlRef.current);
 
     return () => {
       unsubscribe();
     };
-  }, [wsUrl]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Clear optimistic bets once they appear in roundData or when round changes
   useEffect(() => {
     if (!roundData?.players) return;
-    
+
     setOptimisticBets(prev => prev.filter(opt => {
       // Keep only if same round and not yet in server list
       const inServerList = roundData.players.some(
@@ -125,6 +154,12 @@ export function useGame(options: { wsUrl?: string } = {}) {
       return opt.roundId === roundData.roundId && !inServerList;
     }));
   }, [roundData?.players, roundData?.roundId]);
+
+  const roundIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    roundIdRef.current = roundData?.roundId || null;
+  }, [roundData?.roundId]);
 
   const placeBet = useCallback(
     async (address: string, amount: number, useFreeBet: boolean = false, autoCashoutMultiplier?: number) => {
@@ -163,24 +198,25 @@ export function useGame(options: { wsUrl?: string } = {}) {
           }
         }
 
-        if (!roundData?.roundId) {
+        const currentRoundId = roundIdRef.current;
+        if (!currentRoundId) {
           return { success: false, error: 'No active round' };
         }
 
-        console.log("placing bet", roundData.roundId, address, amount, useFreeBet ? "(free bet)" : "", autoCashoutMultiplier ? `(auto-cashout: ${autoCashoutMultiplier}x)` : "");
-        const res = await api.placeBetRest(roundData.roundId, address, amount, chainId, useFreeBet, autoCashoutMultiplier, clientSeed);
+        console.log("placing bet", currentRoundId, address, amount, useFreeBet ? "(free bet)" : "", autoCashoutMultiplier ? `(auto-cashout: ${autoCashoutMultiplier}x)` : "");
+        const res = await api.placeBetRest(currentRoundId, address, amount, chainId, useFreeBet, autoCashoutMultiplier, clientSeed);
 
         if (res.success && res.bet) {
           // Generate new seed for next bet
           setClientSeed(Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2));
-          
+
           // Add to optimistic bets
           setOptimisticBets(prev => [...prev, {
             ...res.bet,
-            roundId: roundData.roundId,
+            roundId: currentRoundId,
             address: address
           }]);
-          
+
           return { success: true, txHash: res.bet.txHash };
         } else {
           return { success: false, error: res.error || 'Failed to place bet' };
@@ -190,19 +226,19 @@ export function useGame(options: { wsUrl?: string } = {}) {
         console.error("Error placing bet:", err);
         return {
           success: false,
-          error: 'Failed to place bet'
+          error: err instanceof Error ? err.message : 'Failed to place bet'
         };
       }
     },
     [
-      roundData,
       transferUSDC,
       houseAddress,
       walletClient,
       publicClient,
       checkAllowance,
       approveUSDC,
-      chainId
+      chainId,
+      clientSeed
     ],
   );
 
@@ -223,8 +259,8 @@ export function useGame(options: { wsUrl?: string } = {}) {
   }, [chainId]);
 
   const reconnect = useCallback(() => {
-    manager.connect(wsUrl);
-  }, [wsUrl]);
+    manager.connect(wsUrlRef.current);
+  }, []);
 
   const disconnect = useCallback(() => {
     manager.disconnect();
@@ -301,7 +337,7 @@ export function useRoundCountdown(roundData: RoundData | null) {
       const flyAt = roundData.flyStartTime
         ? Number(roundData.flyStartTime)
         : Date.now() - timeOffset + 60000;
-        
+
       const update = () => {
         const adjustedNow = Date.now() - timeOffset;
         const secsLeft = Math.max(0, Math.ceil((flyAt - adjustedNow) / 1000));
@@ -324,16 +360,35 @@ export function useRoundCountdown(roundData: RoundData | null) {
   return countdown;
 }
 
+/** Match backend `calculateCurrentMultiplier` for smooth client-side display. */
+function multiplierAtElapsedMs(elapsedMs: number, maxCrash = 100): number {
+  const t = elapsedMs / 1000;
+  return Math.min(1.0 + Math.pow(t, 1.5) / 5, maxCrash);
+}
+
+function flyStartFromRound(round: RoundData): number {
+  if (round.flyStartTime) {
+    const clockOffset = round.serverTime ? Date.now() - round.serverTime : 0;
+    return Number(round.flyStartTime) + clockOffset;
+  }
+  const mult = Number(round.currentMultiplier) || 1;
+  const serverElapsed = Math.pow((mult - 1.0) * 5, 2 / 3) * 1000;
+  return Date.now() - serverElapsed;
+}
+
 export function useMultiplierAnimation(roundData: RoundData | null) {
   const [displayMultiplier, setDisplayMultiplier] = useState(1.0);
   const rafRef = useRef<number | null>(null);
-  const targetMultiplierRef = useRef(1.0);
+  const flyStartRef = useRef<number>(Date.now());
+  const maxCrashRef = useRef(100);
 
+  // Anchor takeoff time only when entering FLYING or switching rounds — not every tick.
   useEffect(() => {
-    if (roundData?.currentMultiplier) {
-      targetMultiplierRef.current = roundData.currentMultiplier;
+    if (roundData?.phase === "FLYING") {
+      flyStartRef.current = flyStartFromRound(roundData);
+      maxCrashRef.current = Number(roundData.maxCrashMultiplier) || 100;
     }
-  }, [roundData?.currentMultiplier]);
+  }, [roundData?.phase, roundData?.roundId, roundData?.flyStartTime]);
 
   useEffect(() => {
     const stop = () => {
@@ -343,28 +398,25 @@ export function useMultiplierAnimation(roundData: RoundData | null) {
       }
     };
 
-    if (roundData?.phase === "FLYING") {
-      setDisplayMultiplier(Number(targetMultiplierRef.current));
+    const currentPhase = roundData?.phase;
+
+    if (currentPhase === "FLYING") {
       const animate = () => {
-        setDisplayMultiplier((m) =>
-          Math.max(Number(m), Number(targetMultiplierRef.current)),
-        );
+        const elapsed = Math.max(0, Date.now() - flyStartRef.current);
+        setDisplayMultiplier(multiplierAtElapsedMs(elapsed, maxCrashRef.current));
         rafRef.current = requestAnimationFrame(animate);
       };
       rafRef.current = requestAnimationFrame(animate);
       return () => stop();
-    } else {
-      stop();
-      if (roundData?.phase === "CRASHED") {
-        setDisplayMultiplier(Number(roundData.crashMultiplier || 1.0));
-      } else {
-        setDisplayMultiplier(1.0);
-      }
     }
-  }, [
-    roundData?.phase,
-    roundData?.crashMultiplier,
-  ]);
+
+    stop();
+    if (currentPhase === "CRASHED") {
+      setDisplayMultiplier(Number(roundData?.crashMultiplier || 1.0));
+    } else {
+      setDisplayMultiplier(1.0);
+    }
+  }, [roundData?.phase, roundData?.crashMultiplier, roundData?.roundId]);
 
   return displayMultiplier;
 }
