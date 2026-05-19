@@ -60,13 +60,7 @@ const GameBoard: React.FC = () => {
   ]);
 
   return (
-    <div
-      className={`absolute inset-0 pointer-events-none z-[10] ${
-        roundData?.phase === "FLYING" && displayMultiplier > 5
-          ? "animate-[cameraShake_0.2s_infinite]"
-          : ""
-      }`}
-    >
+    <div className="absolute inset-0 pointer-events-none z-[10]">
       <ParticleEffect
         trigger={crashTrigger}
         x={crashPosition.x}
@@ -135,15 +129,13 @@ const GameBoard: React.FC = () => {
                     : displayMultiplier >= 1.5
                       ? "text-yellow-400"
                       : "text-green-400"
-            } transition-colors duration-300 text-6xl sm:text-7xl md:text-8xl lg:text-9xl ${
-              roundData?.phase === "FLYING" && settings.animationsEnabled
-                ? "animate-pulse"
-                : ""
-            }`}
+            } transition-colors duration-500 text-6xl sm:text-7xl md:text-8xl lg:text-9xl`}
             style={{
               animation:
-                roundData?.phase === "FLYING" && settings.animationsEnabled
-                  ? `multiplierPulse ${Math.max(0.3, 1 - displayMultiplier * 0.1)}s ease-in-out infinite`
+                roundData?.phase === "FLYING" &&
+                settings.animationsEnabled &&
+                displayMultiplier < 3
+                  ? `multiplierPulse ${Math.max(0.8, 1.2 - displayMultiplier * 0.1)}s ease-in-out infinite`
                   : "none",
             }}
           >

@@ -78,9 +78,10 @@ const BetControls: React.FC = () => {
       if (!walletAddress) return;
       const userData = await api.fetchUserByAddress(walletAddress);
 
-      const globalMaxBet = Number(roundData?.maxBetAmount ?? parseFloat(
-        process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"
-      ));
+      const globalMaxBet = Number(
+        roundData?.maxBetAmount ??
+          parseFloat(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"),
+      );
 
       if (userData?.user) {
         // Use user's maxBetAmount if set, otherwise use global default
@@ -91,9 +92,10 @@ const BetControls: React.FC = () => {
     } catch (err) {
       console.error("Failed to fetch user max bet amount:", err);
       // Fallback to global default
-      const globalMaxBet = Number(roundData?.maxBetAmount ?? parseFloat(
-        process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"
-      ));
+      const globalMaxBet = Number(
+        roundData?.maxBetAmount ??
+          parseFloat(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"),
+      );
       setMaxBetAmount(globalMaxBet);
     }
   };
@@ -104,6 +106,12 @@ const BetControls: React.FC = () => {
 
     if (!walletAddress) {
       setError("Please connect your wallet to place bets");
+      return;
+    }
+
+    // Check if betting phase is active
+    if (roundData?.phase !== "BETTING") {
+      setError("Betting is currently closed. Wait for the next round.");
       return;
     }
 
@@ -160,12 +168,32 @@ const BetControls: React.FC = () => {
         // Refresh free bets info
         await fetchFreeBetsInfo();
       } else {
-        setError(res.error || "Failed to place bet");
+        // Provide user-friendly error messages
+        const errorMsg = res.error || "Failed to place bet";
+        if (errorMsg.toLowerCase().includes("betting closed")) {
+          setError("Betting window closed. Wait for the next round.");
+        } else if (errorMsg.toLowerCase().includes("already placed")) {
+          setError("You already have an active bet in this round.");
+        } else if (errorMsg.toLowerCase().includes("insufficient")) {
+          setError("Insufficient balance to place this bet.");
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (err) {
-      setIsProcessing(false);
       console.error("Error placing bet:", err);
-      setError((err as Error).message || "Failed to place bet");
+      const errorMsg = (err as Error).message || "Failed to place bet";
+
+      // Parse user-friendly error messages
+      if (errorMsg.toLowerCase().includes("betting closed")) {
+        setError("Betting window closed. Wait for the next round.");
+      } else if (errorMsg.toLowerCase().includes("already placed")) {
+        setError("You already have an active bet in this round.");
+      } else if (errorMsg.toLowerCase().includes("insufficient")) {
+        setError("Insufficient balance to place this bet.");
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -244,9 +272,10 @@ const BetControls: React.FC = () => {
   }, []);
 
   const isConnected = mounted && !!walletAddress;
+  const isBettingPhase = roundData?.phase === "BETTING";
   const canPlaceBet =
     isConnected &&
-    roundData?.phase === "BETTING" &&
+    isBettingPhase &&
     !myBet &&
     ((useFreeBet && freeBetsRemaining > 0) ||
       (!useFreeBet && walletBalance && walletBalance > 0));
@@ -504,13 +533,17 @@ const BetControls: React.FC = () => {
 
           <button
             onClick={() => handlePlaceBet()}
-            disabled={!betValidation.isValid || isProcessing}
+            disabled={!betValidation.isValid || isProcessing || !isBettingPhase}
             className="w-full mt-1 relative group/play overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-sm sm:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform active:scale-[0.98]"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 bg-[length:200%_auto] hover:bg-right transition-all duration-500"></div>
             <div className="absolute inset-0 bg-black opacity-0 group-active/play:opacity-10 transition-opacity"></div>
             <div className="relative px-3 py-2.5 sm:px-4 sm:py-3.5 flex items-center justify-center text-slate-950 shadow-[inset_0_1px_rgba(255,255,255,0.4)] z-20">
-              {isProcessing ? "PROCESSING..." : `PLACE BET`}
+              {isProcessing
+                ? "PROCESSING..."
+                : !isBettingPhase
+                  ? "BETTING CLOSED"
+                  : `PLACE BET`}
             </div>
           </button>
 
