@@ -16,6 +16,7 @@
     "migration:revert": "tsx -r ./scripts/force-ipv4.cjs src/scripts/revert-migration.ts",
     "migration:show": "tsx -r ./scripts/force-ipv4.cjs src/scripts/show-migrations.ts",
     "seed:free-bets": "tsx -r ./scripts/force-ipv4.cjs src/scripts/seed-free-bets.ts",
+    "diagnose": "tsx -r ./scripts/force-ipv4.cjs scripts/diagnose-game-state.ts",
     "test": "vitest",
     "test:run": "vitest --run",
     "test:ui": "vitest --ui",
