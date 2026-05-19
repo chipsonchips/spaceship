@@ -9,12 +9,17 @@ import { useAuth } from "@/context/AuthContext";
  * It automatically logs in when a wallet connects and handles address switching.
  */
 export default function WalletAuthManager() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, isReconnecting, isConnecting } = useAccount();
   const { user, loginWithWallet, logout, isLoading } = useAuth();
   const { disconnect } = useDisconnect();
   const lastProcessedAddress = useRef<string | undefined>(undefined);
 
   useEffect(() => {
+    // Skip checking if wagmi is still restoring connection or connecting
+    if (isReconnecting || isConnecting) {
+      return;
+    }
+
     // 1. Handle disconnection
     if (!isConnected && user) {
       console.log("Wallet disconnected, logging out user:", user.id);
@@ -57,7 +62,7 @@ export default function WalletAuthManager() {
     } else if (!isConnected) {
       lastProcessedAddress.current = undefined;
     }
-  }, [isConnected, address, user, isLoading, loginWithWallet, logout]);
+  }, [isConnected, address, user, isLoading, loginWithWallet, logout, isReconnecting, isConnecting]);
 
   return null; // This component doesn't render anything
 }

@@ -9,10 +9,14 @@ import { useAuth } from "@/context/AuthContext";
  * Watches for wallet connection and calls backend login endpoint
  */
 export function useWalletAuth() {
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, isReconnecting, isConnecting } = useAccount();
     const { user, loginWithWallet, isLoading } = useAuth();
 
     useEffect(() => {
+        if (isReconnecting || isConnecting) {
+            return;
+        }
+
         console.log("useWalletAuth effect:", {
             isConnected,
             address,
@@ -26,7 +30,7 @@ export function useWalletAuth() {
                 console.error("Wallet login failed:", error);
             });
         }
-    }, [isConnected, address, user, isLoading, loginWithWallet]);
+    }, [isConnected, address, user, isLoading, loginWithWallet, isReconnecting, isConnecting]);
 
     return { isConnected, address, user };
 }

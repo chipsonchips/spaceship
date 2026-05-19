@@ -3,6 +3,19 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { UserRole } from "@/types/user";
 
+// Mock wagmi
+vi.mock("wagmi", () => ({
+  useSignMessage: vi.fn(() => ({
+    signMessageAsync: vi.fn().mockResolvedValue("mock-signature"),
+  })),
+  useAccount: vi.fn(() => ({
+    address: undefined,
+    isConnected: false,
+    isReconnecting: false,
+    isConnecting: false,
+  })),
+}));
+
 // Mock fetch
 global.fetch = vi.fn();
 
