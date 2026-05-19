@@ -55,8 +55,19 @@ export class GameSettingsService {
 
             return settings;
         } catch (error) {
-            logger.error('Failed to get game settings', { error: (error as Error).message });
-            throw error;
+            logger.error('Failed to get game settings, using fallback defaults', { error: (error as Error).message });
+            // Return fallback defaults if database query fails
+            const fallbackSettings: Partial<GameSettings> = {
+                minBetAmount: parseFloat(process.env.MIN_BET_AMOUNT || '0.1'),
+                maxBetAmount: parseFloat(process.env.MAX_BET_AMOUNT || '10'),
+                bettingDurationMs: parseInt(process.env.BETTING_DURATION_MS || '30000'),
+                flyingDurationMs: parseInt(process.env.FLYING_DURATION_MS || '20000'),
+                roundRestartDelayMs: parseInt(process.env.ROUND_RESTART_DELAY_MS || '5000'),
+                houseEdge: 0.03,
+                minCrashMultiplier: 1.01,
+                maxCrashMultiplier: 100.00,
+            };
+            return fallbackSettings as GameSettings;
         }
     }
 

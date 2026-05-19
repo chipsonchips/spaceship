@@ -272,21 +272,37 @@ export class GameEngine {
       await this.initPromise;
     }
 
-    // ensure there is at least one round
-    const r = await this.roundRepo.findOne({ where: {}, order: { roundId: 'DESC' } });
-    if (!r) {
-      await this.startNewRound();
-    } else if (r.phase === 'BETTING') {
-      this.currentRound = r;
-      this.broadcastGameState();
-      await this.scheduleFlyingPhase();
-    } else if (r.phase === 'FLYING') {
-      this.currentRound = r;
-      this.broadcastGameState();
-      logger.info('Existing round is in FLYING phase, crashing it to reset');
-      await this.crashRound(1.0);
-    } else {
-      await this.startNewRound();
+    logger.info('Starting game engine');
+
+    try {
+      // ensure there is at least one round
+      const r = await this.roundRepo.findOne({ where: {}, order: { roundId: 'DESC' } });
+
+      if (!r) {
+        logger.info('No existing round found, starting new round');
+        await this.startNewRound();
+      } else if (r.phase === 'BETTING') {
+        logger.info('Resuming existing betting round', { roundId: r.roundId });
+        this.currentRound = r;
+        this.broadcastGameState();
+        await this.scheduleFlyingPhase();
+      } else if (r.phase === 'FLYING') {
+        logger.info('Existing round is in FLYING phase, crashing it to reset', { roundId: r.roundId });
+        this.currentRound = r;
+        this.broadcastGameState();
+        await this.crashRound(1.0);
+      } else {
+        logger.info('Existing round is in CRASHED phase, starting new round', { roundId: r.roundId });
+        await this.startNewRound();
+      }
+
+      logger.info('Game engine started successfully');
+    } catch (error) {
+      logger.error('Failed to start game engine', {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      throw error;
     }
   }
 
@@ -451,7 +467,23 @@ export class GameEngine {
         ? Math.max(0, Number(this.currentRound.flyStartTime) - now)
         : bettingDuration;
 
-    this.bettingTimeout = setTimeout(() => this.startFlyingPhase(), remainingMs);
+    logger.info('Scheduling flying phase', {
+      remainingMs,
+      bettingDuration,
+      currentRoundId: this.currentRound?.roundId,
+      flyStartTime: this.currentRound?.flyStartTime
+    });
+
+    this.bettingTimeout = setTimeout(() => {
+      logger.info('Flying phase timeout triggered', { currentRoundId: this.currentRound?.roundId });
+      this.startFlyingPhase().catch(err => {
+        logger.error('Failed to start flying phase', { error: (err as Error).message, stack: (err as Error).stack });
+        // Attempt recovery by starting a new round
+        this.startNewRound().catch(recoveryErr => {
+          logger.error('Failed to recover from flying phase error', { error: (recoveryErr as Error).message });
+        });
+      });
+    }, remainingMs);
   }
 
   async startFlyingPhase() {
@@ -459,10 +491,16 @@ export class GameEngine {
     if (!this.currentRound || this.currentRound.phase !== 'BETTING') {
       logger.warn('startFlyingPhase aborted: no current betting round', {
         hasRound: !!this.currentRound,
-        phase: this.currentRound?.phase
+        phase: this.currentRound?.phase,
+        roundId: this.currentRound?.roundId
       });
       return;
     }
+
+    logger.info('Starting flying phase', {
+      roundId: this.currentRound.roundId,
+      phase: this.currentRound.phase
+    });
 
     // Load active settings dynamically
     const settings = await gameSettingsService.getSettings();
@@ -530,7 +568,7 @@ export class GameEngine {
     try {
       await this.executeWithRetry(async () => {
         if (this.currentRound) {
-          await this.roundRepo.createQueryBuilder()
+          const result = await this.roundRepo.createQueryBuilder()
             .update(Round)
             .set({
               phase: 'FLYING',
@@ -540,13 +578,22 @@ export class GameEngine {
             })
             .where('id = :id', { id: this.currentRound.id })
             .execute();
+
+          logger.info('Round phase updated to FLYING in database', {
+            roundId: this.currentRound.roundId,
+            affected: result.affected
+          });
         }
       });
 
       this.currentRound.phase = 'FLYING';
       this.currentRound.flyStartTime = flyStartTime;
     } catch (err) {
-      logger.error('Failed to update round phase to FLYING in DB. Force continuing in-memory to prevent game freeze!', { error: (err as Error).message });
+      logger.error('Failed to update round phase to FLYING in DB. Force continuing in-memory to prevent game freeze!', {
+        error: (err as Error).message,
+        stack: (err as Error).stack,
+        roundId: this.currentRound?.roundId
+      });
       // CRITICAL FALLBACK: Force-update the in-memory state to guarantee the game engine loop does not halt.
       this.currentRound.phase = 'FLYING';
       this.currentRound.flyStartTime = flyStartTime;
@@ -554,6 +601,13 @@ export class GameEngine {
 
     // Broadcast phase change immediately
     await this.broadcastGameState();
+
+    logger.info('Flying phase started successfully', {
+      roundId: this.currentRound.roundId,
+      targetCrash,
+      flyingDuration,
+      clientSeedsCount: clientSeeds.length
+    });
 
     this.autoCashedOutBets.clear(); // Reset for new round
     this.previousMultiplier = 1.0; // Reset previous multiplier
@@ -568,7 +622,11 @@ export class GameEngine {
     if (this.flyingInterval) clearInterval(this.flyingInterval);
 
     this.flyingInterval = setInterval(async () => {
-      if (!this.currentRound) return;
+      if (!this.currentRound) {
+        logger.error('Flying interval running but no current round exists');
+        if (this.flyingInterval) clearInterval(this.flyingInterval);
+        return;
+      }
       const elapsed = Date.now() - startTime;
 
       this.currentRound.currentMultiplier = calculateCurrentMultiplier(elapsed, maxCrashMultiplier);
@@ -600,13 +658,25 @@ export class GameEngine {
         });
       }
 
-      await this.broadcastGameState();
+      // Fire-and-forget so a slow DB read cannot stack intervals on long flights.
+      void this.broadcastGameState();
 
       if (
         elapsed >= flyingDuration ||
         this.currentRound.currentMultiplier >= targetCrash
       ) {
-        await this.crashRound(targetCrash);
+        logger.info('Crash condition met', {
+          elapsed,
+          flyingDuration,
+          currentMultiplier: this.currentRound.currentMultiplier,
+          targetCrash,
+          roundId: this.currentRound.roundId
+        });
+        if (this.flyingInterval) {
+          clearInterval(this.flyingInterval);
+          this.flyingInterval = null;
+        }
+        void this.crashRound(targetCrash);
       }
     }, 50);
   }
@@ -692,8 +762,19 @@ export class GameEngine {
 
   async crashRound(crashMultiplier: number) {
     if (!this.currentRound || this.currentRound.phase !== 'FLYING') {
+      logger.warn('crashRound called but round is not in FLYING phase', {
+        hasRound: !!this.currentRound,
+        phase: this.currentRound?.phase,
+        roundId: this.currentRound?.roundId
+      });
       return;
     }
+
+    logger.info('Crashing round', {
+      roundId: this.currentRound.roundId,
+      crashMultiplier,
+      phase: this.currentRound.phase
+    });
 
     if (this.flyingInterval) {
       clearInterval(this.flyingInterval);
@@ -778,7 +859,23 @@ export class GameEngine {
 
     // Query active settings for dynamic round restart delay
     const settings = await gameSettingsService.getSettings();
-    setTimeout(() => this.startNewRound(), Number(settings.roundRestartDelayMs || 5000));
+    const restartDelay = Number(settings.roundRestartDelayMs || 5000);
+
+    logger.info('Round crashed, scheduling new round', {
+      roundId: this.currentRound.roundId,
+      crashMultiplier,
+      restartDelay
+    });
+
+    setTimeout(() => {
+      logger.info('Starting new round after crash delay');
+      this.startNewRound().catch(err => {
+        logger.error('Failed to start new round after crash', {
+          error: (err as Error).message,
+          stack: (err as Error).stack
+        });
+      });
+    }, restartDelay);
   }
 
   async placeBet(
