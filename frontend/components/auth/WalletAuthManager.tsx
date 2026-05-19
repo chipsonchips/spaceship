@@ -56,7 +56,6 @@ export default function WalletAuthManager() {
         lastProcessedAddress.current = address;
         loginWithWallet(address).catch((error) => {
           console.error("Auto-login failed:", error);
-          lastProcessedAddress.current = undefined;
         });
       }
     } else if (!isConnected) {
