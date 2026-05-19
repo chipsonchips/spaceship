@@ -6,11 +6,12 @@ import { useBetValidation } from "@/hooks/useBetValidation";
 import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
 import AutoCashout from "./AutoCashout";
-import { useMultiplierAnimation, usePlayerBet } from "@/hooks/useGame";
+import { usePlayerBet } from "@/hooks/game";
 import * as api from "@/lib/api";
 
 const BetControls: React.FC = () => {
-  const { roundData, cashOut, placeBet, optimisticBets } = useGameContext();
+  const { roundData, cashOut, placeBet, optimisticBets, displayMultiplier } =
+    useGameContext();
   const { walletBalance, walletAddress, refreshBalance } = useUSDC();
   const { chainLabel, explorerUrl } = useChainInfo();
 
@@ -50,23 +51,10 @@ const BetControls: React.FC = () => {
       const userData = await api.fetchUserByAddress(walletAddress);
 
       if (userData?.user?.id) {
-        const apiBase =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-        const freeBetsRes = await fetch(
-          `${apiBase}/api/free-bets/user/${userData.user.id}`,
-        );
-        if (freeBetsRes.ok) {
-          const freeBetsData = await freeBetsRes.json();
-          setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
-          setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
-          setFreeBetsExpiresAt(freeBetsData.expiresAt);
-        } else {
-          console.error(
-            "Failed to fetch free bets:",
-            freeBetsRes.status,
-            await freeBetsRes.text(),
-          );
-        }
+        const freeBetsData = await api.fetchFreeBetsForUser(userData.user.id);
+        setFreeBetsRemaining(freeBetsData.freeBetsRemaining);
+        setFreeBetMaxAmount(freeBetsData.freeBetMaxAmount);
+        setFreeBetsExpiresAt(freeBetsData.expiresAt);
       }
     } catch (err) {
       console.error("Failed to fetch free bets info:", err);
@@ -280,8 +268,6 @@ const BetControls: React.FC = () => {
     ((useFreeBet && freeBetsRemaining > 0) ||
       (!useFreeBet && walletBalance && walletBalance > 0));
 
-  // Calculate potential payout for mobile display
-  const displayMultiplier = useMultiplierAnimation(roundData);
   const potentialPayout =
     myBet && roundData?.phase === "FLYING"
       ? Number(myBet.amount) * Number(displayMultiplier)

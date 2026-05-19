@@ -3,13 +3,12 @@
 import React from "react";
 import { useGameContext } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
-import { useMultiplierAnimation, usePlayerBet } from "@/hooks/useGame";
+import { usePlayerBet } from "@/hooks/game";
 import useUSDC from "@/hooks/useUSDC";
 
 const PotentialPayout: React.FC = () => {
-  const { roundData, optimisticBets } = useGameContext();
+  const { roundData, optimisticBets, displayMultiplier } = useGameContext();
   const { settings } = useSettings();
-  const displayMultiplier = useMultiplierAnimation(roundData);
   const { walletAddress } = useUSDC();
   const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
 

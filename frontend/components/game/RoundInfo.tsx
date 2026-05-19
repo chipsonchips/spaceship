@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useGameContext } from "@/context/GameContext";
-import { useRoundCountdown } from "@/hooks/useGame";
+import { useRoundCountdown } from "@/hooks/game";
+import { bettingDurationSec, restartDelaySec } from "@/lib/game/timing";
 
 const RoundInfo: React.FC = () => {
   const { roundData } = useGameContext();
@@ -74,14 +75,8 @@ const RoundInfo: React.FC = () => {
                   width: `${Math.min(
                     (timeRemaining /
                       (roundData.phase === "CRASHED"
-                      ? 5
-                        : roundData.flyStartTime && roundData.startTime
-                          ? Math.ceil(
-                              (Number(roundData.flyStartTime) -
-                                Number(roundData.startTime)) /
-                                1000,
-                            )
-                          : 30)) *
+                        ? restartDelaySec(roundData)
+                        : bettingDurationSec(roundData))) *
                       100,
                     100,
                   )}%`,

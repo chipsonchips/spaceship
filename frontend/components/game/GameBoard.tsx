@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useGameContext } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
-import { useMultiplierAnimation } from "@/hooks/useGame";
 import usePlaneAnimation from "@/hooks/usePlaneAnimation";
 import { useSound } from "@/hooks/useSound";
 import ParticleEffect from "./ParticleEffect";
@@ -11,9 +10,8 @@ import FlyingEffects from "./FlyingEffects";
 import Image from "next/image";
 
 const GameBoard: React.FC = () => {
-  const { roundData } = useGameContext();
+  const { roundData, displayMultiplier } = useGameContext();
   const { settings } = useSettings();
-  const displayMultiplier = useMultiplierAnimation(roundData);
   const plane = usePlaneAnimation(roundData);
   const { playCrash, playTakeoff } = useSound({
     enabled: settings.soundEnabled,

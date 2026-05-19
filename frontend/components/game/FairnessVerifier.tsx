@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { verifyRound } from "@/lib/api/game";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 interface VerificationData {
   roundId: number;
@@ -28,16 +30,19 @@ const FairnessVerifier: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/verify/${roundId}`);
-      const data = await response.json();
+      const data = (await verifyRound(Number(roundId))) as {
+        success: boolean;
+        data?: VerificationData;
+        error?: string;
+      };
 
-      if (data.success) {
+      if (data.success && data.data) {
         setResult(data.data);
       } else {
         setError(data.error || "Verification failed");
       }
     } catch (err) {
-      setError("Failed to connect to verification server");
+      setError(getApiErrorMessage(err, "Failed to connect to verification server"));
     } finally {
       setLoading(false);
     }
