@@ -1,173 +1,119 @@
-import { authenticatedFetch } from "./api-auth";
+/**
+ * Public API surface — backed by axios (`lib/api/client.ts`).
+ * Import from `@/lib/api` or the focused modules under `@/lib/api/*`.
+ */
+import { apiClient } from "./api/client";
+import { getApiErrorMessage } from "./api/errors";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+export { apiClient, getApiErrorMessage };
+export * from "./api/game";
 
-export async function fetchCurrentRound() {
-  const res = await fetch(`${API_BASE}/api/rounds/current`);
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to fetch current round: ${res.statusText}`);
-  }
-  const j = await res.json();
-  return j.round;
+// ---------------------------------------------------------------------------
+// Admin helpers (Bearer admin secret via axios interceptor)
+// ---------------------------------------------------------------------------
+
+function adminHeaders(adminSecret: string) {
+  return {
+    Authorization: `Bearer ${adminSecret}`,
+    "Content-Type": "application/json",
+  };
 }
 
-export async function placeBetRest(
-  roundId: number,
-  address: string,
-  amount: number,
+export async function adminFetchContractStatus(
+  adminSecret: string,
   chainId?: number,
-  useFreeBet: boolean = false,
-  autoCashoutMultiplier?: number,
-  clientSeed?: string,
 ) {
-  const body: any = { address, amount, chainId, useFreeBet, clientSeed };
-  if (autoCashoutMultiplier) {
-    body.autoCashoutMultiplier = autoCashoutMultiplier;
-  }
-  const res = await authenticatedFetch(`${API_BASE}/api/rounds/${roundId}/bets`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const { data } = await apiClient.get("/api/admin/contract/status", {
+    params: chainId ? { chainId } : undefined,
+    headers: adminHeaders(adminSecret),
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to place bet: ${res.statusText}`);
-  }
-  return res.json();
-}
-
-export async function cashOutRest(betId: number, multiplier?: number, chainId?: number) {
-  const res = await authenticatedFetch(`${API_BASE}/api/rounds/bets/${betId}/cashout`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ multiplier, chainId }),
-  });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to cash out: ${res.statusText}`);
-  }
-  return res.json();
-}
-
-export async function fetchLeaderboard() {
-  const res = await fetch(`${API_BASE}/api/leaderboard`);
-  if (!res.ok) throw new Error("Failed to fetch leaderboard");
-  const j = await res.json();
-  return j.leaderboard || [];
-}
-
-export async function fetchUserByAddress(address: string) {
-  const res = await fetch(`${API_BASE}/api/users/address/${address}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch user");
-  return res.json();
-}
-
-// Admin API functions
-export async function adminFetchContractStatus(adminSecret: string, chainId?: number) {
-  const params = new URLSearchParams();
-  if (chainId) params.append('chainId', chainId.toString());
-
-  const res = await fetch(`${API_BASE}/api/admin/contract/status?${params}`, {
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  if (!res.ok) throw new Error("Failed to fetch contract status");
-  return res.json();
+  return data;
 }
 
 export async function adminGetHouseBalance(adminSecret: string, chainId?: number) {
-  const params = new URLSearchParams();
-  if (chainId) params.append('chainId', chainId.toString());
-
-  const res = await fetch(`${API_BASE}/api/admin/house/balance?${params}`, {
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    }
+  const { data } = await apiClient.get("/api/admin/house/balance", {
+    params: chainId ? { chainId } : undefined,
+    headers: adminHeaders(adminSecret),
   });
-  if (!res.ok) throw new Error("Failed to fetch house balance");
-  return res.json();
+  return data;
 }
 
-export async function adminWithdrawHouse(adminSecret: string, amount: number, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/admin/house/withdraw`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ amount, chainId })
-  });
-  if (!res.ok) throw new Error("Failed to withdraw house profits");
-  return res.json();
+export async function adminWithdrawHouse(
+  adminSecret: string,
+  amount: number,
+  chainId?: number,
+) {
+  const { data } = await apiClient.post(
+    "/api/admin/house/withdraw",
+    { amount, chainId },
+    { headers: adminHeaders(adminSecret) },
+  );
+  return data;
 }
 
-export async function adminFundHouse(adminSecret: string, amount: number, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/admin/house/fund`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ amount, chainId })
-  });
-  if (!res.ok) throw new Error("Failed to fund house");
-  return res.json();
+export async function adminFundHouse(
+  adminSecret: string,
+  amount: number,
+  chainId?: number,
+) {
+  const { data } = await apiClient.post(
+    "/api/admin/house/fund",
+    { amount, chainId },
+    { headers: adminHeaders(adminSecret) },
+  );
+  return data;
 }
 
 export async function adminPauseContract(adminSecret: string, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/admin/contract/pause`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ chainId })
-  });
-  if (!res.ok) throw new Error("Failed to pause contract");
-  return res.json();
+  const { data } = await apiClient.post(
+    "/api/admin/contract/pause",
+    { chainId },
+    { headers: adminHeaders(adminSecret) },
+  );
+  return data;
 }
 
-export async function adminUnpauseContract(adminSecret: string, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/admin/contract/unpause`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ chainId })
-  });
-  if (!res.ok) throw new Error("Failed to unpause contract");
-  return res.json();
+export async function adminUnpauseContract(
+  adminSecret: string,
+  chainId?: number,
+) {
+  const { data } = await apiClient.post(
+    "/api/admin/contract/unpause",
+    { chainId },
+    { headers: adminHeaders(adminSecret) },
+  );
+  return data;
 }
 
-export async function adminSetOperator(adminSecret: string, address: string, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/admin/contract/operator`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ address, chainId })
-  });
-  if (!res.ok) throw new Error("Failed to set operator");
-  return res.json();
+export async function adminSetOperator(
+  adminSecret: string,
+  address: string,
+  chainId?: number,
+) {
+  const { data } = await apiClient.post(
+    "/api/admin/contract/operator",
+    { address, chainId },
+    { headers: adminHeaders(adminSecret) },
+  );
+  return data;
 }
 
-export async function adminWithdrawETH(adminSecret: string, to: string, amount: number, chainId?: number) {
-  const res = await fetch(`${API_BASE}/api/admin/eth/withdraw`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminSecret}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ to, amount, chainId })
-  });
-  if (!res.ok) throw new Error("Failed to withdraw ETH");
-  return res.json();
+export async function adminWithdrawETH(
+  adminSecret: string,
+  to: string,
+  amount: number,
+  chainId?: number,
+) {
+  const { data } = await apiClient.post(
+    "/api/admin/eth/withdraw",
+    { to, amount, chainId },
+    { headers: adminHeaders(adminSecret) },
+  );
+  return data;
 }
+
+// Backward-compatible aliases for existing call sites
+export {
+  placeBet as placeBetRest,
+  cashOut as cashOutRest,
+} from "./api/game";

@@ -7,6 +7,8 @@ export interface PlayerBet {
   cashedOut: boolean;
   cashoutMultiplier: number | null;
   payout: number | null;
+  status?: "PENDING" | "VALIDATED" | "FAILED";
+  validationError?: string | null;
   txHash?: string | null;
   autoCashoutMultiplier?: number | null;
 }
@@ -24,7 +26,7 @@ export interface RoundData {
   totalPayouts: number;
   settled: boolean;
   players: PlayerBet[];
-  planePosition: { x: number; y: number };
+  planePosition?: { x: number; y: number };
   serverTime?: number;
   minBetAmount?: number;
   maxBetAmount?: number;

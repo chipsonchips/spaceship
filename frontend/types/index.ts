@@ -35,7 +35,8 @@ export interface RoundData {
     totalPayouts: number;
     settled: boolean;
     players: PlayerBet[];
-    planePosition: { x: number; y: number };
+    planePosition?: { x: number; y: number };
+    serverTime?: number;
     minBetAmount?: number;
     maxBetAmount?: number;
     roundRestartDelayMs?: number;
@@ -134,7 +135,8 @@ export interface GameContextType {
     leaderboard: LeaderboardEntry[];
     isConnected: boolean;
     error: string | null;
-    optimisticBets: any[];
+    displayMultiplier: number;
+    optimisticBets: Array<PlayerBet & { roundId?: number }>;
     placeBet: (
         address: string,
         amount: number,
