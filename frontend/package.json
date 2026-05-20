@@ -19,6 +19,7 @@
     "@farcaster/auth-kit": "^0.8.1",
     "@farcaster/miniapp-sdk": "^0.2.1",
     "@tanstack/react-query": "^5.81.5",
+    "axios": "^1.16.1",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "react": "^19.0.0",
