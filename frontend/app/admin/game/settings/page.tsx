@@ -6,6 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, AlertCircle, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import {
+  getAdminGameSettings,
+  updateAdminGameSettings,
+} from "@/lib/api-auth";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 interface GameSettings {
   minBetAmount: number;
@@ -77,14 +82,7 @@ export default function GameSettingsPage() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      const response = await fetch(`${apiUrl}/api/admin/game/settings`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch settings");
-
-      const data = await response.json();
+      const data = await getAdminGameSettings();
       const fetchedSettings = data.settings || {
         minBetAmount: 0.1,
         maxBetAmount: 10,
@@ -156,22 +154,7 @@ export default function GameSettingsPage() {
         throw new Error("Maximum crash multiplier must be greater than minimum crash multiplier");
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-      const response = await fetch(`${apiUrl}/api/admin/game/settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to save settings");
-      }
-
-      const data = await response.json();
+      const data = await updateAdminGameSettings(formData);
       const updatedSettings = data.settings;
       
       const validSettings: GameSettings = {
@@ -194,8 +177,7 @@ export default function GameSettingsPage() {
     } catch (error) {
       setMessage({
         type: "error",
-        text:
-          error instanceof Error ? error.message : "Failed to save settings",
+        text: getApiErrorMessage(error, "Failed to save settings"),
       });
     } finally {
       setSaving(false);
