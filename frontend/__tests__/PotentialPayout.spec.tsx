@@ -7,8 +7,7 @@ import React from "react";
 let mockRoundData: any = null;
 let mockWalletAddress = "0x1234567890123456789012345678901234567890";
 
-vi.mock("@/hooks/useGame", () => ({
-  useMultiplierAnimation: () => 2.5,
+vi.mock("@/hooks/game", () => ({
   usePlayerBet: (roundData: any, address: string) => {
     return roundData?.players?.find(
       (p: any) => p.address.toLowerCase() === address?.toLowerCase()
@@ -25,6 +24,8 @@ vi.mock("@/hooks/useUSDC", () => ({
 vi.mock("@/context/GameContext", () => ({
   useGameContext: () => ({
     roundData: mockRoundData,
+    displayMultiplier: 2.5,
+    optimisticBets: [],
   }),
 }));
 

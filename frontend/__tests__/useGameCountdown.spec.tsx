@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useRoundCountdown } from '../hooks/useGame';
+import { useRoundCountdown } from '../hooks/game';
 
 describe('useRoundCountdown', () => {
   beforeEach(() => {

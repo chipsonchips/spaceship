@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculatePlanePosition } from "@/hooks/usePlaneAnimation";
+import { calculatePlanePosition } from "@/lib/game/timing";
 
 describe("calculatePlanePosition", () => {
   it("produces consistent positions with vertical movement", () => {
