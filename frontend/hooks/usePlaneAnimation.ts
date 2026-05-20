@@ -1,27 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { RoundData } from "@/types/game";
+import {
+  calculatePlanePosition,
+  flyStartFromRound,
+} from "@/lib/game/timing";
 
-// Mirror backend implementation so client can predict/smooth locally
-export function calculatePlanePosition(elapsedMs: number): {
-  x: number;
-  y: number;
-} {
-  const progress = Math.min(elapsedMs / 10000, 1);
-  const x = 50;
-  const eased = 1 - Math.pow(1 - progress, 2);
-  const y = eased * 100;
-  return { x, y };
-}
-
-function flyStartFromRound(round: RoundData): number {
-  if (round.flyStartTime) {
-    const clockOffset = round.serverTime ? Date.now() - round.serverTime : 0;
-    return Number(round.flyStartTime) + clockOffset;
-  }
-  const mult = Number(round.currentMultiplier) || 1;
-  const serverElapsed = Math.pow((mult - 1.0) * 5, 2 / 3) * 1000;
-  return Date.now() - serverElapsed;
-}
+export { calculatePlanePosition };
 
 export default function usePlaneAnimation(roundData: RoundData | null) {
   const [position, setPosition] = useState({ x: 50, y: 0 });
@@ -93,11 +77,8 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
         const dy = predicted.y - prevYRef.current;
 
         let targetAngle = 0;
-        if (dy > 0) {
-          targetAngle = 0 - Math.min(dy * 1.5, 5);
-        } else if (dy < 0) {
-          targetAngle = 3;
-        }
+        if (dy > 0) targetAngle = 0 - Math.min(dy * 1.5, 5);
+        else if (dy < 0) targetAngle = 3;
 
         const smoothedAngle =
           angleRef.current + (targetAngle - angleRef.current) * 0.08;
@@ -131,9 +112,7 @@ export default function usePlaneAnimation(roundData: RoundData | null) {
         setAngle(ang);
         setOpacity(op);
 
-        if (t < 1) {
-          rafRef.current = requestAnimationFrame(tick);
-        }
+        if (t < 1) rafRef.current = requestAnimationFrame(tick);
       };
 
       rafRef.current = requestAnimationFrame(tick);
