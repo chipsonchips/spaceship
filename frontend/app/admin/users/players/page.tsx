@@ -238,31 +238,24 @@ export default function PlayerManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <Link
-              href="/admin/users"
-              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back to Users
-            </Link>
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Player Management
-            </h1>
-            <p className="text-slate-400">
-              Manage player accounts, restrictions, and limits
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl">
+        <Link
+          href="/admin/users"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-3 text-sm touch-manipulation"
+        >
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          Back to Users
+        </Link>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">
+          Player Management
+        </h1>
+        <p className="text-slate-400 text-sm">
+          Manage player accounts, restrictions, and limits
+        </p>
       </div>
 
-      <div className="max-w-6xl mx-auto">
+      <div>
         {error && (
           <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -278,9 +271,8 @@ export default function PlayerManagementPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Players List */}
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="lg:col-span-2 order-2 lg:order-1">
             <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-700">
                 <h2 className="text-2xl font-bold text-white mb-4">Players</h2>
@@ -342,8 +334,7 @@ export default function PlayerManagementPage() {
             </div>
           </div>
 
-          {/* Player Details */}
-          <div>
+          <div className="order-1 lg:order-2">
             {selectedPlayer && restrictions ? (
               <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl p-6 space-y-6">
                 <div>
@@ -518,8 +509,8 @@ export default function PlayerManagementPage() {
 
       {/* Modal */}
       {showModal && selectedPlayer && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">
                 {modalMode === "block" && "Block Player"}
