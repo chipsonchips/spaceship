@@ -39,6 +39,7 @@ import {
   DollarSign,
   Gift,
 } from "lucide-react";
+import { AdminPageHeader, AdminTabs } from "@/components/admin";
 
 interface Player {
   id: string;
@@ -394,9 +395,14 @@ export default function UserManagementPage() {
     setFreeBetCount("");
   };
 
+  const userTabs = [
+    { id: "admins", label: "Admins" },
+    { id: "logs", label: "Logs" },
+    { id: "players", label: "Players" },
+  ] as const;
+
   return (
-    <div className="space-y-8">
-      {/* Show loading state while auth is initializing */}
+    <div className="space-y-4 sm:space-y-6 md:space-y-8">
       {authLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-green-500" />
@@ -405,17 +411,10 @@ export default function UserManagementPage() {
 
       {!authLoading && (
         <>
-          {/* Header */}
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                User Management
-              </h1>
-              <p className="text-slate-400">
-                Manage admin users, players, and permissions
-              </p>
-            </div>
-          </div>
+          <AdminPageHeader
+            title="User Management"
+            description="Manage admin users, players, and permissions"
+          />
 
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-start gap-3">
@@ -432,25 +431,14 @@ export default function UserManagementPage() {
             </div>
           )}
 
-          {/* Tabs */}
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
-            <div className="flex border-b border-slate-700">
-              {(["admins", "logs", "players"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 px-4 py-3 font-medium transition-colors ${
-                    activeTab === tab
-                      ? "bg-green-600/20 text-green-400 border-b-2 border-green-500"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-            </div>
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl sm:rounded-2xl overflow-hidden">
+            <AdminTabs
+              tabs={[...userTabs]}
+              activeTab={activeTab}
+              onChange={(id) => setActiveTab(id as typeof activeTab)}
+            />
 
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {activeTab === "admins" && (
                 <div className="space-y-6">
                   {/* Create Admin Form */}
@@ -527,17 +515,17 @@ export default function UserManagementPage() {
                           {admins.map((admin) => (
                             <div
                               key={admin.id}
-                              className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700"
+                              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700"
                             >
-                              <div>
-                                <p className="text-white font-medium">
+                              <div className="min-w-0">
+                                <p className="text-white font-medium truncate">
                                   {admin.username}
                                 </p>
-                                <p className="text-slate-400 text-sm">
+                                <p className="text-slate-400 text-sm truncate">
                                   {admin.email || "No email"}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 shrink-0">
                                 <span
                                   className={`px-3 py-1 rounded-full text-sm font-medium ${
                                     admin.isActive
@@ -694,19 +682,19 @@ export default function UserManagementPage() {
                     </p>
                   ) : (
                     <>
-                      <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                      <div className="grid grid-cols-1 gap-3 max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain">
                         {players.map((player) => (
                           <div
                             key={player.id}
-                            className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
+                            className="p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors space-y-3"
                           >
-                            <div className="flex-1">
-                              <p className="text-white font-medium">
+                            <div className="min-w-0">
+                              <p className="text-white font-medium truncate">
                                 {player.username ||
                                   player.displayName ||
                                   "Unknown"}
                               </p>
-                              <p className="text-slate-400 text-sm font-mono">
+                              <p className="text-slate-400 text-sm font-mono truncate">
                                 {player.address?.slice(0, 10)}...
                                 {player.address?.slice(-8)}
                               </p>
@@ -717,88 +705,91 @@ export default function UserManagementPage() {
                                 ).toLocaleDateString()}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex flex-col gap-1">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    player.isActive
-                                      ? "bg-green-600/20 text-green-400"
-                                      : "bg-red-600/20 text-red-400"
-                                  }`}
-                                >
-                                  {player.isActive ? "Active" : "Inactive"}
+                            <div className="flex flex-wrap gap-1.5">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  player.isActive
+                                    ? "bg-green-600/20 text-green-400"
+                                    : "bg-red-600/20 text-red-400"
+                                }`}
+                              >
+                                {player.isActive ? "Active" : "Inactive"}
+                              </span>
+                              {player.isBlocked && (
+                                <span className="px-2 py-1 rounded text-xs font-medium bg-red-600/20 text-red-400">
+                                  Blocked
                                 </span>
-                                {player.isBlocked && (
-                                  <span className="px-2 py-1 rounded text-xs font-medium bg-red-600/20 text-red-400">
-                                    Blocked
-                                  </span>
-                                )}
-                                {player.isSuspended && (
-                                  <span className="px-2 py-1 rounded text-xs font-medium bg-amber-600/20 text-amber-400">
-                                    Suspended
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                {player.isBlocked ? (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPlayer(player);
-                                      handleUnblockPlayer(player.id);
-                                    }}
-                                    disabled={playerActionLoading}
-                                    className="px-3 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
-                                  >
-                                    <Unlock className="w-4 h-4" />
-                                    Unblock
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPlayer(player);
-                                      openPlayerModal("block");
-                                    }}
-                                    disabled={playerActionLoading}
-                                    className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
-                                  >
-                                    <Lock className="w-4 h-4" />
-                                    Block
-                                  </button>
-                                )}
+                              )}
+                              {player.isSuspended && (
+                                <span className="px-2 py-1 rounded text-xs font-medium bg-amber-600/20 text-amber-400">
+                                  Suspended
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                              {player.isBlocked ? (
                                 <button
+                                  type="button"
                                   onClick={() => {
                                     setSelectedPlayer(player);
-                                    openPlayerModal("suspend");
+                                    handleUnblockPlayer(player.id);
                                   }}
                                   disabled={playerActionLoading}
-                                  className="px-3 py-1 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                                  className="px-3 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 touch-manipulation"
                                 >
-                                  <Pause className="w-4 h-4" />
-                                  {player.isSuspended ? "Unsuspend" : "Suspend"}
+                                  <Unlock className="w-4 h-4 shrink-0" />
+                                  Unblock
                                 </button>
+                              ) : (
                                 <button
+                                  type="button"
                                   onClick={() => {
                                     setSelectedPlayer(player);
-                                    openPlayerModal("limits");
+                                    openPlayerModal("block");
                                   }}
                                   disabled={playerActionLoading}
-                                  className="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                                  className="px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 touch-manipulation"
                                 >
-                                  <DollarSign className="w-4 h-4" />
-                                  Limits
+                                  <Lock className="w-4 h-4 shrink-0" />
+                                  Block
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedPlayer(player);
-                                    openPlayerModal("freebets");
-                                  }}
-                                  disabled={playerActionLoading}
-                                  className="px-3 py-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
-                                >
-                                  <Gift className="w-4 h-4" />
-                                  Free Bets
-                                </button>
-                              </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPlayer(player);
+                                  openPlayerModal("suspend");
+                                }}
+                                disabled={playerActionLoading}
+                                className="px-3 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 touch-manipulation"
+                              >
+                                <Pause className="w-4 h-4 shrink-0" />
+                                {player.isSuspended ? "Unsuspend" : "Suspend"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPlayer(player);
+                                  openPlayerModal("limits");
+                                }}
+                                disabled={playerActionLoading}
+                                className="px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 touch-manipulation"
+                              >
+                                <DollarSign className="w-4 h-4 shrink-0" />
+                                Limits
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPlayer(player);
+                                  openPlayerModal("freebets");
+                                }}
+                                disabled={playerActionLoading}
+                                className="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 touch-manipulation col-span-2 sm:col-span-1 touch-manipulation"
+                              >
+                                <Gift className="w-4 h-4 shrink-0" />
+                                Free Bets
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -841,8 +832,8 @@ export default function UserManagementPage() {
 
             {/* Player Actions Modal */}
             {showPlayerModal && selectedPlayer && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                <div className="bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl max-h-[90dvh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-white font-orbitron">
                       {playerModalMode === "block" && "Block Player"}
