@@ -198,18 +198,18 @@ export default function GameSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 pb-6 border-b border-slate-700">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 pb-4 sm:pb-6 border-b border-slate-700">
         <Link
           href="/admin/game"
-          className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+          className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors w-fit touch-manipulation"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div>
-          <h1 className="text-3xl font-bold font-orbitron tracking-wide text-white">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-orbitron tracking-wide text-white">
             GAME<span className="text-emerald-500">SETTINGS</span>
           </h1>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-sm mt-1 leading-relaxed">
             Configure global game parameters, wagers, house edges, and multiplier bounds
           </p>
         </div>
@@ -486,20 +486,22 @@ export default function GameSettingsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button
+              type="button"
               onClick={handleSave}
               disabled={!hasChanges || saving}
-              className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg font-medium transition-all disabled:cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg font-medium transition-all disabled:cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full sm:w-auto touch-manipulation"
             >
               <Save className="w-4 h-4" />
               {saving ? "Saving..." : "Save Changes"}
             </button>
 
             <button
+              type="button"
               onClick={handleReset}
               disabled={!hasChanges}
-              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-slate-700 rounded-lg text-slate-300 font-medium transition-all disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-slate-700 rounded-lg text-slate-300 font-medium transition-all disabled:cursor-not-allowed w-full sm:w-auto touch-manipulation"
             >
               Reset
             </button>
@@ -510,7 +512,7 @@ export default function GameSettingsPage() {
             <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-3">
               Current Configuration Summary
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-slate-500 text-xs uppercase tracking-wider font-bold">Min / Max Bet</p>
                 <p className="text-emerald-400 font-semibold mt-0.5">
