@@ -63,3 +63,18 @@ export interface PlaneState {
   ts: number;
   angle?: number;
 }
+
+export interface UserBetHistoryItem {
+  id: number;
+  roundId: number | null;
+  amount: number;
+  cashedOut: boolean;
+  cashoutMultiplier: number | null;
+  payout: number | null;
+  crashMultiplier: number | null;
+  timestamp: number;
+  txHash: string | null;
+  status: string;
+}
+
+export type BetHistoryFilter = "all" | "won" | "lost";

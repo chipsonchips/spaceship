@@ -1,4 +1,9 @@
-import type { GameHistory, LeaderboardEntry, RoundData } from "@/types/game";
+import type {
+  GameHistory,
+  LeaderboardEntry,
+  RoundData,
+  UserBetHistoryItem,
+} from "@/types/game";
 import { apiClient } from "./client";
 import { getApiErrorMessage } from "./errors";
 
@@ -12,6 +17,22 @@ export async function fetchCurrentRound(): Promise<RoundData | null> {
 export async function fetchGameHistory(): Promise<GameHistory[]> {
   const { data } = await apiClient.get<{ history: GameHistory[] }>("/api/history");
   return data.history ?? [];
+}
+
+export async function fetchMyBetHistory(
+  limit = 50,
+  offset = 0,
+): Promise<{ bets: UserBetHistoryItem[]; pages: number; total: number }> {
+  const { data } = await apiClient.get<{
+    success: boolean;
+    bets: UserBetHistoryItem[];
+    pagination: { total: number; pages: number };
+  }>("/api/rounds/bets/me", { params: { limit, offset } });
+  return {
+    bets: data.bets ?? [],
+    pages: data.pagination?.pages ?? 1,
+    total: data.pagination?.total ?? 0,
+  };
 }
 
 export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
