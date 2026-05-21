@@ -49,6 +49,17 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [showEmergencyLogin, setShowEmergencyLogin] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSidebarOpen]);
+
   const handleLogin = async () => {
     if (!loginSecret.trim()) {
       setLoginError("Please enter admin secret");
@@ -213,23 +224,25 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="h-screen bg-slate-950 flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-[100dvh] h-[100dvh] bg-slate-950 flex flex-col md:flex-row overflow-hidden">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
-        <div className="font-orbitron font-bold text-lg tracking-wide text-white">
+      <div className="md:hidden flex items-center justify-between bg-slate-900 border-b border-slate-800 px-4 h-14 shrink-0 z-50">
+        <div className="font-orbitron font-bold text-base tracking-wide text-white">
           ADMIN<span className="text-emerald-500">PORTAL</span>
         </div>
         <button
+          type="button"
+          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-slate-400 hover:text-white"
+          className="p-2 -mr-2 text-slate-400 hover:text-white touch-manipulation"
         >
-          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {/* Sidebar */}
       <div
-        className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`fixed md:static top-14 md:top-0 bottom-0 left-0 z-40 w-[min(100vw,16rem)] md:w-64 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 ease-in-out flex flex-col ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
@@ -242,7 +255,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto mt-16 md:mt-0">
+        <nav className="flex-1 px-3 sm:px-4 py-4 md:py-6 space-y-1 overflow-y-auto overscroll-contain">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -291,15 +304,18 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-y-auto pt-4 md:pt-0 custom-scrollbar">
-        <div className="max-w-6xl mx-auto p-4 md:p-8">{children}</div>
+      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain custom-scrollbar">
+        <div className="max-w-6xl mx-auto px-3 py-4 sm:px-4 sm:py-6 md:p-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {children}
+        </div>
       </main>
 
       {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 top-14 bg-black/60 z-30 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
+          aria-hidden
         />
       )}
     </div>
