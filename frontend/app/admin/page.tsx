@@ -16,6 +16,7 @@ import {
   SkeletonStats,
   SkeletonTabs,
 } from "@/components/skeleton";
+import { AdminPageHeader, AdminTabs, AdminFormRow } from "@/components/admin";
 
 interface ContractStatus {
   owner: string;
@@ -167,38 +168,39 @@ export default function AdminDashboard() {
     setEthWithdrawAmount("");
   };
 
+  const dashboardTabs = [
+    { id: "overview", label: "Overview" },
+    { id: "house", label: "House" },
+    { id: "contract", label: "Contract" },
+    { id: "advanced", label: "Advanced" },
+  ] as const;
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Admin Dashboard
-            </h1>
-            <p className="text-slate-400">
-              Manage contract and house operations
-            </p>
-          </div>
+    <div className="space-y-4 sm:space-y-6 md:space-y-8">
+      <AdminPageHeader
+        title="Admin Dashboard"
+        description="Manage contract and house operations"
+        actions={
           <button
+            type="button"
             onClick={fetchContractStatus}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-all disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-all disabled:opacity-50 w-full sm:w-auto touch-manipulation"
           >
             <RefreshCw
               className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`}
             />
             Refresh
           </button>
-        </div>
+        }
+      />
 
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-      </div>
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Quick Stats */}
       {isLoading && !contractStatus ? (
@@ -248,26 +250,14 @@ export default function AdminDashboard() {
       {isLoading && !contractStatus ? (
         <SkeletonTabs tabCount={4} />
       ) : (
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
-          <div className="flex border-b border-slate-700">
-            {(["overview", "house", "contract", "advanced"] as const).map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 px-4 py-3 font-medium transition-colors ${
-                    activeTab === tab
-                      ? "bg-green-600/20 text-green-400 border-b-2 border-green-500"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ),
-            )}
-          </div>
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl sm:rounded-2xl overflow-hidden">
+          <AdminTabs
+            tabs={[...dashboardTabs]}
+            activeTab={activeTab}
+            onChange={(id) => setActiveTab(id as typeof activeTab)}
+          />
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === "overview" && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white mb-4">
@@ -275,23 +265,23 @@ export default function AdminDashboard() {
                 </h3>
                 {contractStatus && (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Contract Address:</span>
-                      <span className="text-white font-mono text-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center py-2 border-b border-slate-800/50 last:border-0">
+                      <span className="text-slate-400 text-sm">Contract Address</span>
+                      <span className="text-white font-mono text-xs sm:text-sm break-all sm:text-right">
                         {contractStatus.contractAddress.slice(0, 10)}...
                         {contractStatus.contractAddress.slice(-8)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Owner:</span>
-                      <span className="text-white font-mono text-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center py-2 border-b border-slate-800/50 last:border-0">
+                      <span className="text-slate-400 text-sm">Owner</span>
+                      <span className="text-white font-mono text-xs sm:text-sm break-all sm:text-right">
                         {contractStatus.owner.slice(0, 10)}...
                         {contractStatus.owner.slice(-8)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Server Operator:</span>
-                      <span className="text-white font-mono text-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center py-2">
+                      <span className="text-slate-400 text-sm">Server Operator</span>
+                      <span className="text-white font-mono text-xs sm:text-sm break-all sm:text-right">
                         {contractStatus.serverOperator.slice(0, 10)}...
                         {contractStatus.serverOperator.slice(-8)}
                       </span>
@@ -307,65 +297,69 @@ export default function AdminDashboard() {
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Withdraw House Profits
                   </h3>
-                  <div className="flex gap-2">
+                  <AdminFormRow>
                     <input
                       type="number"
                       value={withdrawAmount}
                       onChange={(e) => setWithdrawAmount(e.target.value)}
                       placeholder="Amount in USDC"
-                      className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
+                      className="flex-1 min-w-0 px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
                     />
                     <button
+                      type="button"
                       onClick={handleWithdraw}
                       disabled={isLoading || !withdrawAmount}
-                      className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                      className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 w-full sm:w-auto shrink-0 touch-manipulation"
                     >
                       {isLoading ? "Processing..." : "Withdraw"}
                     </button>
-                  </div>
+                  </AdminFormRow>
                 </div>
 
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Fund House
                   </h3>
-                  <div className="flex gap-2">
+                  <AdminFormRow>
                     <input
                       type="number"
                       value={fundAmount}
                       onChange={(e) => setFundAmount(e.target.value)}
                       placeholder="Amount in USDC"
-                      className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
+                      className="flex-1 min-w-0 px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
                     />
                     <button
+                      type="button"
                       onClick={handleFund}
                       disabled={isLoading || !fundAmount}
-                      className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                      className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 w-full sm:w-auto shrink-0 touch-manipulation"
                     >
                       {isLoading ? "Processing..." : "Fund"}
                     </button>
-                  </div>
+                  </AdminFormRow>
                 </div>
               </div>
             )}
 
             {activeTab === "contract" && (
               <div className="space-y-6">
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
+                    type="button"
                     onClick={handlePause}
                     disabled={isLoading || contractStatus?.isPaused}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 touch-manipulation"
                   >
-                    <Pause className="w-5 h-5" />
+                    <Pause className="w-5 h-5 shrink-0" />
                     Pause Contract
                   </button>
                   <button
+                    type="button"
                     onClick={handleUnpause}
                     disabled={isLoading || !contractStatus?.isPaused}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 touch-manipulation"
                   >
-                    <Play className="w-5 h-5" />
+                    <Play className="w-5 h-5 shrink-0" />
                     Unpause Contract
                   </button>
                 </div>
@@ -374,22 +368,23 @@ export default function AdminDashboard() {
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Set Server Operator
                   </h3>
-                  <div className="flex gap-2">
+                  <AdminFormRow>
                     <input
                       type="text"
                       value={newOperator}
                       onChange={(e) => setNewOperator(e.target.value)}
                       placeholder="0x..."
-                      className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
+                      className="flex-1 min-w-0 px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
                     />
                     <button
+                      type="button"
                       onClick={handleSetOperator}
                       disabled={isLoading || !newOperator}
-                      className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                      className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 w-full sm:w-auto shrink-0 touch-manipulation"
                     >
                       {isLoading ? "Setting..." : "Set"}
                     </button>
-                  </div>
+                  </AdminFormRow>
                 </div>
               </div>
             )}
@@ -408,24 +403,25 @@ export default function AdminDashboard() {
                       placeholder="Recipient address (0x...)"
                       className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
                     />
-                    <div className="flex gap-2">
+                    <AdminFormRow>
                       <input
                         type="number"
                         value={ethWithdrawAmount}
                         onChange={(e) => setEthWithdrawAmount(e.target.value)}
                         placeholder="Amount in ETH"
-                        className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
+                        className="flex-1 min-w-0 px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
                       />
                       <button
+                        type="button"
                         onClick={handleWithdrawETH}
                         disabled={
                           isLoading || !ethWithdrawAddress || !ethWithdrawAmount
                         }
-                        className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                        className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 w-full sm:w-auto shrink-0 touch-manipulation"
                       >
                         {isLoading ? "Processing..." : "Withdraw"}
                       </button>
-                    </div>
+                    </AdminFormRow>
                   </div>
                 </div>
               </div>
@@ -444,9 +440,9 @@ export default function AdminDashboard() {
             {transactions.map((tx, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg"
+                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-3 bg-slate-800/30 rounded-lg"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   {tx.status === "success" ? (
                     <CheckCircle className="w-5 h-5 text-green-400" />
                   ) : (
