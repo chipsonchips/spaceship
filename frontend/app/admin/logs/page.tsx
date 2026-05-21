@@ -159,10 +159,9 @@ export default function AdminLogsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="border-b border-slate-700 pb-6">
-        <h1 className="text-3xl font-bold font-orbitron tracking-wide text-white mb-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="border-b border-slate-700 pb-4 sm:pb-6">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-orbitron tracking-wide text-white mb-1 sm:mb-2">
           AUDIT<span className="text-emerald-500">LOGS</span>
         </h1>
         <p className="text-slate-400 text-sm">
@@ -184,7 +183,7 @@ export default function AdminLogsPage() {
       )}
 
       {/* Filters Card */}
-      <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-lg">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 sm:p-6 shadow-lg">
         <h2 className="text-lg font-semibold font-orbitron tracking-wide text-white mb-4 flex items-center gap-2">
           <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
           FILTERS
@@ -308,9 +307,7 @@ export default function AdminLogsPage() {
         </button>
       </div>
 
-      {/* Results Info */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-400">
+      <div className="text-sm text-slate-400">
           Showing{" "}
           <span className="text-emerald-400 font-semibold">{logs.length}</span>{" "}
           of{" "}
@@ -318,7 +315,6 @@ export default function AdminLogsPage() {
             {pagination.total}
           </span>{" "}
           logs
-        </div>
       </div>
 
       {/* Logs List */}
@@ -344,14 +340,14 @@ export default function AdminLogsPage() {
             >
               {/* Log Header */}
               <button
+                type="button"
                 onClick={() =>
                   setExpandedLog(expandedLog === log.id ? null : log.id)
                 }
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                className="w-full px-4 sm:px-6 py-4 flex items-start justify-between gap-3 hover:bg-slate-800/50 transition-colors text-left touch-manipulation"
               >
-                <div className="flex items-center gap-4 flex-1 text-left">
-                  {/* Timestamp */}
-                  <div className="min-w-fit">
+                <div className="flex-1 min-w-0 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
+                  <div>
                     <p className="text-xs text-slate-500 uppercase tracking-wider">
                       Time
                     </p>
@@ -360,13 +356,12 @@ export default function AdminLogsPage() {
                     </p>
                   </div>
 
-                  {/* Action Type */}
-                  <div className="min-w-fit">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
                       Action
                     </p>
                     <span
-                      className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold border ${getActionColor(
+                      className={`inline-block px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-semibold border max-w-full truncate ${getActionColor(
                         log.actionType,
                       )}`}
                     >
@@ -374,35 +369,32 @@ export default function AdminLogsPage() {
                     </span>
                   </div>
 
-                  {/* Status */}
-                  <div className="min-w-fit">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
                       Status
                     </p>
                     {log.success ? (
-                      <span className="inline-block px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                      <span className="inline-block px-2 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
                         SUCCESS
                       </span>
                     ) : (
-                      <span className="inline-block px-3 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-300 border border-red-500/20">
+                      <span className="inline-block px-2 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-300 border border-red-500/20">
                         FAILED
                       </span>
                     )}
                   </div>
 
-                  {/* Description */}
-                  <div className="flex-1 min-w-0">
+                  <div className="sm:col-span-2 lg:col-span-1">
                     <p className="text-xs text-slate-500 uppercase tracking-wider">
                       Description
                     </p>
-                    <p className="text-sm text-slate-300 truncate">
+                    <p className="text-sm text-slate-300 line-clamp-2 sm:truncate">
                       {log.description || "-"}
                     </p>
                   </div>
                 </div>
 
-                {/* Expand Icon */}
-                <div className="ml-4 text-slate-400">
+                <div className="shrink-0 text-slate-400 pt-1">
                   {expandedLog === log.id ? (
                     <ChevronUp className="w-5 h-5" />
                   ) : (
@@ -413,7 +405,7 @@ export default function AdminLogsPage() {
 
               {/* Expanded Details */}
               {expandedLog === log.id && (
-                <div className="border-t border-slate-700 bg-slate-950 px-6 py-4 space-y-4">
+                <div className="border-t border-slate-700 bg-slate-950 px-4 sm:px-6 py-4 space-y-4">
                   {/* Details */}
                   <div>
                     <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
@@ -437,7 +429,7 @@ export default function AdminLogsPage() {
                   )}
 
                   {/* Metadata */}
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-700">
                     {log.adminId && (
                       <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wider">
@@ -476,7 +468,7 @@ export default function AdminLogsPage() {
 
       {/* Pagination */}
       {pagination.pages > 1 && (
-        <div className="flex justify-center items-center gap-2 pt-4">
+        <div className="flex flex-wrap justify-center items-center gap-2 pt-4">
           <button
             onClick={() => fetchLogs(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
