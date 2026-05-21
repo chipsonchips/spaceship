@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { Round } from '../entities/round.entity.js';
+import { GameSettings } from '../entities/game-settings.entity.js';
 import { verifyCrashPoint } from '../utils/provably-fair.js';
 import { generateCrashMultiplier } from '../services/game-utils.js';
 import { decrypt } from '../utils/encryption.js';
@@ -18,6 +19,7 @@ router.get('/:roundId', async (req, res) => {
     const roundId = parseInt(req.params.roundId);
 
     const roundRepo = AppDataSource.getRepository(Round);
+    const settingsRepo = AppDataSource.getRepository(GameSettings);
 
     const round = await roundRepo.findOne({
       where: { roundId },
@@ -34,6 +36,12 @@ router.get('/:roundId', async (req, res) => {
         error: "Round not completed or server seed not available",
       });
     }
+
+    // Get game settings
+    const settings = await settingsRepo.findOne({ where: {} });
+    const houseEdge = settings?.houseEdge ?? 0.03;
+    const minCrash = settings?.minCrashMultiplier ?? 1.01;
+    const maxCrash = settings?.maxCrashMultiplier ?? 100.00;
 
     // 1. Decrypt server seed for verification
     let serverSeed = round.serverSeed;
@@ -55,14 +63,19 @@ router.get('/:roundId', async (req, res) => {
       .map((b: unknown) => (b as { clientSeed?: string }).clientSeed)
       .filter((s) => s !== null && s !== undefined) as string[];
 
-    // 3. Verify
+    // 3. Verify - recalculate everything from scratch
     const verification = verifyCrashPoint(
       serverSeed,
       round.serverSeedHash!,
       clientSeeds,
       roundId, // nonce
       Number(round.crashMultiplier || 0),
-      generateCrashMultiplier
+      (finalSeed: string) => generateCrashMultiplier(
+        finalSeed,
+        houseEdge,
+        minCrash,
+        maxCrash
+      )
     );
 
     res.json({
@@ -73,8 +86,8 @@ router.get('/:roundId', async (req, res) => {
         serverSeed: serverSeed,
         serverSeedHash: round.serverSeedHash,
         clientSeeds,
-        combinedClientSeedHash: round.combinedClientSeedHash,
-        finalSeed: round.finalSeed,
+        combinedClientSeedHash: verification.combinedClientSeedHash,
+        finalSeed: verification.finalSeed,
         claimedCrashPoint: Number(round.crashMultiplier),
         actualCrashPoint: verification.actualCrashPoint,
         error: verification.error,

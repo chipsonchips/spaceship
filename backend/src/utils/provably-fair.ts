@@ -38,13 +38,21 @@ export function verifyCrashPoint(
   nonce: number,
   claimedCrashPoint: number,
   algorithm: (seed: string) => number
-): { valid: boolean; actualCrashPoint: number; error?: string } {
+): {
+  valid: boolean;
+  actualCrashPoint: number;
+  combinedClientSeedHash: string;
+  finalSeed: string;
+  error?: string;
+} {
   // 1. Verify server seed hash
   const computedHash = ethers.keccak256(ethers.toUtf8Bytes(serverSeed));
   if (computedHash !== serverSeedHash) {
     return {
       valid: false,
       actualCrashPoint: 0,
+      combinedClientSeedHash: '',
+      finalSeed: '',
       error: "Server seed hash mismatch",
     };
   }
@@ -64,6 +72,8 @@ export function verifyCrashPoint(
   return {
     valid,
     actualCrashPoint,
+    combinedClientSeedHash,
+    finalSeed,
     error: valid ? undefined : "Crash point mismatch",
   };
 }
