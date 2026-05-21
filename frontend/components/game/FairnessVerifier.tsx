@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { verifyRound } from "@/lib/api/game";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
@@ -17,11 +17,25 @@ interface VerificationData {
   error?: string;
 }
 
-const FairnessVerifier: React.FC = () => {
-  const [roundId, setRoundId] = useState("");
+interface FairnessVerifierProps {
+  initialRoundId?: number | null;
+}
+
+const FairnessVerifier: React.FC<FairnessVerifierProps> = ({
+  initialRoundId,
+}) => {
+  const [roundId, setRoundId] = useState(
+    initialRoundId != null ? String(initialRoundId) : "",
+  );
   const [result, setResult] = useState<VerificationData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialRoundId != null) {
+      setRoundId(String(initialRoundId));
+    }
+  }, [initialRoundId]);
 
   const handleVerify = async () => {
     if (!roundId) return;
