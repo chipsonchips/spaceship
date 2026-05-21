@@ -19,6 +19,7 @@ import { Server } from 'socket.io';
 import morgan from 'morgan';
 import cors from 'cors';
 import helmet from 'helmet';
+import { getCorsOrigins } from './config/cors.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { GameEngine } from './services/game-engine.service.js';
 import { logger } from './utils/logger.js';
@@ -39,18 +40,7 @@ config();
 const app: Express = express();
 const port = process.env.PORT || 3001;
 
-// Build CORS origins dynamically
-const corsOrigins: (string | RegExp)[] = [
-  'https://aviator-sand.vercel.app',
-  'http://localhost:3000',
-  'https://aviator.farcast.app'
-];
-
-// Add ngrok URLs from environment or hardcoded
-if (process.env.NGROK_URL) {
-  corsOrigins.push(process.env.NGROK_URL);
-}
-corsOrigins.push(/^https:\/\/.*\.ngrok(?:-free)?\.app$/);
+const corsOrigins = getCorsOrigins();
 
 // Middleware
 app.use(helmet());

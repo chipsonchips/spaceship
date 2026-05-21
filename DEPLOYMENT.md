@@ -48,48 +48,75 @@ forge script script/Aviator.s.sol:AviatorGameUSDCScript \
 
 ## 2. Backend Deployment
 
-### Setup PostgreSQL Database
+### Setup PostgreSQL Database (Supabase)
+
+In Supabase Dashboard → **Project Settings → Database**:
+
+1. Copy the **Session pooler** connection string (port **5432**, not direct IPv6-only host).
+2. Set it on Railway as `DATABASE_URL` (the backend parses this automatically).
 
 ```bash
-# Create database
-createdb aviator
-
-# Set connection string
-export DATABASE_URL=postgresql://user:password@host:5432/aviator
+# Example (use your real password and project ref)
+DATABASE_URL=postgresql://postgres.xxxxx:password@aws-0-eu-north-1.pooler.supabase.com:5432/postgres
 ```
+
+**Railway IPv6 note:** Railway cannot reach Supabase over IPv6 (`ENETUNREACH`). The backend forces IPv4 for DB connections. Use the **pooler** hostname (`*.pooler.supabase.com`), not the direct `db.*.supabase.co` host if you see IPv6 errors.
+
+Do **not** set `DB_SYNCHRONIZE=true` in production. Migrations run automatically via `predeploy` and `start` scripts.
 
 ### Prepare Backend
 
 ```bash
 cd backend
 
-# Install dependencies
 pnpm install
-
-# Build
 pnpm build
-
-# Setup database
-pnpm db:sync
-pnpm db:migrate
+# Migrations run on deploy (predeploy + start)
 ```
 
-### Deploy to Node.js Hosting (Heroku, Railway, etc.)
+### Deploy to Railway
 
-**Heroku Example:**
+| Setting | Value |
+|---------|--------|
+| Root directory | `backend` |
+| Build command | `pnpm install && pnpm build` |
+| Start command | `pnpm start` |
+| Pre-deploy (optional) | `pnpm predeploy` — migrations only |
+
+**Required Railway env vars:**
+
+```
+DATABASE_URL=postgresql://postgres.[ref]:[password]@[region].pooler.supabase.com:5432/postgres
+NODE_ENV=production
+DB_SYNCHRONIZE=false
+PORT=3001
+ENCRYPTION_SECRET=...
+JWT_SECRET=...
+BACKEND_PRIVATE_KEY=...
+BASE_RPC_URL=https://mainnet.base.org
+```
+
+**Vercel frontend env vars** (Project → Settings → Environment Variables):
+
+```
+NEXT_PUBLIC_API_URL=https://aviator-backend-production-2306.up.railway.app
+NEXT_PUBLIC_WS_URL=wss://aviator-backend-production-2306.up.railway.app
+```
+
+CORS already allows `https://aviator-sand.vercel.app`. Add more origins with `CORS_ORIGINS` (comma-separated) on Railway if needed.
+
+**Game rounds:** No separate cron or script. When the server starts successfully, `GameEngine` creates and schedules rounds automatically after migrations complete.
+
+### Deploy to Heroku (alternative)
+
 ```bash
-# Create app
 heroku create aviator-game-api
-
-# Set environment variables
 heroku config:set -a aviator-game-api \
   DATABASE_URL=postgresql://... \
   BASE_RPC_URL=https://mainnet.base.org \
   USDC_TOKEN_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
   SERVER_OPERATOR_ADDRESS=0x... \
   PORT=3001
-
-# Deploy
 git push heroku main
 ```
 
