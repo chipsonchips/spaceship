@@ -20,16 +20,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { signMessageAsync } = useSignMessage();
 
-  // Load tokens from localStorage on mount
+  const saveAuth = useCallback((user: AuthUser, tokens: AuthTokens) => {
+    setUser(user);
+    setTokens(tokens);
+    localStorage.setItem("authUser", JSON.stringify(user));
+    localStorage.setItem("authTokens", JSON.stringify(tokens));
+    localStorage.setItem("authTokenTimestamp", Date.now().toString());
+  }, []);
+
+  const clearAuth = useCallback(() => {
+    setUser(null);
+    setTokens(null);
+    localStorage.removeItem("authUser");
+    localStorage.removeItem("authTokens");
+    localStorage.removeItem("authTokenTimestamp");
+  }, []);
+
+  // Load tokens from localStorage on mount and check expiration
   useEffect(() => {
     const loadStoredAuth = () => {
       try {
         const storedTokens = localStorage.getItem("authTokens");
         const storedUser = localStorage.getItem("authUser");
+        const tokenTimestamp = localStorage.getItem("authTokenTimestamp");
 
         if (storedTokens && storedUser) {
           const parsedTokens = JSON.parse(storedTokens);
           const parsedUser = JSON.parse(storedUser);
+
+          // Check if token has expired
+          if (tokenTimestamp) {
+            const timestamp = parseInt(tokenTimestamp, 10);
+            const expiresIn = parsedTokens.expiresIn || 86400000; // Default 24h
+            const now = Date.now();
+
+            if (now - timestamp > expiresIn) {
+              console.log("Auth token expired, clearing auth");
+              localStorage.removeItem("authTokens");
+              localStorage.removeItem("authUser");
+              localStorage.removeItem("authTokenTimestamp");
+              setIsLoading(false);
+              return;
+            }
+          }
+
           console.log("Loaded stored auth from localStorage:", parsedUser);
           setTokens(parsedTokens);
           setUser(parsedUser);
@@ -40,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Failed to load stored auth:", err);
         localStorage.removeItem("authTokens");
         localStorage.removeItem("authUser");
+        localStorage.removeItem("authTokenTimestamp");
       } finally {
         console.log("Setting isLoading to false after localStorage check");
         setIsLoading(false);
@@ -49,19 +84,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadStoredAuth();
   }, []);
 
-  const saveAuth = useCallback((user: AuthUser, tokens: AuthTokens) => {
-    setUser(user);
-    setTokens(tokens);
-    localStorage.setItem("authUser", JSON.stringify(user));
-    localStorage.setItem("authTokens", JSON.stringify(tokens));
-  }, []);
+  // Listen for auth expiration events from API client
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      console.log("Auth expired event received, logging out");
+      clearAuth();
+      setError("Your session has expired. Please log in again.");
+    };
 
-  const clearAuth = useCallback(() => {
-    setUser(null);
-    setTokens(null);
-    localStorage.removeItem("authUser");
-    localStorage.removeItem("authTokens");
-  }, []);
+    window.addEventListener("auth:expired", handleAuthExpired);
+    return () => window.removeEventListener("auth:expired", handleAuthExpired);
+  }, [clearAuth]);
+
+  // Periodic token expiration check (every minute)
+  useEffect(() => {
+    if (!tokens || !user) return;
+
+    const checkTokenExpiration = () => {
+      const tokenTimestamp = localStorage.getItem("authTokenTimestamp");
+      if (!tokenTimestamp) {
+        clearAuth();
+        return;
+      }
+
+      const timestamp = parseInt(tokenTimestamp, 10);
+      const expiresIn = tokens.expiresIn || 86400000; // Default 24h
+      const now = Date.now();
+
+      if (now - timestamp > expiresIn) {
+        console.log("Token expired during periodic check, logging out");
+        clearAuth();
+        setError("Your session has expired. Please log in again.");
+      }
+    };
+
+    // Check immediately
+    checkTokenExpiration();
+
+    // Then check every minute
+    const interval = setInterval(checkTokenExpiration, 60000);
+    return () => clearInterval(interval);
+  }, [tokens, user, clearAuth]);
 
   const loginWithWallet = useCallback(
     async (address: string) => {
@@ -77,7 +140,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           signature = await signMessageAsync({ message });
         } catch (signErr) {
           console.error("Message signing failed:", signErr);
-          throw new Error("Failed to sign authentication message. Please approve the signature request in your wallet.");
+          throw new Error(
+            "Failed to sign authentication message. Please approve the signature request in your wallet.",
+          );
         }
 
         const apiUrl =
@@ -156,8 +221,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
             signature = await signMessageAsync({ message });
           } catch (signErr) {
-            console.error("Wallet signature for Farcaster link failed:", signErr);
-            throw new Error("Failed to sign message to link wallet. Please approve the signature request in your wallet.");
+            console.error(
+              "Wallet signature for Farcaster link failed:",
+              signErr,
+            );
+            throw new Error(
+              "Failed to sign message to link wallet. Please approve the signature request in your wallet.",
+            );
           }
         }
 
