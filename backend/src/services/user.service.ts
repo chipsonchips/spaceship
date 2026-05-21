@@ -119,7 +119,8 @@ export class UserService {
         displayName: string,
         avatarUrl?: string
     ): Promise<User> {
-        let user = await this.userRepo.findOne({ where: { address } });
+        const normalizedAddress = address.toLowerCase();
+        let user = await this.userRepo.findOne({ where: { address: normalizedAddress } });
 
         if (!user) {
             user = await this.getOrCreatePlayerFromWallet(address);

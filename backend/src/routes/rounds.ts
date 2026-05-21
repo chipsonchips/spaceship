@@ -35,6 +35,54 @@ export const createRoundsRouter = (gameEngine: GameEngine) => {
     }
   });
 
+  router.get('/bets/me', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user?.address) {
+        return res.status(401).json({ success: false, error: 'Authentication and linked wallet required' });
+      }
+
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const betRepo = AppDataSource.getRepository(PlayerBet);
+
+      // Use case-insensitive address comparison
+      const [bets, total] = await betRepo
+        .createQueryBuilder('bet')
+        .leftJoinAndSelect('bet.round', 'round')
+        .where('LOWER(bet.address) = LOWER(:address)', { address: req.user.address })
+        .orderBy('bet.timestamp', 'DESC')
+        .take(limit)
+        .skip(offset)
+        .getManyAndCount();
+
+      res.json({
+        success: true,
+        bets: bets.map((bet) => ({
+          id: bet.id,
+          roundId: bet.round?.roundId ?? null,
+          amount: Number(bet.amount),
+          cashedOut: bet.cashedOut,
+          cashoutMultiplier: bet.cashoutMultiplier != null ? Number(bet.cashoutMultiplier) : null,
+          payout: bet.payout != null ? Number(bet.payout) : null,
+          crashMultiplier: bet.round?.crashMultiplier != null ? Number(bet.round.crashMultiplier) : null,
+          timestamp: Number(bet.timestamp),
+          txHash: bet.txHash,
+          status: bet.status,
+        })),
+        pagination: {
+          total,
+          limit,
+          offset,
+          pages: Math.ceil(total / limit) || 1,
+        },
+      });
+    } catch (err) {
+      const errorMsg = (err as Error).message || 'Failed to fetch bet history';
+      console.error('Get my bets error:', err);
+      res.status(500).json({ success: false, error: errorMsg });
+    }
+  });
+
   router.get('/current', async (req, res) => {
     try {
       const round = await roundService.getCurrentRound();

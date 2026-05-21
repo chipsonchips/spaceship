@@ -19,7 +19,7 @@ export class BetHandler {
     private readonly rounds: RoundRepository,
     private readonly broadcaster: GameBroadcaster,
     private readonly services: GameEngineServices,
-  ) {}
+  ) { }
 
   private async getChainService(chainId: number): Promise<ChainService> {
     if (!this.chainServices.has(chainId)) {
@@ -117,7 +117,7 @@ export class BetHandler {
     const bet = await executeWithRetry(
       async () => {
         const newBet = this.rounds.createBet({
-          address,
+          address: address.toLowerCase(),
           amount,
           cashedOut: false,
           cashoutMultiplier: null,
@@ -136,7 +136,7 @@ export class BetHandler {
         round.totalBets = Number(round.totalBets || 0) + Number(amount);
 
         await this.services.leaderboard.updateFromBet({
-          address,
+          address: address.toLowerCase(),
           amount,
           cashedOut: false,
         });

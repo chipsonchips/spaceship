@@ -21,7 +21,7 @@ export class LeaderboardService {
     payout?: number | null;
     cashoutMultiplier?: number | null;
   }) {
-    const addr = bet.address;
+    const addr = bet.address.toLowerCase();
     let entry = await this.repo.findOneBy({ address: addr });
 
     if (!entry) {
@@ -61,7 +61,7 @@ export class LeaderboardService {
   }
 
   async updateUsername(address: string, username: string) {
-    const entry = await this.repo.findOneBy({ address });
+    const entry = await this.repo.findOneBy({ address: address.toLowerCase() });
     if (entry) {
       entry.username = username;
       return this.repo.save(entry);
