@@ -22,6 +22,8 @@ export class ChainService {
   contract: ethers.Contract;
   chainId: number;
   private providerReady = false;
+  private baseSigner: ethers.Wallet;
+  private contractAddress: string;
 
   constructor(chainId: number) {
     const chainConfig = getChainConfig(chainId);
@@ -33,6 +35,7 @@ export class ChainService {
 
     const rpc = chainConfig.rpcUrl;
     const addr = chainConfig.contractAddress;
+    this.contractAddress = addr;
 
     logger.info(`ChainService connecting to ${chainConfig.label} (chainId=${chainConfig.chainId})`, {
       rpc,
@@ -46,8 +49,8 @@ export class ChainService {
     });
 
     this.provider = new ethers.JsonRpcProvider(fetchReq);
-    const baseSigner = new ethers.Wallet(key, this.provider);
-    this.signer = new NonceManager(baseSigner);
+    this.baseSigner = new ethers.Wallet(key, this.provider);
+    this.signer = new NonceManager(this.baseSigner);
     this.contract = new ethers.Contract(addr, aviatorAbiTyped, this.signer);
 
     // Initialize provider connection in background
@@ -56,6 +59,29 @@ export class ChainService {
         error: (err as Error).message,
       });
     });
+  }
+
+  private async resetNonce(): Promise<void> {
+    try {
+      // Recreate the NonceManager to reset the nonce tracking
+      this.signer = new NonceManager(this.baseSigner);
+      this.contract = new ethers.Contract(this.contractAddress, aviatorAbiTyped, this.signer);
+
+      const address = await this.baseSigner.getAddress();
+      const onChainNonce = await this.provider.getTransactionCount(address, 'latest');
+
+      logger.info('Nonce reset', { address, onChainNonce });
+    } catch (err) {
+      logger.error('Failed to reset nonce', { error: (err as Error).message });
+    }
+  }
+
+  private isNonceError(error: unknown): boolean {
+    const errorMsg = (error as Error).message || '';
+    return errorMsg.includes('nonce') ||
+      errorMsg.includes('NONCE') ||
+      errorMsg.includes('nonce too low') ||
+      errorMsg.includes('nonce has already been used');
   }
 
   private async initializeProvider() {
@@ -220,7 +246,15 @@ export class ChainService {
       logger.info('Snapshot tx confirmed', { roundId: round.roundId, txHash: tx.hash });
       return tx;
     } catch (err) {
-      logger.error('Failed to submit round snapshot', { error: (err as Error).message });
+      const errorMsg = (err as Error).message;
+
+      // Reset nonce if we detect a nonce error
+      if (this.isNonceError(err)) {
+        logger.warn('Nonce error detected, resetting nonce manager', { error: errorMsg });
+        await this.resetNonce();
+      }
+
+      logger.error('Failed to submit round snapshot', { error: errorMsg });
       throw err;
     }
   }
@@ -246,6 +280,13 @@ export class ChainService {
       return tx.hash;
     } catch (err) {
       const errorMsg = (err as Error).message;
+
+      // Reset nonce if we detect a nonce error
+      if (this.isNonceError(err)) {
+        logger.warn('Nonce error detected, resetting nonce manager', { error: errorMsg });
+        await this.resetNonce();
+      }
+
       logger.error('Failed to place bet on chain', {
         error: errorMsg,
         player,
@@ -273,7 +314,15 @@ export class ChainService {
 
       return tx.hash;
     } catch (err) {
-      logger.error('Failed to cash out on chain', { error: (err as Error).message });
+      const errorMsg = (err as Error).message;
+
+      // Reset nonce if we detect a nonce error
+      if (this.isNonceError(err)) {
+        logger.warn('Nonce error detected, resetting nonce manager', { error: errorMsg });
+        await this.resetNonce();
+      }
+
+      logger.error('Failed to cash out on chain', { error: errorMsg });
       throw err;
     }
   }
