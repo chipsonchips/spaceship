@@ -149,11 +149,8 @@ const BetControls: React.FC = () => {
       }
       if (res?.success) {
         setTxHash(res.txHash || null);
-        setLastBetAmount(amountToBet); // Track last bet
-        setBetAmount("0.10");
+        setLastBetAmount(amountToBet);
         setUseFreeBet(false);
-        setAutoCashoutMultiplier(null);
-        // Refresh free bets info
         await fetchFreeBetsInfo();
       } else {
         // Provide user-friendly error messages
