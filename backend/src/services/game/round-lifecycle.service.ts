@@ -1,5 +1,4 @@
 import type { Round } from '../../entities/round.entity.js';
-import type { PlayerBet } from '../../entities/player-bet.entity.js';
 import { securityMonitor } from '../security-monitor.service.js';
 import { auditLogService } from '../audit-log.service.js';
 import { AdminActionType } from '../../entities/admin-log.entity.js';
