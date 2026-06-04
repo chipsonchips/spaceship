@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useGameContext } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import useUSDC from "@/hooks/useUSDC";
+import * as api from "@/lib/api";
 
 interface SessionStat {
   wins: number;
@@ -11,8 +11,20 @@ interface SessionStat {
   totalProfit: number;
 }
 
+interface UserBetHistoryItem {
+  id: number;
+  roundId: number | null;
+  amount: number;
+  cashedOut: boolean;
+  cashoutMultiplier: number | null;
+  payout: number | null;
+  crashMultiplier: number | null;
+  timestamp: number;
+  txHash: string | null;
+  status: string;
+}
+
 const SessionStats: React.FC = () => {
-  const { gameHistory } = useGameContext();
   const { settings } = useSettings();
   const { walletAddress } = useUSDC();
   const [stats, setStats] = useState<SessionStat>({
@@ -27,30 +39,46 @@ const SessionStats: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (
-      !settings.sessionStatsEnabled ||
-      !gameHistory ||
-      !walletAddress ||
-      gameHistory.length === 0
-    ) {
+    if (!settings.sessionStatsEnabled || !walletAddress) {
       setStats({ wins: 0, losses: 0, totalProfit: 0 });
       return;
     }
 
-    let wins = 0;
-    let losses = 0;
-    const totalProfit = 0;
+    const fetchBetHistory = async () => {
+      try {
+        // Fetch all player bets (using high limit to get session data)
+        const { bets } = await api.fetchMyBetHistory(500, 0);
 
-    gameHistory.forEach((game) => {
-      if (game.winnersCount > 0) {
-        wins++;
-      } else {
-        losses++;
+        if (!bets || bets.length === 0) {
+          setStats({ wins: 0, losses: 0, totalProfit: 0 });
+          return;
+        }
+
+        let wins = 0;
+        let losses = 0;
+        let totalProfit = 0;
+
+        bets.forEach((bet: UserBetHistoryItem) => {
+          // Win: bet was cashed out with positive payout
+          if (bet.cashedOut && (bet.payout ?? 0) > 0) {
+            wins++;
+            totalProfit += (bet.payout ?? 0) - bet.amount;
+          } else {
+            // Loss: either didn't cash out or cashed out with no profit
+            losses++;
+            totalProfit -= bet.amount;
+          }
+        });
+
+        setStats({ wins, losses, totalProfit });
+      } catch (err) {
+        console.error("Failed to fetch bet history for session stats:", err);
+        setStats({ wins: 0, losses: 0, totalProfit: 0 });
       }
-    });
+    };
 
-    setStats({ wins, losses, totalProfit });
-  }, [settings.sessionStatsEnabled, gameHistory, walletAddress]);
+    fetchBetHistory();
+  }, [settings.sessionStatsEnabled, walletAddress]);
 
   if (!mounted || !settings.sessionStatsEnabled) {
     return null;
@@ -85,6 +113,16 @@ const SessionStats: React.FC = () => {
           <div className="text-[9px] text-slate-500 font-courier">
             Rounds: {totalRounds}
           </div>
+          {stats.totalProfit !== 0 && (
+            <div
+              className={`text-[9px] font-courier font-bold ${
+                stats.totalProfit > 0 ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              P/L: {stats.totalProfit > 0 ? "+" : ""}
+              {stats.totalProfit.toFixed(2)} USDC
+            </div>
+          )}
         </div>
       </div>
     </div>
