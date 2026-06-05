@@ -105,18 +105,8 @@ export function useGame(options: { wsUrl?: string } = {}) {
       }
 
       try {
-        if (!useFreeBet && houseAddress) {
-          const allowance = await checkAllowance(address, houseAddress);
-          if (allowance < amount) {
-            const approvalTxHash = await approveUSDC(
-              houseAddress,
-              maxUint256,
-            );
-            await publicClient!.waitForTransactionReceipt({
-              hash: approvalTxHash as `0x${string}`,
-            });
-          }
-        }
+        // No wallet approval needed here anymore! 
+        // Betting utilizes the user's game balance which they manage via Deposit/Withdraw.
 
         const res = await gameApi.placeBet(currentRoundId, {
           address,
