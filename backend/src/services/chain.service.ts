@@ -125,42 +125,19 @@ export class ChainService {
   async validatePlayerFunds(player: string, amount: number) {
     try {
       await this.ensureProviderReady(2);
-      const chainConfig = getChainConfig(this.chainId);
-      const usdcToken = chainConfig.usdcAddress;
 
-      if (!usdcToken) {
-        throw new Error(`USDC address not configured for chain ${this.chainId}`);
-      }
-
-      const usdcContract = new ethers.Contract(
-        usdcToken,
-        [
-          'function balanceOf(address) view returns (uint256)',
-          'function allowance(address owner, address spender) view returns (uint256)'
-        ],
-        this.provider
-      );
-
-      const contractAddress = await this.contract.getAddress();
       const betAmountUint = BigInt(Math.round(amount * 1e6)); // USDC 6 decimals
 
-      const [balance, allowance] = await Promise.all([
-        usdcContract.balanceOf(player),
-        usdcContract.allowance(player, contractAddress)
-      ]);
+      const balance = await this.contract.playerBalances(player);
 
       if (BigInt(balance) < betAmountUint) {
-        return { ok: false, reason: `Insufficient USDC balance. Have ${Number(balance) / 1e6}, need ${amount}` };
-      }
-
-      if (BigInt(allowance) < betAmountUint) {
-        return { ok: false, reason: `Insufficient allowance. Contract not approved to spend your USDC.` };
+        return { ok: false, reason: `Insufficient game balance. Have ${Number(balance) / 1e6}, need ${amount}. Please deposit funds.` };
       }
 
       return { ok: true };
     } catch (err) {
       logger.error('Failed to validate player funds', { error: (err as Error).message, player, amount });
-      return { ok: false, reason: 'Failed to verify balance/allowance: ' + (err as Error).message };
+      return { ok: false, reason: 'Failed to verify game balance: ' + (err as Error).message };
     }
   }
 
