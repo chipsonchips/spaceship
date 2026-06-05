@@ -11,6 +11,7 @@ import {
     PausableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {
     Initializable
 } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -35,6 +36,10 @@ contract AviatorGame is
     
     // Server operator (trusted for game operations)
     address public serverOperator;
+
+    // Player balances for deposit/withdrawal flow
+    mapping(address => uint256) public playerBalances;
+    uint256 public totalPlayerBalances;
 
     // Snapshot storage
     struct RoundSnapshotData {
@@ -61,6 +66,10 @@ contract AviatorGame is
     );
 
     event ServerOperatorUpdated(address indexed newOperator);
+
+    // Player funds events
+    event Deposit(address indexed player, uint256 amount);
+    event Withdrawal(address indexed player, uint256 amount);
 
     // Snapshot event
     event RoundSnapshot(
@@ -133,6 +142,74 @@ contract AviatorGame is
         if (!success) revert ETHTransferFailed();
     }
 
+    // ============ Player Deposit / Withdraw Functions ============
+
+    /**
+     * @notice Deposit USDC into the game contract.
+     * @param amount Amount of USDC to deposit.
+     */
+    function deposit(uint256 amount) external whenNotPaused nonReentrant {
+        if (amount == 0) revert InvalidBetAmount();
+
+        bool success = usdcToken.transferFrom(msg.sender, address(this), amount);
+        if (!success) revert TransferFailed();
+
+        playerBalances[msg.sender] += amount;
+        totalPlayerBalances += amount;
+
+        emit Deposit(msg.sender, amount);
+    }
+
+    /**
+     * @notice Deposit USDC using ERC-2612 Permit for a single-transaction flow.
+     * @param amount Amount of USDC to deposit.
+     */
+    function depositWithPermit(
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external whenNotPaused nonReentrant {
+        if (amount == 0) revert InvalidBetAmount();
+
+        // Call permit on the USDC token
+        IERC20Permit(address(usdcToken)).permit(
+            msg.sender,
+            address(this),
+            amount,
+            deadline,
+            v,
+            r,
+            s
+        );
+
+        bool success = usdcToken.transferFrom(msg.sender, address(this), amount);
+        if (!success) revert TransferFailed();
+
+        playerBalances[msg.sender] += amount;
+        totalPlayerBalances += amount;
+
+        emit Deposit(msg.sender, amount);
+    }
+
+    /**
+     * @notice Withdraw deposited USDC and winnings from the game contract.
+     * @param amount Amount of USDC to withdraw.
+     */
+    function withdraw(uint256 amount) external nonReentrant {
+        if (amount == 0) revert InvalidBetAmount();
+        if (playerBalances[msg.sender] < amount) revert InsufficientBalance();
+
+        playerBalances[msg.sender] -= amount;
+        totalPlayerBalances -= amount;
+
+        bool success = usdcToken.transfer(msg.sender, amount);
+        if (!success) revert TransferFailed();
+
+        emit Withdrawal(msg.sender, amount);
+    }
+
     // ============ Core Game Functions ============
 
     /**
@@ -145,11 +222,11 @@ contract AviatorGame is
         uint256 amount
     ) external nonReentrant whenNotPaused onlyServerOperator {
         if (amount < MIN_BET || amount > MAX_BET) revert InvalidBetAmount();
+        if (playerBalances[player] < amount) revert InsufficientBalance();
 
-        // Transfer USDC from player to contract
-        // Note: The player must have approved the contract to spend this amount
-        bool success = usdcToken.transferFrom(player, address(this), amount);
-        if (!success) revert TransferFailed();
+        // Deduct from player's deposited balance
+        playerBalances[player] -= amount;
+        totalPlayerBalances -= amount;
 
         emit BetPlaced(roundId, player, amount);
     }
@@ -165,11 +242,13 @@ contract AviatorGame is
         uint256 multiplier
     ) external nonReentrant whenNotPaused onlyServerOperator {
         if (payout > MAX_PAYOUT) revert InsufficientHouseBalance();
-        if (usdcToken.balanceOf(address(this)) < payout) revert InsufficientHouseBalance();
+        
+        uint256 houseBalance = usdcToken.balanceOf(address(this)) - totalPlayerBalances;
+        if (houseBalance < payout) revert InsufficientHouseBalance();
 
-        // Transfer winnings in USDC to the player
-        bool success = usdcToken.transfer(player, payout);
-        if (!success) revert TransferFailed();
+        // Credit the payout to the player's balance
+        playerBalances[player] += payout;
+        totalPlayerBalances += payout;
 
         emit CashOut(roundId, player, payout, multiplier);
     }
@@ -200,8 +279,8 @@ contract AviatorGame is
     }
 
     function withdrawHouseProfits(uint256 amount) external onlyOwner {
-        if (amount > usdcToken.balanceOf(address(this)))
-            revert InsufficientBalance();
+        uint256 houseBalance = usdcToken.balanceOf(address(this)) - totalPlayerBalances;
+        if (amount > houseBalance) revert InsufficientHouseBalance();
 
         bool success = usdcToken.transfer(owner(), amount);
         if (!success) revert TransferFailed();
