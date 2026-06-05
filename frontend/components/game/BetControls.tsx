@@ -12,7 +12,7 @@ import * as api from "@/lib/api";
 const BetControls: React.FC = () => {
   const { roundData, cashOut, placeBet, optimisticBets, displayMultiplier } =
     useGameContext();
-  const { walletBalance, walletAddress, refreshBalance } = useUSDC();
+  const { walletBalance, gameBalance, walletAddress, refreshBalance, depositUSDC, withdrawUSDC } = useUSDC();
   const { chainLabel, explorerUrl } = useChainInfo();
 
   const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
@@ -34,8 +34,42 @@ const BetControls: React.FC = () => {
 
   const betValidation = useBetValidation(
     betAmount,
-    useFreeBet ? freeBetMaxAmount : walletBalance || 0,
+    useFreeBet ? freeBetMaxAmount : gameBalance || 0,
   );
+
+  const [isManagingFunds, setIsManagingFunds] = useState(false);
+  const [fundAmount, setFundAmount] = useState("");
+  const [isFunding, setIsFunding] = useState(false);
+
+  const handleDeposit = async () => {
+    if (!fundAmount || isNaN(parseFloat(fundAmount))) return;
+    try {
+      setIsFunding(true);
+      setError(null);
+      await depositUSDC(parseFloat(fundAmount));
+      setIsManagingFunds(false);
+      setFundAmount("");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsFunding(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!fundAmount || isNaN(parseFloat(fundAmount))) return;
+    try {
+      setIsFunding(true);
+      setError(null);
+      await withdrawUSDC(parseFloat(fundAmount));
+      setIsManagingFunds(false);
+      setFundAmount("");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsFunding(false);
+    }
+  };
 
   // Fetch free bets info when wallet address changes
   useEffect(() => {
@@ -113,8 +147,8 @@ const BetControls: React.FC = () => {
         return;
       }
     } else {
-      if (!walletBalance || walletBalance <= 0) {
-        setError("Insufficient USDC balance");
+      if (!gameBalance || gameBalance <= 0) {
+        setError("Insufficient game balance (Deposit USDC first)");
         return;
       }
       if (parseFloat(amountToBet) > maxBetAmount) {
@@ -263,7 +297,7 @@ const BetControls: React.FC = () => {
     isBettingPhase &&
     !myBet &&
     ((useFreeBet && freeBetsRemaining > 0) ||
-      (!useFreeBet && walletBalance && walletBalance > 0));
+      (!useFreeBet && gameBalance !== null && gameBalance > 0));
 
   const potentialPayout =
     myBet && roundData?.phase === "FLYING"
@@ -284,18 +318,25 @@ const BetControls: React.FC = () => {
           </span>
         </span>
         <div className="flex gap-1.5 sm:gap-2">
-          <span className="bg-slate-800/80 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-slate-700/50 text-emerald-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
-            <span className="text-slate-500 text-[9px] sm:text-[10px]">💰</span>
-            <span className="hidden sm:inline">
-              {mounted ? walletBalance?.toFixed(2) || "0.00" : "0.00"}
-            </span>
-            <span className="sm:hidden">
-              {mounted ? walletBalance?.toFixed(1) || "0" : "0"}
-            </span>
-            <span className="text-[8px] sm:text-[9px] text-emerald-500/70">
-              USDC
-            </span>
-          </span>
+          <button 
+            onClick={() => setIsManagingFunds(!isManagingFunds)}
+            className={`bg-slate-800/80 px-2 sm:px-3 py-1 rounded border transition-colors flex items-center gap-2 sm:gap-3 ${isManagingFunds ? "border-emerald-500" : "border-slate-700/50 hover:border-emerald-500/50"}`}
+          >
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] sm:text-[9px] text-slate-500 font-medium leading-none mb-0.5 tracking-wider">WALLET</span>
+              <span className="text-slate-400 text-[10px] sm:text-xs font-bold leading-none">
+                {mounted ? walletBalance?.toFixed(2) || "0.00" : "0.00"}
+              </span>
+            </div>
+            <div className="w-px h-5 bg-slate-700/80"></div>
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] sm:text-[9px] text-emerald-500/70 font-bold leading-none mb-0.5 tracking-wider">GAME</span>
+              <span className="text-emerald-400 text-xs sm:text-sm font-black leading-none flex items-center gap-1">
+                <span className="text-[10px]">💰</span>
+                {mounted ? gameBalance?.toFixed(2) || "0.00" : "0.00"}
+              </span>
+            </div>
+          </button>
           {freeBetsRemaining > 0 && (
             <span className="bg-blue-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-blue-500/30 text-blue-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
               <span className="text-blue-500 text-[9px] sm:text-[10px]">
@@ -309,6 +350,50 @@ const BetControls: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Funds Manager Dropdown */}
+      {isManagingFunds && (
+        <div className="absolute top-14 right-2 sm:right-5 w-64 sm:w-72 bg-slate-800 border border-slate-600 rounded-xl p-3 sm:p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-xs sm:text-sm font-orbitron font-bold text-white tracking-widest flex items-center gap-2">
+              <span className="text-emerald-400">⚡</span> MANAGE FUNDS
+            </h3>
+            <button onClick={() => setIsManagingFunds(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between text-[10px] sm:text-xs font-courier text-slate-400">
+              <button className="hover:text-emerald-400 transition-colors" onClick={() => setFundAmount(walletBalance?.toString() || "0")}>Wallet: {walletBalance?.toFixed(2) || "0.00"}</button>
+              <button className="hover:text-emerald-400 transition-colors" onClick={() => setFundAmount(gameBalance?.toString() || "0")}>Game: {gameBalance?.toFixed(2) || "0.00"}</button>
+            </div>
+            <div className="relative">
+              <input
+                type="number"
+                value={fundAmount}
+                onChange={(e) => setFundAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-orbitron focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+              />
+              <span className="absolute right-3 top-2.5 text-[10px] sm:text-xs text-slate-500 font-bold font-courier tracking-widest">USDC</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeposit}
+                disabled={isFunding || !fundAmount || parseFloat(fundAmount) <= 0}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white text-[10px] sm:text-xs font-bold font-orbitron tracking-wider py-2 sm:py-2.5 rounded-lg transition-colors shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+              >
+                {isFunding ? "..." : "DEPOSIT"}
+              </button>
+              <button
+                onClick={handleWithdraw}
+                disabled={isFunding || !fundAmount || parseFloat(fundAmount) <= 0}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:hover:bg-slate-700 text-white text-[10px] sm:text-xs font-bold font-orbitron tracking-wider py-2 sm:py-2.5 rounded-lg transition-colors"
+              >
+                {isFunding ? "..." : "WITHDRAW"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {myBet && (
         <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 sm:p-4 shadow-inner relative overflow-hidden group">
@@ -444,7 +529,7 @@ const BetControls: React.FC = () => {
                   max={
                     useFreeBet
                       ? freeBetMaxAmount.toString()
-                      : Math.min(walletBalance || 0, maxBetAmount).toString()
+                      : Math.min(gameBalance || 0, maxBetAmount).toString()
                   }
                   className="w-full bg-transparent text-white text-lg sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
                   placeholder="0.00"
@@ -553,10 +638,10 @@ const BetControls: React.FC = () => {
       {isConnected && !canPlaceBet && roundData?.phase === "BETTING" && (
         <div className="bg-slate-800/60 border border-amber-500/30 rounded-lg p-3 text-center">
           <div className="text-amber-400 font-bold font-orbitron tracking-widest text-xs">
-            {walletBalance === 0 && freeBetsRemaining === 0
-              ? "INSUFFICIENT BALANCE"
-              : walletBalance === 0
-                ? "INSUFFICIENT BALANCE"
+            {gameBalance === 0 && freeBetsRemaining === 0
+              ? "INSUFFICIENT GAME BALANCE"
+              : gameBalance === 0
+                ? "INSUFFICIENT GAME BALANCE"
                 : myBet
                   ? "BET REGISTERED"
                   : "BETTING CLOSED"}
