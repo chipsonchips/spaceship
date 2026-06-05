@@ -188,6 +188,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                 >
                   <option value={8453}>Base</option>
                   <option value={42220}>Celo</option>
+                  <option value={-1} disabled>
+                    Stellar (Coming Soon)
+                  </option>
                 </select>
               </div>
 
@@ -290,6 +293,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             >
               <option value={8453}>Base Mainnet</option>
               <option value={42220}>Celo Mainnet</option>
+              <option value={-1} disabled>
+                Stellar (Coming Soon)
+              </option>
             </select>
           </div>
 
