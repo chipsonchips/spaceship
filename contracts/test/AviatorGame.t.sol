@@ -104,18 +104,28 @@ contract AviatorGameTest is Test {
         // We act as server operator (this contract is owner and initial operator)
         uint256 roundId = 123;
 
+        // Player must deposit first
+        vm.prank(PLAYER);
+        aviator.deposit(BET_AMOUNT);
+        assertEq(aviator.playerBalances(PLAYER), BET_AMOUNT);
+        assertEq(aviator.totalPlayerBalances(), BET_AMOUNT);
+
         vm.expectEmit(true, true, false, true);
         emit BetPlaced(roundId, PLAYER, BET_AMOUNT);
 
         aviator.placeBetFor(roundId, PLAYER, BET_AMOUNT);
 
-        assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT);
+        assertEq(aviator.playerBalances(PLAYER), 0);
+        assertEq(aviator.totalPlayerBalances(), 0);
+        assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT); // House keeps the bet
         assertEq(usdc.balanceOf(PLAYER), 1000e6 - BET_AMOUNT);
-        assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT);
     }
 
     function test_CannotPlaceLowOrHighBet() public {
         uint256 roundId = 1;
+
+        vm.prank(PLAYER);
+        aviator.deposit(1000e6); // Deposit the player's full balance
 
         vm.expectRevert(
             abi.encodeWithSelector(AviatorGame.InvalidBetAmount.selector)
@@ -143,7 +153,11 @@ contract AviatorGameTest is Test {
     function test_CashOutSuccessFlow() public {
         uint256 roundId = 123;
 
-        // 1. Place bet to fund house
+        // Player must deposit first
+        vm.prank(PLAYER);
+        aviator.deposit(BET_AMOUNT);
+
+        // 1. Place bet to fund house (bet becomes house funds)
         aviator.placeBetFor(roundId, PLAYER, BET_AMOUNT);
         assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT);
 
@@ -159,8 +173,16 @@ contract AviatorGameTest is Test {
         aviator.cashOutFor(roundId, PLAYER, payout, 200);
 
         // House balance should decrease
-        assertEq(usdc.balanceOf(address(aviator)), 0);
-        // Player should have original balance + winnings (net +1 bet amount)
+        uint256 houseBal = usdc.balanceOf(address(aviator)) - aviator.totalPlayerBalances();
+        assertEq(houseBal, 0);
+
+        // Player's game balance should have original + winnings
+        assertEq(aviator.playerBalances(PLAYER), payout);
+        
+        // Player withdraws
+        vm.prank(PLAYER);
+        aviator.withdraw(payout);
+        assertEq(aviator.playerBalances(PLAYER), 0);
         assertEq(usdc.balanceOf(PLAYER), 1000e6 + BET_AMOUNT);
     }
 
@@ -188,6 +210,9 @@ contract AviatorGameTest is Test {
     }
 
     function test_PausePreventsActions() public {
+        vm.prank(PLAYER);
+        aviator.deposit(BET_AMOUNT * 2);
+
         aviator.pause();
 
         vm.expectRevert();
@@ -209,13 +234,13 @@ contract AviatorGameTest is Test {
         ERC1967Proxy badProxy = new ERC1967Proxy(address(badImpl), badInit);
         AviatorGame bad = AviatorGame(payable(address(badProxy)));
 
-        // Attempt to place bet should revert because transferFrom returns false
-        // Need to be owner/operator to call placeBetFor, which we are (this contract)
+        // Attempt to deposit should revert because transferFrom returns false
 
+        vm.prank(PLAYER);
         vm.expectRevert(
             abi.encodeWithSelector(AviatorGame.TransferFailed.selector)
         );
-        bad.placeBetFor(1, PLAYER, BET_AMOUNT);
+        bad.deposit(BET_AMOUNT);
     }
 
     function test_SnapshotOnlyServerOperator() public {
@@ -316,18 +341,41 @@ contract AviatorGameTest is Test {
         uint256 bet1 = 100e6;
         uint256 bet2 = 200e6;
 
+        vm.prank(PLAYER);
+        aviator.deposit(bet1);
+
+        vm.prank(PLAYER2);
+        aviator.deposit(bet2);
+
         // Player 1 places bet
         aviator.placeBetFor(roundId, PLAYER, bet1);
 
         // Player 2 places bet
         aviator.placeBetFor(roundId, PLAYER2, bet2);
 
-        // House balance should reflect both
+        // House balance should reflect both (since balances are now 0)
         assertEq(usdc.balanceOf(address(aviator)), bet1 + bet2);
+        assertEq(aviator.totalPlayerBalances(), 0);
 
-        // Balances updated
+        // Wallet Balances updated
         assertEq(usdc.balanceOf(PLAYER), 1000e6 - bet1);
         assertEq(usdc.balanceOf(PLAYER2), 1000e6 - bet2);
+    }
+
+    function test_DepositAndWithdraw() public {
+        uint256 amount = 50e6;
+        
+        vm.prank(PLAYER);
+        aviator.deposit(amount);
+        assertEq(aviator.playerBalances(PLAYER), amount);
+        assertEq(aviator.totalPlayerBalances(), amount);
+        assertEq(usdc.balanceOf(PLAYER), 1000e6 - amount);
+
+        vm.prank(PLAYER);
+        aviator.withdraw(amount);
+        assertEq(aviator.playerBalances(PLAYER), 0);
+        assertEq(aviator.totalPlayerBalances(), 0);
+        assertEq(usdc.balanceOf(PLAYER), 1000e6);
     }
 
     function test_InitializationProtection() public {
