@@ -89,7 +89,7 @@ const SessionStats: React.FC = () => {
     totalRounds > 0 ? ((stats.wins / totalRounds) * 100).toFixed(1) : "0.0";
 
   return (
-    <div className="fixed top-20 left-2 sm:top-24 sm:left-4 z-30 pointer-events-none">
+    <div className="fixed top-40 left-2 sm:top-24 sm:left-4 z-30 pointer-events-none">
       <div className="bg-slate-900/40 backdrop-blur-md px-3 py-2.5 rounded-lg border border-slate-700/50 shadow-sm space-y-2">
         <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold leading-tight font-orbitron uppercase tracking-widest">
           Session Stats
