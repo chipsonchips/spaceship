@@ -12,7 +12,14 @@ import * as api from "@/lib/api";
 const BetControls: React.FC = () => {
   const { roundData, cashOut, placeBet, optimisticBets, displayMultiplier } =
     useGameContext();
-  const { walletBalance, gameBalance, walletAddress, refreshBalance, depositUSDC, withdrawUSDC } = useUSDC();
+  const {
+    walletBalance,
+    gameBalance,
+    walletAddress,
+    refreshBalance,
+    depositUSDC,
+    withdrawUSDC,
+  } = useUSDC();
   const { chainLabel, explorerUrl } = useChainInfo();
 
   const myBet = usePlayerBet(roundData, walletAddress || null, optimisticBets);
@@ -318,19 +325,23 @@ const BetControls: React.FC = () => {
           </span>
         </span>
         <div className="flex gap-1.5 sm:gap-2">
-          <button 
+          <button
             onClick={() => setIsManagingFunds(!isManagingFunds)}
             className={`bg-slate-800/80 px-2 sm:px-3 py-1 rounded border transition-colors flex items-center gap-2 sm:gap-3 ${isManagingFunds ? "border-emerald-500" : "border-slate-700/50 hover:border-emerald-500/50"}`}
           >
             <div className="flex flex-col items-end">
-              <span className="text-[8px] sm:text-[9px] text-slate-500 font-medium leading-none mb-0.5 tracking-wider">WALLET</span>
+              <span className="text-[8px] sm:text-[9px] text-slate-500 font-medium leading-none mb-0.5 tracking-wider">
+                WALLET
+              </span>
               <span className="text-slate-400 text-[10px] sm:text-xs font-bold leading-none">
                 {mounted ? walletBalance?.toFixed(2) || "0.00" : "0.00"}
               </span>
             </div>
             <div className="w-px h-5 bg-slate-700/80"></div>
             <div className="flex flex-col items-end">
-              <span className="text-[8px] sm:text-[9px] text-emerald-500/70 font-bold leading-none mb-0.5 tracking-wider">GAME</span>
+              <span className="text-[8px] sm:text-[9px] text-emerald-500/70 font-bold leading-none mb-0.5 tracking-wider">
+                GAME
+              </span>
               <span className="text-emerald-400 text-xs sm:text-sm font-black leading-none flex items-center gap-1">
                 <span className="text-[10px]">💰</span>
                 {mounted ? gameBalance?.toFixed(2) || "0.00" : "0.00"}
@@ -353,17 +364,32 @@ const BetControls: React.FC = () => {
 
       {/* Funds Manager Dropdown */}
       {isManagingFunds && (
-        <div className="absolute top-14 right-2 sm:right-5 w-64 sm:w-72 bg-slate-800 border border-slate-600 rounded-xl p-3 sm:p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute bottom-14 right-2 sm:right-5 w-64 sm:w-72 bg-slate-800 border border-slate-600 rounded-xl p-3 sm:p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-xs sm:text-sm font-orbitron font-bold text-white tracking-widest flex items-center gap-2">
               <span className="text-emerald-400">⚡</span> MANAGE FUNDS
             </h3>
-            <button onClick={() => setIsManagingFunds(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+            <button
+              onClick={() => setIsManagingFunds(false)}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
           </div>
           <div className="space-y-3">
             <div className="flex justify-between text-[10px] sm:text-xs font-courier text-slate-400">
-              <button className="hover:text-emerald-400 transition-colors" onClick={() => setFundAmount(walletBalance?.toString() || "0")}>Wallet: {walletBalance?.toFixed(2) || "0.00"}</button>
-              <button className="hover:text-emerald-400 transition-colors" onClick={() => setFundAmount(gameBalance?.toString() || "0")}>Game: {gameBalance?.toFixed(2) || "0.00"}</button>
+              <button
+                className="hover:text-emerald-400 transition-colors"
+                onClick={() => setFundAmount(walletBalance?.toString() || "0")}
+              >
+                Wallet: {walletBalance?.toFixed(2) || "0.00"}
+              </button>
+              <button
+                className="hover:text-emerald-400 transition-colors"
+                onClick={() => setFundAmount(gameBalance?.toString() || "0")}
+              >
+                Game: {gameBalance?.toFixed(2) || "0.00"}
+              </button>
             </div>
             <div className="relative">
               <input
@@ -373,19 +399,25 @@ const BetControls: React.FC = () => {
                 placeholder="0.00"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-orbitron focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
               />
-              <span className="absolute right-3 top-2.5 text-[10px] sm:text-xs text-slate-500 font-bold font-courier tracking-widest">USDC</span>
+              <span className="absolute right-3 top-2.5 text-[10px] sm:text-xs text-slate-500 font-bold font-courier tracking-widest">
+                USDC
+              </span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleDeposit}
-                disabled={isFunding || !fundAmount || parseFloat(fundAmount) <= 0}
+                disabled={
+                  isFunding || !fundAmount || parseFloat(fundAmount) <= 0
+                }
                 className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white text-[10px] sm:text-xs font-bold font-orbitron tracking-wider py-2 sm:py-2.5 rounded-lg transition-colors shadow-[0_0_10px_rgba(16,185,129,0.2)]"
               >
                 {isFunding ? "..." : "DEPOSIT"}
               </button>
               <button
                 onClick={handleWithdraw}
-                disabled={isFunding || !fundAmount || parseFloat(fundAmount) <= 0}
+                disabled={
+                  isFunding || !fundAmount || parseFloat(fundAmount) <= 0
+                }
                 className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:hover:bg-slate-700 text-white text-[10px] sm:text-xs font-bold font-orbitron tracking-wider py-2 sm:py-2.5 rounded-lg transition-colors"
               >
                 {isFunding ? "..." : "WITHDRAW"}
