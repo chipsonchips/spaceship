@@ -1,10 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-onchain`](https://www.npmjs.com/package/create-onchain).
 
+## Supported Chains
+
+The Aviator game is currently available on:
+
+- **Base** - Fully supported
+- **Celo** - Fully supported
+- **Stella** - Coming Soon
 
 ## Getting Started
 
 First, install dependencies:
-
 
 ```bash
 npm install
@@ -31,7 +37,6 @@ bun dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
 
 ## Learn More
 
