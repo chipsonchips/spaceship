@@ -148,7 +148,11 @@ export default function useUSDC() {
       });
       if (publicClient) {
         await publicClient.waitForTransactionReceipt({ hash });
-        fetchBalance().then((b) => setBalance(b));
+        const res = await fetchBalance();
+        if (res) {
+          setBalance(res.walletBalance);
+          setGameBalance(res.gameBalance);
+        }
       }
       return hash as `0x${string}`;
     },
@@ -158,7 +162,7 @@ export default function useUSDC() {
   const depositUSDC = useCallback(async (amount: number) => {
     if (!walletClient || !address) throw new Error("Wallet not connected");
     const amountInWei = parseUnits(amount.toString(), decimals);
-    
+
     const allowance = await checkAllowance(address, houseAddress);
     if (allowance < amount) {
       await approveUSDC(houseAddress, amountInWei);
@@ -170,7 +174,7 @@ export default function useUSDC() {
       functionName: "deposit",
       args: [amountInWei],
     });
-    
+
     if (publicClient) {
       await publicClient.waitForTransactionReceipt({ hash });
       const res = await fetchBalance();
@@ -185,14 +189,14 @@ export default function useUSDC() {
   const withdrawUSDC = useCallback(async (amount: number) => {
     if (!walletClient) throw new Error("Wallet not connected");
     const amountInWei = parseUnits(amount.toString(), decimals);
-    
+
     const hash = await walletClient.writeContract({
       address: houseAddress,
       abi: AVIATOR_ABI as any,
       functionName: "withdraw",
       args: [amountInWei],
     });
-    
+
     if (publicClient) {
       await publicClient.waitForTransactionReceipt({ hash });
       const res = await fetchBalance();
