@@ -186,7 +186,7 @@ const Nav = () => {
           >
             Leaderboard
           </Link>
-          {isConnected && (
+          {/* {isConnected && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-600/50 text-xs font-courier">
               <span className="text-slate-400 font-bold uppercase">
                 Balance:
@@ -195,7 +195,7 @@ const Nav = () => {
                 {(walletBalance || 0).toFixed(2)} USDC
               </span>
             </div>
-          )}
+          )} */}
           <ChainSwitcher />
           <button
             onClick={() => setIsSettingsOpen(true)}
