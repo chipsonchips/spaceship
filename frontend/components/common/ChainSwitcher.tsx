@@ -19,6 +19,7 @@ const ChainSwitcher: React.FC = () => {
 
   const currentChain = CHAIN_CONFIGS[chainId];
   const availableChains = Object.values(CHAIN_CONFIGS);
+  const comingSoonChains = [{ label: "Stella", status: "coming soon" }];
 
   const handleChainSwitch = (newChainId: number) => {
     switchChain({ chainId: newChainId });
@@ -60,6 +61,24 @@ const ChainSwitcher: React.FC = () => {
               {chain.label}
             </button>
           ))}
+
+          {comingSoonChains.length > 0 && (
+            <>
+              <div className="border-t border-slate-700 my-1" />
+              {comingSoonChains.map((chain) => (
+                <button
+                  key={chain.label}
+                  disabled
+                  className="w-full text-left px-4 py-2 text-sm text-gray-500 cursor-not-allowed opacity-50 flex items-center justify-between"
+                >
+                  <span>{chain.label}</span>
+                  <span className="text-xs text-gray-600 italic">
+                    {chain.status}
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
