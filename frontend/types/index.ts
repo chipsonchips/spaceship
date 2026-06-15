@@ -142,7 +142,7 @@ export interface GameContextType {
         amount: number,
         useFreeBet?: boolean,
         autoCashoutMultiplier?: number,
-    ) => Promise<{ success: boolean; error?: string; txHash?: string }>;
+    ) => Promise<{ success: boolean; error?: string; txHash?: string; betId?: number }>;
     cashOut: (betId: number) => Promise<{ success: boolean; error?: string }>;
     reconnect: () => void;
     disconnect: () => void;
