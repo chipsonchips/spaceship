@@ -7,6 +7,7 @@ import * as api from "@/lib/api";
 import { getUserFriendlyErrorMessage } from "@/lib/error-messages";
 import { ActiveBet } from "./ActiveBet";
 import { BetPlacementForm } from "./BetPlacementForm";
+import { useMultiBetTracking } from "@/hooks/useMultiBetTracking";
 import type { PlayerBet } from "@/types/game";
 
 interface SingleBetPanelProps {
@@ -18,6 +19,7 @@ interface SingleBetPanelProps {
     gameBalance: number;
   } | null>;
   panelId?: number;
+  compact?: boolean; // For mobile-optimized compact view
 }
 
 export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
@@ -26,18 +28,16 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
   gameBalance,
   refreshBalance,
   panelId = 1,
+  compact = false,
 }) => {
   const { roundData, cashOut, placeBet, optimisticBets, displayMultiplier } =
     useGameContext();
 
-  // Track which bet ID belongs to this panel
-  const [myBetId, setMyBetId] = useState<number | null>(null);
+  // Get all user bets for this round
+  const allUserBets = React.useMemo(() => {
+    if (!walletAddress || !roundData) return [];
 
-  // Find this panel's specific bet
-  const myBet = React.useMemo(() => {
-    if (!walletAddress || !roundData) return null;
-
-    const allUserBets = [
+    return [
       ...(roundData.players || []),
       ...optimisticBets.filter(
         (bet) =>
@@ -47,16 +47,19 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
     ].filter(
       (bet) => bet.address.toLowerCase() === walletAddress.toLowerCase(),
     );
+  }, [roundData, walletAddress, optimisticBets]);
 
-    // If we have a tracked bet ID for this panel, return that specific bet
-    if (myBetId !== null) {
-      const trackedBet = allUserBets.find((bet) => bet.id === myBetId);
-      if (trackedBet) return trackedBet;
-    }
-
-    // No bet for this panel
-    return null;
-  }, [roundData, walletAddress, optimisticBets, myBetId]);
+  // Use the multi-bet tracking hook
+  const {
+    myBet,
+    canPlaceBet: canPlaceBetForPanel,
+    trackBet,
+  } = useMultiBetTracking(
+    panelId,
+    roundData?.roundId,
+    walletAddress,
+    allUserBets,
+  );
 
   const [betAmount, setBetAmount] = useState("0.10");
   const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState<
@@ -96,13 +99,7 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
     }
   }, [myBet?.id, roundData?.roundId]);
 
-  // Reset bet tracking when round changes
-  useEffect(() => {
-    if (roundData?.roundId) {
-      setMyBetId(null);
-      setTxHash(null);
-    }
-  }, [roundData?.roundId]);
+  // No need to reset bet tracking - the hook handles that
 
   useEffect(() => {
     if (!error) return;
@@ -209,6 +206,12 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
         setTxHash(res.txHash || null);
         setLastBetAmount(amountToBet);
         setUseFreeBet(false);
+
+        // Track the bet ID for this panel
+        if (res.betId) {
+          trackBet(res.betId);
+        }
+
         await fetchFreeBetsInfo();
       } else {
         setError(res.error || "Failed to place bet");
@@ -254,7 +257,7 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
   const canPlaceBet =
     isConnected &&
     isBettingPhase &&
-    !myBet &&
+    canPlaceBetForPanel &&
     ((useFreeBet && freeBetsRemaining > 0) ||
       (!useFreeBet && gameBalance !== null && gameBalance > 0));
 
@@ -268,6 +271,7 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
           isCashingOut={isCashingOut}
           optimisticCashOut={optimisticCashOut}
           onCashOut={handleCashOut}
+          compact={compact}
         />
       )}
 
@@ -297,6 +301,7 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
           }}
           explorerUrl={explorerUrl}
           txHash={txHash}
+          compact={compact}
         />
       )}
 
