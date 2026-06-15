@@ -166,7 +166,7 @@ const Nav = () => {
           <div className="relative w-8 h-8 sm:w-10 sm:h-10 transition-transform group-hover:scale-110">
             <Image
               src="/logo.png"
-              alt="Aviator Logo"
+              alt="Spaceship Logo"
               fill
               className="object-contain drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]"
             />

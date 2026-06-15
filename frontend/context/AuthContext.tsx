@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(null);
 
         const timestamp = Date.now();
-        const message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+        const message = `Welcome to Spaceship! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
         let signature = "";
 
         try {
@@ -218,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (address) {
           try {
             const timestamp = Date.now();
-            message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+            message = `Welcome to Spaceship! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
             signature = await signMessageAsync({ message });
           } catch (signErr) {
             console.error(

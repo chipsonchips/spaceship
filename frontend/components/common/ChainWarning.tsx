@@ -31,7 +31,7 @@ const ChainWarning: React.FC = () => {
           Unsupported Chain
         </h3>
         <p className="text-yellow-300 text-sm">
-          Please switch to Base or Celo to play Aviator. Your current chain is
+          Please switch to Base or Celo to play Spaceship. Your current chain is
           not supported.
         </p>
       </div>

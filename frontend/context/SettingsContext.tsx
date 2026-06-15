@@ -44,7 +44,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
   undefined,
 );
 
-const STORAGE_KEY = "aviator_game_settings";
+const STORAGE_KEY = "spaceship_game_settings";
 
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({
   children,

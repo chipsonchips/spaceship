@@ -1,5 +1,5 @@
 /**
- * Environment detection utilities for Aviator app
+ * Environment detection utilities for Spaceship app
  * Helps detect whether the app is running in Farcaster miniapp context or standard web browser
  */
 

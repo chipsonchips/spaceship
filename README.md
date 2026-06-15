@@ -1,25 +1,28 @@
-# Aviator Game
+# Spaceship Game
 
-![Aviator Game Screenshot](https://purple-accessible-swift-921.mypinata.cloud/ipfs/bafkreie66ht6qors2fwlwihbbobx6umvdppyyxg4rb4fseto5u4fjvknqu)
+![Spaceship Game Screenshot](https://purple-accessible-swift-921.mypinata.cloud/ipfs/bafkreie66ht6qors2fwlwihbbobx6umvdppyyxg4rb4fseto5u4fjvknqu)
 
 A real-time crash game built on Base and Celo blockchain with Farcaster integration, USDC payments, and gasless transactions via Paymaster.
 
 ## Key Features
 
 ### Core Game
+
 - **Real-time crash game** with exponential multiplier growth
-- **Live player updates** via WebSocket  
+- **Live player updates** via WebSocket
 - **Provably fair** - on-chain crash verification with server seed hashing
 - **Instant payouts** in USDC
 - **Countdown timer** - Visible betting phase countdown
 
 ### Blockchain & Payments
+
 - ✅ **USDC payments** - Players bet in USDC tokens (Base network)
 - ✅ **Gasless transactions** - Paymaster sponsors transaction fees
 - ✅ **ERC-4337 compatible** - Account abstraction ready
 - ✅ **Secure betting** - Smart contract enforces all rules
 
 ### User Experience
+
 - ✅ **Farcaster MiniApp** - Frame SDK integrated
 - ✅ **Base Mini App Kit** - Native Base integration
 - ✅ **Celo Mini App Kit** - Native Base integration
@@ -29,7 +32,7 @@ A real-time crash game built on Base and Celo blockchain with Farcaster integrat
 ## Architecture
 
 ```
-aviator/
+spaceship/
 ├── frontend/          # Next.js 15 + React 19
 │   ├── app/           # App router (Farcaster entry)
 │   ├── components/    # Game UI components
@@ -45,8 +48,8 @@ aviator/
 │   │   └── config/    # Configuration
 ├── contracts/         # Solidity + Foundry
 │   ├── src/
-│   │   ├── AviatorGameUSDC.sol # Main contract (USDC + ERC-4337)
-│   │   └── Aviator.sol         # Legacy (ETH-based)
+│   │   ├── SpaceshipGameUSDC.sol # Main contract (USDC + ERC-4337)
+│   │   └── Spaceship.sol         # Legacy (ETH-based)
 │   ├── test/          # Contract tests
 │   └── script/        # Deployment scripts
 └── .env.example       # Configuration template
@@ -55,6 +58,7 @@ aviator/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js** ≥ 18.0.0
 - **pnpm** ≥ 8.0.0
 - **PostgreSQL** (backend)
@@ -65,7 +69,7 @@ aviator/
 ```bash
 # Clone and install
 git clone <repo>
-cd aviator
+cd spaceship
 pnpm install:all
 
 # Setup environment
@@ -92,20 +96,23 @@ pnpm db:sync && pnpm db:migrate
 
 ### Smart Contracts
 
-**Recommended: AviatorGameUSDC.sol**
+**Recommended: SpaceshipGameUSDC.sol**
+
 - USDC token support
 - ERC-4337 ready
 - Paymaster compatible
 
 **Deploy:**
+
 ```bash
 cd contracts
-forge script script/Aviator.s.sol --rpc-url $BASE_RPC --broadcast
+forge script script/Spaceship.s.sol --rpc-url $BASE_RPC --broadcast
 ```
 
 ### Paymaster (Gasless)
 
 Setup via [Coinbase Developer Platform](https://www.coinbase.com/developer-platform):
+
 1. Create account and get Paymaster URL
 2. Add contract to allowlist
 3. Set `NEXT_PUBLIC_PAYMASTER_PROXY_URL`

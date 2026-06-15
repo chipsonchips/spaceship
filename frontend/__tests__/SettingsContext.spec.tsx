@@ -86,14 +86,14 @@ describe("SettingsContext", () => {
     });
 
     const stored = JSON.parse(
-      localStorageMock.getItem("aviator_game_settings") || "{}",
+      localStorageMock.getItem("spaceship_game_settings") || "{}",
     );
     expect(stored.soundVolume).toBe(0.7);
   });
 
   it("loads settings from localStorage", () => {
     localStorageMock.setItem(
-      "aviator_game_settings",
+      "spaceship_game_settings",
       JSON.stringify({
         soundEnabled: false,
         soundVolume: 0.3,
@@ -133,7 +133,7 @@ describe("SettingsContext", () => {
       result.current.resetSettings();
     });
 
-    expect(localStorageMock.getItem("aviator_game_settings")).toBeNull();
+    expect(localStorageMock.getItem("spaceship_game_settings")).toBeNull();
   });
 
   it("handles localStorage errors gracefully", () => {

@@ -33,9 +33,9 @@ const courierPrime = Courier_Prime({
 export async function generateMetadata(): Promise<Metadata> {
   // Base metadata for all contexts
   const baseMetadata: Metadata = {
-    title: "Aviator",
+    title: "Spaceship",
     description:
-      "Aviator - Multiply your fund with fun. Play the crash game on Base.",
+      "Spaceship - Multiply your fund with fun. Play the crash game on Base.",
     icons: {
       icon: "/logo.png",
     },
@@ -49,14 +49,14 @@ export async function generateMetadata(): Promise<Metadata> {
         "a7cc46e178fd79b0de428df4f8ca8869c527df0cddfb569d1f1e9f4a0b1ac5cc2f3948a307974b1c7e16708d8d0dcb007c8cb942ef676f20596e8085011b263a",
       "fc:miniapp": JSON.stringify({
         version: "next",
-        imageUrl: "https://aviator-sand.vercel.app/embed-image",
+        imageUrl: "https://spaceship-sand.vercel.app/embed-image",
         button: {
-          title: `Launch Aviator`,
+          title: `Launch Spaceship`,
           action: {
             type: "launch_miniapp",
-            name: "Aviator",
-            url: "https://aviator-sand.vercel.app",
-            splashImageUrl: "https://aviator-sand.vercel.app/splash-image",
+            name: "Spaceship",
+            url: "https://spaceship-sand.vercel.app",
+            splashImageUrl: "https://spaceship-sand.vercel.app/splash-image",
             splashBackgroundColor: "#000000",
           },
         },
