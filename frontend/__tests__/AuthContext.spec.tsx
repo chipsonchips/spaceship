@@ -83,11 +83,12 @@ describe("AuthContext", () => {
       const storedTokens = {
         accessToken: "access-token-123",
         refreshToken: "refresh-token-123",
-        expiresIn: 3600,
+        expiresIn: 86400000,
       };
 
       localStorage.setItem("authUser", JSON.stringify(storedUser));
       localStorage.setItem("authTokens", JSON.stringify(storedTokens));
+      localStorage.setItem("authTokenTimestamp", Date.now().toString());
 
       const TestComponent = () => {
         const { user, isAuthenticated } = useAuth();
@@ -111,9 +112,12 @@ describe("AuthContext", () => {
         </AuthProvider>,
       );
 
-      await waitFor(() => {
-        expect(screen.getByText("testuser")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("testuser")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -251,11 +255,12 @@ describe("AuthContext", () => {
       const tokens = {
         accessToken: "access-token-123",
         refreshToken: "refresh-token-123",
-        expiresIn: 3600,
+        expiresIn: 86400000,
       };
 
       localStorage.setItem("authUser", JSON.stringify(initialUser));
       localStorage.setItem("authTokens", JSON.stringify(tokens));
+      localStorage.setItem("authTokenTimestamp", Date.now().toString());
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -283,15 +288,20 @@ describe("AuthContext", () => {
         </AuthProvider>,
       );
 
-      const updateButton = screen.getByText("Update");
+      const updateButton = await waitFor(() => screen.getByText("Update"), {
+        timeout: 3000,
+      });
 
       await act(async () => {
         updateButton.click();
       });
 
-      await waitFor(() => {
-        expect(screen.getByText("newusername")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("newusername")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should throw error if not authenticated", async () => {
@@ -388,9 +398,10 @@ describe("AuthContext", () => {
   });
 
   describe("Permission checks", () => {
-    it("should check if user has permission", () => {
+    it("should check if user has permission", async () => {
       const user = {
         id: "user-123",
+        address: "0x1234567890123456789012345678901234567890",
         username: "testuser",
         role: UserRole.PLAYER,
         permissions: ["read:admin", "write:house"],
@@ -404,9 +415,10 @@ describe("AuthContext", () => {
         JSON.stringify({
           accessToken: "token",
           refreshToken: "token",
-          expiresIn: 3600,
+          expiresIn: 86400000,
         }),
       );
+      localStorage.setItem("authTokenTimestamp", Date.now().toString());
 
       const TestComponent = () => {
         const { hasPermission } = useAuth();
@@ -425,13 +437,19 @@ describe("AuthContext", () => {
         </AuthProvider>,
       );
 
-      expect(screen.getByText("Has read:admin")).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText("Has read:admin")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
       expect(screen.getByText("No write:contract")).toBeInTheDocument();
     });
 
-    it("should return true for admin users", () => {
+    it("should return true for admin users", async () => {
       const user = {
         id: "user-123",
+        address: "0x1234567890123456789012345678901234567890",
         username: "admin",
         role: UserRole.ADMIN,
         permissions: [],
@@ -445,9 +463,10 @@ describe("AuthContext", () => {
         JSON.stringify({
           accessToken: "token",
           refreshToken: "token",
-          expiresIn: 3600,
+          expiresIn: 86400000,
         }),
       );
+      localStorage.setItem("authTokenTimestamp", Date.now().toString());
 
       const TestComponent = () => {
         const { hasPermission, isAdmin } = useAuth();
@@ -466,7 +485,12 @@ describe("AuthContext", () => {
         </AuthProvider>,
       );
 
-      expect(screen.getByText("Is admin")).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(screen.getByText("Is admin")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
       expect(screen.getByText("Has any permission")).toBeInTheDocument();
     });
   });

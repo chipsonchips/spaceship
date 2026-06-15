@@ -1,38 +1,48 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import SessionStats from "@/components/game/SessionStats";
 import { SettingsProvider } from "@/context/SettingsContext";
 import React from "react";
 
-const mockGameHistory = [
+let mockWalletAddress = "0x1234567890123456789012345678901234567890";
+let mockBets = [
   {
+    id: 1,
     roundId: 1,
+    amount: 100,
+    cashedOut: true,
+    cashoutMultiplier: 1.5,
+    payout: 150,
     crashMultiplier: 2.5,
     timestamp: Date.now(),
-    totalBets: 100,
-    totalPayouts: 150,
-    winnersCount: 5,
+    txHash: "0x123",
+    status: "completed",
   },
   {
+    id: 2,
     roundId: 2,
+    amount: 80,
+    cashedOut: false,
+    cashoutMultiplier: null,
+    payout: 0,
     crashMultiplier: 1.2,
     timestamp: Date.now(),
-    totalBets: 80,
-    totalPayouts: 0,
-    winnersCount: 0,
+    txHash: null,
+    status: "lost",
   },
   {
+    id: 3,
     roundId: 3,
+    amount: 120,
+    cashedOut: true,
+    cashoutMultiplier: 1.8,
+    payout: 200,
     crashMultiplier: 3.5,
     timestamp: Date.now(),
-    totalBets: 120,
-    totalPayouts: 200,
-    winnersCount: 8,
+    txHash: "0x456",
+    status: "completed",
   },
 ];
-
-let mockWalletAddress = "0x1234567890123456789012345678901234567890";
-let mockHistory = mockGameHistory;
 
 vi.mock("@/hooks/useUSDC", () => ({
   default: () => ({
@@ -40,62 +50,112 @@ vi.mock("@/hooks/useUSDC", () => ({
   }),
 }));
 
-vi.mock("@/context/GameContext", () => ({
-  useGameContext: () => ({
-    gameHistory: mockHistory,
-  }),
+vi.mock("@/lib/api", () => ({
+  fetchMyBetHistory: vi.fn(async () => ({ bets: mockBets })),
 }));
 
 describe("SessionStats", () => {
   beforeEach(() => {
     mockWalletAddress = "0x1234567890123456789012345678901234567890";
-    mockHistory = mockGameHistory;
+    mockBets = [
+      {
+        id: 1,
+        roundId: 1,
+        amount: 100,
+        cashedOut: true,
+        cashoutMultiplier: 1.5,
+        payout: 150,
+        crashMultiplier: 2.5,
+        timestamp: Date.now(),
+        txHash: "0x123",
+        status: "completed",
+      },
+      {
+        id: 2,
+        roundId: 2,
+        amount: 80,
+        cashedOut: false,
+        cashoutMultiplier: null,
+        payout: 0,
+        crashMultiplier: 1.2,
+        timestamp: Date.now(),
+        txHash: null,
+        status: "lost",
+      },
+      {
+        id: 3,
+        roundId: 3,
+        amount: 120,
+        cashedOut: true,
+        cashoutMultiplier: 1.8,
+        payout: 200,
+        crashMultiplier: 3.5,
+        timestamp: Date.now(),
+        txHash: "0x456",
+        status: "completed",
+      },
+    ];
+    vi.clearAllMocks();
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SettingsProvider>{children}</SettingsProvider>
   );
 
-  it("displays session stats header", () => {
+  it("displays session stats header", async () => {
     const { container } = render(<SessionStats />, { wrapper });
-    expect(container.textContent).toContain("Session Stats");
+    await waitFor(() => {
+      expect(container.textContent).toContain("Session Stats");
+    });
   });
 
-  it("calculates wins correctly", () => {
+  it("calculates wins correctly", async () => {
     const { container } = render(<SessionStats />, { wrapper });
-    // 2 rounds with winners
-    expect(container.textContent).toContain("2");
-    expect(container.textContent).toContain("Wins");
+    // 2 bets with cashedOut=true and payout > 0
+    await waitFor(() => {
+      expect(container.textContent).toContain("2");
+      expect(container.textContent).toContain("Wins");
+    });
   });
 
-  it("calculates losses correctly", () => {
+  it("calculates losses correctly", async () => {
     const { container } = render(<SessionStats />, { wrapper });
-    // 1 round with no winners
-    expect(container.textContent).toContain("1");
-    expect(container.textContent).toContain("Losses");
+    // 1 bet with cashedOut=false
+    await waitFor(() => {
+      expect(container.textContent).toContain("1");
+      expect(container.textContent).toContain("Losses");
+    });
   });
 
-  it("calculates win rate correctly", () => {
+  it("calculates win rate correctly", async () => {
     const { container } = render(<SessionStats />, { wrapper });
     // 2 wins out of 3 rounds = 66.7%
-    expect(container.textContent).toContain("66.7%");
+    await waitFor(() => {
+      expect(container.textContent).toContain("66.7%");
+    });
   });
 
-  it("displays total rounds", () => {
+  it("displays total rounds", async () => {
     const { container } = render(<SessionStats />, { wrapper });
-    expect(container.textContent).toContain("Rounds: 3");
+    await waitFor(() => {
+      expect(container.textContent).toContain("Rounds: 3");
+    });
   });
 
-  it("handles empty game history", () => {
-    mockHistory = [];
+  it("handles empty game history", async () => {
+    mockBets = [];
     const { container } = render(<SessionStats />, { wrapper });
-    expect(container.textContent).toContain("0.0%");
+    await waitFor(() => {
+      expect(container.textContent).toContain("0.0%");
+    });
   });
 
-  it("handles no wallet address", () => {
+  it("handles no wallet address", async () => {
     mockWalletAddress = null as any;
     const { container } = render(<SessionStats />, { wrapper });
     // Component should render with 0 stats when no wallet
-    expect(container.textContent).toContain("Session Stats");
+    await waitFor(() => {
+      expect(container.textContent).toContain("Session Stats");
+    });
   });
 });
