@@ -10,6 +10,7 @@ interface ActiveBetProps {
   isCashingOut: boolean;
   optimisticCashOut: boolean;
   onCashOut: () => void;
+  compact?: boolean;
 }
 
 export const ActiveBet: React.FC<ActiveBetProps> = ({
@@ -19,9 +20,69 @@ export const ActiveBet: React.FC<ActiveBetProps> = ({
   isCashingOut,
   optimisticCashOut,
   onCashOut,
+  compact = false,
 }) => {
   const potentialPayout = Number(bet.amount) * Number(displayMultiplier);
 
+  // Compact mode for dual bet panels
+  if (compact) {
+    return (
+      <div className="bg-gradient-to-b from-emerald-900/20 to-slate-900/60 border border-emerald-500/30 rounded-lg p-2 shadow-inner relative overflow-hidden">
+        <div className="relative flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-orbitron text-emerald-400/80 uppercase tracking-wider font-semibold">
+              ACTIVE
+            </span>
+            {bet.autoCashoutMultiplier && (
+              <span className="bg-slate-800/60 border border-emerald-500/20 rounded px-1 py-0.5 text-[8px] text-emerald-400 font-bold font-courier">
+                Auto: {bet.autoCashoutMultiplier}x
+              </span>
+            )}
+          </div>
+          <div className="text-sm font-black text-white">
+            {Number(bet.amount).toFixed(2)}{" "}
+            <span className="text-[9px] text-emerald-200">USDC</span>
+          </div>
+        </div>
+
+        {(bet.cashedOut || optimisticCashOut) && bet.payout && (
+          <div className="text-center py-1.5 bg-emerald-500/10 rounded border border-emerald-500/20 mb-1.5">
+            <div className="text-emerald-400 font-black text-sm font-orbitron">
+              {optimisticCashOut && isCashingOut
+                ? "CASHING..."
+                : `+ ${Number(bet.payout).toFixed(2)}`}
+            </div>
+            <div className="text-[8px] text-emerald-300 font-bold font-courier">
+              {optimisticCashOut && isCashingOut
+                ? "Processing..."
+                : `@ ${bet.cashoutMultiplier}x`}
+            </div>
+          </div>
+        )}
+
+        {roundPhase === "FLYING" && !bet.cashedOut && !optimisticCashOut && (
+          <button
+            onClick={onCashOut}
+            disabled={isCashingOut}
+            className="w-full relative overflow-hidden rounded-md font-black font-orbitron uppercase tracking-wider text-xs transition-all disabled:opacity-50 transform active:scale-[0.97]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
+            <div className="relative px-2 py-1.5 flex items-center justify-center text-white shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+              <span className="text-sm mr-1">💰</span>
+              <span>{isCashingOut ? "..." : "CASH OUT"}</span>
+              {!isCashingOut && (
+                <span className="ml-1 text-[10px] font-black">
+                  {potentialPayout.toFixed(2)}
+                </span>
+              )}
+            </div>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Full mode: Original detailed layout
   return (
     <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 sm:p-4 shadow-inner relative overflow-hidden group">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none"></div>
