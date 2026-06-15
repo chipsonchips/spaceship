@@ -69,7 +69,7 @@ describe('ChainService', () => {
     process.env.BASE_RPC_URL = 'https://test-rpc.example.com';
     process.env.BACKEND_PRIVATE_KEY =
       '0x1111111111111111111111111111111111111111111111111111111111111111';
-    process.env.BASE_AVIATOR_CONTRACT_ADDRESS = '0x2222222222222222222222222222222222222222';
+    process.env.BASE_SPACESHIP_CONTRACT_ADDRESS = '0x2222222222222222222222222222222222222222';
 
     // Setup mock provider
     mockProvider = {
@@ -131,7 +131,7 @@ describe('ChainService', () => {
       expect(() => new ChainService(8453)).toThrow(/BACKEND_PRIVATE_KEY/);
     });
 
-    it('should throw error if BASE_AVIATOR_CONTRACT_ADDRESS is missing', () => {
+    it('should throw error if BASE_SPACESHIP_CONTRACT_ADDRESS is missing', () => {
       // Skipping this test as it requires complex mocking of getChainConfig
       // which causes circular dependency issues. The actual error handling is tested
       // in integration tests.

@@ -1,7 +1,7 @@
 {
-  "name": "aviator-backend",
+  "name": "spaceship-backend",
   "version": "1.0.0",
-  "description": "Aviator Game Backend Server",
+  "description": "Spaceship Game Backend Server",
   "main": "dist/index.js",
   "scripts": {
     "build": "npx tsc",

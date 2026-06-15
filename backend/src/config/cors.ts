@@ -1,7 +1,7 @@
 const DEFAULT_ORIGINS = [
-  'https://aviator-sand.vercel.app',
+  'https://spaceship-sand.vercel.app',
   'http://localhost:3000',
-  'https://aviator.farcast.app',
+  'https://spaceship.farcast.app',
 ];
 
 export function getCorsOrigins(): (string | RegExp)[] {

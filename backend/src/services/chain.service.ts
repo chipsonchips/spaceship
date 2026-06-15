@@ -1,10 +1,10 @@
 import { ethers, type InterfaceAbi, FetchRequest, NonceManager } from 'ethers';
 import https from 'node:https';
 import { computePlayersMerkleRoot } from './merkle.js';
-import aviatorAbi from '../abi/aviator.json' with { type: 'json' };
+import spaceshipAbi from '../abi/spaceship.json' with { type: 'json' };
 import { getChainConfig } from '../config/chains.js';
 
-const aviatorAbiTyped = aviatorAbi as unknown as InterfaceAbi;
+const spaceshipAbiTyped = spaceshipAbi as unknown as InterfaceAbi;
 
 // Shared HTTP/HTTPS agent configured to force IPv4 connection.
 // This works around Node.js v18/v20 happy eyeballs and undici IPv6 connection timeout issues.
@@ -51,7 +51,7 @@ export class ChainService {
     this.provider = new ethers.JsonRpcProvider(fetchReq);
     this.baseSigner = new ethers.Wallet(key, this.provider);
     this.signer = new NonceManager(this.baseSigner);
-    this.contract = new ethers.Contract(addr, aviatorAbiTyped, this.signer);
+    this.contract = new ethers.Contract(addr, spaceshipAbiTyped, this.signer);
 
     // Initialize provider connection in background
     this.initializeProvider().catch((err) => {
@@ -65,7 +65,7 @@ export class ChainService {
     try {
       // Recreate the NonceManager to reset the nonce tracking
       this.signer = new NonceManager(this.baseSigner);
-      this.contract = new ethers.Contract(this.contractAddress, aviatorAbiTyped, this.signer);
+      this.contract = new ethers.Contract(this.contractAddress, spaceshipAbiTyped, this.signer);
 
       const address = await this.baseSigner.getAddress();
       const onChainNonce = await this.provider.getTransactionCount(address, 'latest');

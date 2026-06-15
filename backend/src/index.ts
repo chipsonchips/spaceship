@@ -94,7 +94,7 @@ app.get('/health', async (req: Request, res: Response) => {
 });
 
 app.get('/', (req: Request, res: Response) => {
-  res.status(200).json({ message: 'Aviator Backend API is running' });
+  res.status(200).json({ message: 'Spaceship Backend API is running' });
 });
 
 // GameEngine setup

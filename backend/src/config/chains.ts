@@ -18,7 +18,7 @@ const CHAIN_REGISTRY: Record<string, BackendChainConfig> = {
         chainId: 8453,
         label: "Base",
         rpcUrl: process.env.BASE_RPC_URL || "https://mainnet.base.org",
-        contractAddress: process.env.BASE_AVIATOR_CONTRACT_ADDRESS || "",
+        contractAddress: process.env.BASE_SPACESHIP_CONTRACT_ADDRESS || "",
         usdcAddress:
             process.env.BASE_USDC_ADDRESS ||
             "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
@@ -28,7 +28,7 @@ const CHAIN_REGISTRY: Record<string, BackendChainConfig> = {
         chainId: 42220,
         label: "Celo",
         rpcUrl: process.env.CELO_RPC_URL || "https://forno.celo.org",
-        contractAddress: process.env.CELO_AVIATOR_CONTRACT_ADDRESS || "",
+        contractAddress: process.env.CELO_SPACESHIP_CONTRACT_ADDRESS || "",
         usdcAddress:
             process.env.CELO_USDC_ADDRESS ||
             "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
@@ -74,7 +74,7 @@ export function getChainConfig(chainId: number | string): BackendChainConfig {
     if (!config.contractAddress) {
         throw new Error(
             `Contract address not set for chain "${config.label}". ` +
-            `Set ${config.label.toUpperCase()}_AVIATOR_CONTRACT_ADDRESS in your .env`
+            `Set ${config.label.toUpperCase()}_SPACESHIP_CONTRACT_ADDRESS in your .env`
         );
     }
 
