@@ -329,6 +329,30 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
           </span>
         </span>
         <div className="flex gap-1.5 sm:gap-2">
+          {onToggleMode && (
+            <button
+              onClick={onToggleMode}
+              title="Switch to Dual Bets Mode"
+              className="bg-slate-800/80 px-2 sm:px-3 py-1 rounded border border-slate-700/50 hover:border-blue-500/50 transition-colors flex items-center gap-1.5"
+            >
+              <span className="text-[10px] sm:text-xs text-slate-400 font-bold font-orbitron">
+                DUAL
+              </span>
+              <svg
+                className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setIsManagingFunds(!isManagingFunds)}
             className={`bg-slate-800/80 px-2 sm:px-3 py-1 rounded border transition-colors flex items-center gap-2 sm:gap-3 ${isManagingFunds ? "border-emerald-500" : "border-slate-700/50 hover:border-emerald-500/50"}`}

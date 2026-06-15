@@ -35,7 +35,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
   useEffect(() => {
     setClientSeed(
       Math.random().toString(36).substring(2) +
-        Math.random().toString(36).substring(2),
+      Math.random().toString(36).substring(2),
     );
   }, []);
 
@@ -120,7 +120,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
         if (res.success && res.bet) {
           setClientSeed(
             Math.random().toString(36).substring(2) +
-              Math.random().toString(36).substring(2),
+            Math.random().toString(36).substring(2),
           );
           setOptimisticBets((prev) => [
             ...prev,
@@ -133,6 +133,7 @@ export function useGame(options: { wsUrl?: string } = {}) {
           return {
             success: true,
             txHash: (res.bet as PlayerBet).txHash ?? undefined,
+            betId: (res.bet as PlayerBet).id,
           };
         }
 

@@ -3,7 +3,7 @@
 import Nav from "../layout/Nav";
 import { GameProvider } from "@/context/GameContext";
 import GameBoard from "@/components/game/GameBoard";
-import BetControls from "@/components/game/BetControls";
+import UnifiedBetControls from "@/components/game/UnifiedBetControls";
 import RoundInfo from "@/components/game/RoundInfo";
 import HistoryBar from "@/components/game/HistoryBar";
 import ParticleEffect from "@/components/game/ParticleEffect";
@@ -32,7 +32,7 @@ const GameScreen = () => {
           </div>
         </ErrorBoundary>
         <HistoryBar />
-        <BetControls />
+        <UnifiedBetControls />
       </div>
     </GameProvider>
   );
