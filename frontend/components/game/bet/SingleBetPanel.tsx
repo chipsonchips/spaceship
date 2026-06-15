@@ -205,17 +205,11 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
       if (!useFreeBet) {
         await refreshBalance();
       }
-      if (res?.success && res.bet) {
-        const placedBet = res.bet as PlayerBet;
+      if (res?.success) {
         setTxHash(res.txHash || null);
         setLastBetAmount(amountToBet);
         setUseFreeBet(false);
         await fetchFreeBetsInfo();
-
-        // Track this bet ID for this panel
-        if (placedBet.id) {
-          setMyBetId(placedBet.id);
-        }
       } else {
         setError(res.error || "Failed to place bet");
       }
