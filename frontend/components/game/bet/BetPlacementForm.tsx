@@ -22,6 +22,7 @@ interface BetPlacementFormProps {
   onRebet?: () => void;
   explorerUrl: string;
   txHash: string | null;
+  compact?: boolean; // Mobile-optimized compact mode
 }
 
 export const BetPlacementForm: React.FC<BetPlacementFormProps> = ({
@@ -43,7 +44,98 @@ export const BetPlacementForm: React.FC<BetPlacementFormProps> = ({
   onRebet,
   explorerUrl,
   txHash,
+  compact = false,
 }) => {
+  // Compact mode: Ultra-minimal for mobile dual bet
+  if (compact) {
+    return (
+      <div className="space-y-1.5 sm:space-y-2">
+        {/* Compact Input with Inline Presets */}
+        <div className="flex gap-1.5">
+          <div className="relative flex-1">
+            <div className="relative flex items-center bg-slate-900/60 border border-slate-600/60 rounded-md px-2 py-1.5 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+              <span className="text-emerald-400 mr-1 font-bold text-xs">$</span>
+              <input
+                type="number"
+                value={betAmount}
+                onChange={(e) => onBetAmountChange(e.target.value)}
+                step="0.10"
+                min="0.10"
+                className="w-full bg-transparent text-white text-sm font-bold font-orbitron focus:outline-none placeholder-slate-600"
+                placeholder="0.00"
+              />
+            </div>
+            {validationError && (
+              <div className="text-red-400 text-[8px] mt-0.5 font-bold flex items-center gap-0.5">
+                <span>⚠️</span>
+                <span>{validationError}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Presets - Inline */}
+          <div className="flex gap-1">
+            {["0.5", "1", "5"].map((amount) => {
+              const amountNum = parseFloat(amount);
+              const isDisabled = useFreeBet
+                ? amountNum > freeBetMaxAmount
+                : amountNum > maxBetAmount;
+              return (
+                <button
+                  key={amount}
+                  onClick={() => onBetAmountChange(amount)}
+                  disabled={isDisabled}
+                  className={`px-2 py-1.5 rounded text-[10px] font-bold font-orbitron transition-all ${
+                    isDisabled
+                      ? "bg-slate-800/30 border border-slate-700/30 text-slate-600"
+                      : "bg-slate-800/60 border border-slate-600/60 text-emerald-100 hover:border-emerald-500/50 active:scale-95"
+                  }`}
+                >
+                  {amount}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Auto Cashout - Compact */}
+        <AutoCashout
+          value={autoCashoutMultiplier}
+          onChange={onAutoCashoutChange}
+          disabled={isProcessing}
+        />
+
+        {/* Place Bet Button - Compact */}
+        <button
+          onClick={onPlaceBet}
+          disabled={!!validationError || isProcessing || !isBettingPhase}
+          className="w-full relative overflow-hidden rounded-md font-bold font-orbitron uppercase tracking-wider text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.97]"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 bg-[length:200%_auto] hover:bg-right transition-all duration-500"></div>
+          <div className="relative px-3 py-2 flex items-center justify-center text-slate-950 shadow-[inset_0_1px_rgba(255,255,255,0.4)]">
+            {isProcessing ? "..." : !isBettingPhase ? "CLOSED" : "PLACE BET"}
+          </div>
+        </button>
+
+        {/* TX Hash - Ultra Compact */}
+        {txHash && (
+          <div className="text-[8px] font-courier flex items-center justify-center gap-1 bg-emerald-900/10 py-1 px-1.5 rounded border border-emerald-500/20">
+            <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={`${explorerUrl}/tx/${txHash}`}
+              className="text-emerald-300 underline"
+            >
+              {txHash.slice(0, 6)}...
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Full mode: Original detailed layout
   return (
     <div className="space-y-2 sm:space-y-3">
       {freeBetsRemaining > 0 && (
