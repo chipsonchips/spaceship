@@ -20,6 +20,6 @@ base_sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basesca
 base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
 celo = { key = "${ETHERSCAN_API_KEY}", url = "https://celoscan.io/api" }
 
-#forge script script/AviatorGame.s.sol:AviatorGameScript \
+#forge script script/SpaceshipGame.s.sol:SpaceshipGameScript \
 #  --rpc-url $RPC_URL \
 #  --broadcast

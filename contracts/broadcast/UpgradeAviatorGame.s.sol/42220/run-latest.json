@@ -3,7 +3,7 @@
     {
       "hash": "0x4c0f8e61736a2cc6ea949802e29ef1998b2f69f2002170381255b49ad7ea7c06",
       "transactionType": "CREATE",
-      "contractName": "AviatorGame",
+      "contractName": "SpaceshipGame",
       "contractAddress": "0xef5ee2537056bef8bd284003c671a425e6d51916",
       "function": null,
       "arguments": null,

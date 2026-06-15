@@ -2,14 +2,14 @@
 pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
-import {AviatorGame} from "../src/AviatorGame.sol";
+import {SpaceshipGame} from "../src/SpaceshipGame.sol";
 import {console} from "forge-std/console.sol";
 
 import {
     ERC1967Proxy
 } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract AviatorScript is Script {
+contract SpaceshipScript is Script {
     function run() external {
         // Load the private key from the environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -22,11 +22,11 @@ contract AviatorScript is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy implementation
-        AviatorGame implementation = new AviatorGame();
+        SpaceshipGame implementation = new SpaceshipGame();
 
         // Encode initializer
         bytes memory initData = abi.encodeWithSelector(
-            AviatorGame.initialize.selector,
+            SpaceshipGame.initialize.selector,
             usdcTokenAddress,
             vm.addr(deployerPrivateKey)
         );
@@ -36,9 +36,9 @@ contract AviatorScript is Script {
             address(implementation),
             initData
         );
-        AviatorGame aviator = AviatorGame(payable(address(proxy)));
+        SpaceshipGame spaceship = SpaceshipGame(payable(address(proxy)));
 
-        console.log("AviatorGame Proxy deployed to:", address(aviator));
+        console.log("SpaceshipGame Proxy deployed to:", address(spaceship));
 
         vm.stopBroadcast();
     }
