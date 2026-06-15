@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {AviatorGame} from "../src/AviatorGame.sol";
+import {SpaceshipGame} from "../src/SpaceshipGame.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -41,7 +41,7 @@ contract RejectETH {
     }
 }
 
-contract AviatorGameTest is Test {
+contract SpaceshipGameTest is Test {
     // local matching event for expectEmit
     event BetPlaced(
         uint256 indexed roundId,
@@ -66,7 +66,7 @@ contract AviatorGameTest is Test {
     // Allow test contract to receive ETH
     receive() external payable {}
 
-    AviatorGame public aviator;
+    SpaceshipGame public spaceship;
     ERC20Mock public usdc;
     address public constant PLAYER = address(1);
     address public constant PLAYER2 = address(2);
@@ -76,28 +76,28 @@ contract AviatorGameTest is Test {
         // Deploy mock USDC token
         usdc = new ERC20Mock();
 
-        // Deploy AviatorGame implementation and proxy
-        AviatorGame impl = new AviatorGame();
+        // Deploy SpaceshipGame implementation and proxy
+        SpaceshipGame impl = new SpaceshipGame();
         bytes memory initData = abi.encodeCall(
-            AviatorGame.initialize,
+            SpaceshipGame.initialize,
             (address(usdc), address(this))
         );
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
-        aviator = AviatorGame(payable(address(proxy)));
+        spaceship = SpaceshipGame(payable(address(proxy)));
 
         // Mint USDC to test players and the test contract itself (for funding house)
         usdc.mint(PLAYER, 1000e6);
         usdc.mint(PLAYER2, 1000e6);
         usdc.mint(address(this), 10000e6);
 
-        // Approve aviator to spend players' USDC
+        // Approve spaceship to spend players' USDC
         vm.prank(PLAYER);
-        usdc.approve(address(aviator), type(uint256).max);
+        usdc.approve(address(spaceship), type(uint256).max);
         vm.prank(PLAYER2);
-        usdc.approve(address(aviator), type(uint256).max);
+        usdc.approve(address(spaceship), type(uint256).max);
 
-        // Approve aviator to spend test contract's USDC
-        usdc.approve(address(aviator), type(uint256).max);
+        // Approve spaceship to spend test contract's USDC
+        usdc.approve(address(spaceship), type(uint256).max);
     }
 
     function test_PlaceBet() public {
@@ -106,18 +106,18 @@ contract AviatorGameTest is Test {
 
         // Player must deposit first
         vm.prank(PLAYER);
-        aviator.deposit(BET_AMOUNT);
-        assertEq(aviator.playerBalances(PLAYER), BET_AMOUNT);
-        assertEq(aviator.totalPlayerBalances(), BET_AMOUNT);
+        spaceship.deposit(BET_AMOUNT);
+        assertEq(spaceship.playerBalances(PLAYER), BET_AMOUNT);
+        assertEq(spaceship.totalPlayerBalances(), BET_AMOUNT);
 
         vm.expectEmit(true, true, false, true);
         emit BetPlaced(roundId, PLAYER, BET_AMOUNT);
 
-        aviator.placeBetFor(roundId, PLAYER, BET_AMOUNT);
+        spaceship.placeBetFor(roundId, PLAYER, BET_AMOUNT);
 
-        assertEq(aviator.playerBalances(PLAYER), 0);
-        assertEq(aviator.totalPlayerBalances(), 0);
-        assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT); // House keeps the bet
+        assertEq(spaceship.playerBalances(PLAYER), 0);
+        assertEq(spaceship.totalPlayerBalances(), 0);
+        assertEq(usdc.balanceOf(address(spaceship)), BET_AMOUNT); // House keeps the bet
         assertEq(usdc.balanceOf(PLAYER), 1000e6 - BET_AMOUNT);
     }
 
@@ -125,17 +125,17 @@ contract AviatorGameTest is Test {
         uint256 roundId = 1;
 
         vm.prank(PLAYER);
-        aviator.deposit(1000e6); // Deposit the player's full balance
+        spaceship.deposit(1000e6); // Deposit the player's full balance
 
         vm.expectRevert(
-            abi.encodeWithSelector(AviatorGame.InvalidBetAmount.selector)
+            abi.encodeWithSelector(SpaceshipGame.InvalidBetAmount.selector)
         );
-        aviator.placeBetFor(roundId, PLAYER, 1);
+        spaceship.placeBetFor(roundId, PLAYER, 1);
 
         vm.expectRevert(
-            abi.encodeWithSelector(AviatorGame.InvalidBetAmount.selector)
+            abi.encodeWithSelector(SpaceshipGame.InvalidBetAmount.selector)
         );
-        aviator.placeBetFor(roundId, PLAYER, 1e9 * 1e6); // > MAX_BET
+        spaceship.placeBetFor(roundId, PLAYER, 1e9 * 1e6); // > MAX_BET
     }
 
     function test_CashOutInsufficientHouseBalance() public {
@@ -144,10 +144,10 @@ contract AviatorGameTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                AviatorGame.InsufficientHouseBalance.selector
+                SpaceshipGame.InsufficientHouseBalance.selector
             )
         );
-        aviator.cashOutFor(roundId, PLAYER, 2e6, 200); // Need 2 USDC but have 0
+        spaceship.cashOutFor(roundId, PLAYER, 2e6, 200); // Need 2 USDC but have 0
     }
 
     function test_CashOutSuccessFlow() public {
@@ -155,34 +155,35 @@ contract AviatorGameTest is Test {
 
         // Player must deposit first
         vm.prank(PLAYER);
-        aviator.deposit(BET_AMOUNT);
+        spaceship.deposit(BET_AMOUNT);
 
         // 1. Place bet to fund house (bet becomes house funds)
-        aviator.placeBetFor(roundId, PLAYER, BET_AMOUNT);
-        assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT);
+        spaceship.placeBetFor(roundId, PLAYER, BET_AMOUNT);
+        assertEq(usdc.balanceOf(address(spaceship)), BET_AMOUNT);
 
         // 2. Cash out (simulate win 2x)
         uint256 payout = BET_AMOUNT * 2;
         // Use fundHouse to top up for the win since house only has 1 bet
-        aviator.fundHouse(BET_AMOUNT);
-        assertEq(usdc.balanceOf(address(aviator)), BET_AMOUNT * 2);
+        spaceship.fundHouse(BET_AMOUNT);
+        assertEq(usdc.balanceOf(address(spaceship)), BET_AMOUNT * 2);
 
         vm.expectEmit(true, true, false, true);
         emit CashOut(roundId, PLAYER, payout, 200);
 
-        aviator.cashOutFor(roundId, PLAYER, payout, 200);
+        spaceship.cashOutFor(roundId, PLAYER, payout, 200);
 
         // House balance should decrease
-        uint256 houseBal = usdc.balanceOf(address(aviator)) - aviator.totalPlayerBalances();
+        uint256 houseBal = usdc.balanceOf(address(spaceship)) -
+            spaceship.totalPlayerBalances();
         assertEq(houseBal, 0);
 
         // Player's game balance should have original + winnings
-        assertEq(aviator.playerBalances(PLAYER), payout);
-        
+        assertEq(spaceship.playerBalances(PLAYER), payout);
+
         // Player withdraws
         vm.prank(PLAYER);
-        aviator.withdraw(payout);
-        assertEq(aviator.playerBalances(PLAYER), 0);
+        spaceship.withdraw(payout);
+        assertEq(spaceship.playerBalances(PLAYER), 0);
         assertEq(usdc.balanceOf(PLAYER), 1000e6 + BET_AMOUNT);
     }
 
@@ -193,52 +194,52 @@ contract AviatorGameTest is Test {
         // Non-owner cannot set server operator
         vm.prank(PLAYER);
         vm.expectRevert();
-        aviator.setServerOperator(newOp);
+        spaceship.setServerOperator(newOp);
 
         // Owner sets it and we verify
-        aviator.setServerOperator(newOp);
-        assertEq(aviator.serverOperator(), newOp);
+        spaceship.setServerOperator(newOp);
+        assertEq(spaceship.serverOperator(), newOp);
 
         // Fund house
-        aviator.fundHouse(BET_AMOUNT);
+        spaceship.fundHouse(BET_AMOUNT);
 
         // Withdraw profits
         uint256 before = usdc.balanceOf(address(this));
-        aviator.withdrawHouseProfits(BET_AMOUNT);
+        spaceship.withdrawHouseProfits(BET_AMOUNT);
         assertEq(usdc.balanceOf(address(this)), before + BET_AMOUNT);
-        assertEq(usdc.balanceOf(address(aviator)), 0);
+        assertEq(usdc.balanceOf(address(spaceship)), 0);
     }
 
     function test_PausePreventsActions() public {
         vm.prank(PLAYER);
-        aviator.deposit(BET_AMOUNT * 2);
+        spaceship.deposit(BET_AMOUNT * 2);
 
-        aviator.pause();
+        spaceship.pause();
 
         vm.expectRevert();
-        aviator.placeBetFor(1, PLAYER, BET_AMOUNT);
+        spaceship.placeBetFor(1, PLAYER, BET_AMOUNT);
 
-        aviator.unpause();
+        spaceship.unpause();
         // after unpause should work
-        aviator.placeBetFor(1, PLAYER, BET_AMOUNT);
+        spaceship.placeBetFor(1, PLAYER, BET_AMOUNT);
     }
 
     function test_TransferFailuresRevert() public {
-        // Deploy failing token and new Aviator Proxy with it
+        // Deploy failing token and new Spaceship Proxy with it
         FailingERC20 failToken = new FailingERC20();
-        AviatorGame badImpl = new AviatorGame();
+        SpaceshipGame badImpl = new SpaceshipGame();
         bytes memory badInit = abi.encodeCall(
-            AviatorGame.initialize,
+            SpaceshipGame.initialize,
             (address(failToken), address(this))
         );
         ERC1967Proxy badProxy = new ERC1967Proxy(address(badImpl), badInit);
-        AviatorGame bad = AviatorGame(payable(address(badProxy)));
+        SpaceshipGame bad = SpaceshipGame(payable(address(badProxy)));
 
         // Attempt to deposit should revert because transferFrom returns false
 
         vm.prank(PLAYER);
         vm.expectRevert(
-            abi.encodeWithSelector(AviatorGame.TransferFailed.selector)
+            abi.encodeWithSelector(SpaceshipGame.TransferFailed.selector)
         );
         bad.deposit(BET_AMOUNT);
     }
@@ -250,9 +251,9 @@ contract AviatorGameTest is Test {
 
         vm.prank(PLAYER);
         vm.expectRevert(
-            abi.encodeWithSelector(AviatorGame.Unauthorized.selector)
+            abi.encodeWithSelector(SpaceshipGame.Unauthorized.selector)
         );
-        aviator.snapshotRound(rid, snapshotHash, playersMerkleRoot, 0, 0, 1);
+        spaceship.snapshotRound(rid, snapshotHash, playersMerkleRoot, 0, 0, 1);
     }
 
     function test_SnapshotStoresAndEmits() public {
@@ -265,7 +266,7 @@ contract AviatorGameTest is Test {
 
         // calling as server operator (this test contract is owner and initial serverOperator)
         vm.expectEmit(true, false, false, true);
-        emit AviatorGame.RoundSnapshot(
+        emit SpaceshipGame.RoundSnapshot(
             rid,
             snapshotHash,
             playersMerkleRoot,
@@ -274,7 +275,7 @@ contract AviatorGameTest is Test {
             numPlayers
         );
 
-        aviator.snapshotRound(
+        spaceship.snapshotRound(
             rid,
             snapshotHash,
             playersMerkleRoot,
@@ -289,7 +290,7 @@ contract AviatorGameTest is Test {
             uint96 storedBets,
             uint96 storedPayouts,
             uint32 storedNum
-        ) = aviator.roundSnapshots(rid);
+        ) = spaceship.roundSnapshots(rid);
         assertEq(storedHash, snapshotHash);
         assertEq(storedMerkle, playersMerkleRoot);
         assertEq(storedBets, totalBets);
@@ -300,38 +301,38 @@ contract AviatorGameTest is Test {
     function test_ReceiveETH() public {
         vm.deal(PLAYER, 1 ether);
         vm.prank(PLAYER);
-        (bool success, ) = address(aviator).call{value: 0.5 ether}("");
+        (bool success, ) = address(spaceship).call{value: 0.5 ether}("");
         require(success, "Send failed");
-        assertEq(address(aviator).balance, 0.5 ether);
+        assertEq(address(spaceship).balance, 0.5 ether);
     }
 
     function test_WithdrawETH() public {
-        vm.deal(address(aviator), 1 ether);
+        vm.deal(address(spaceship), 1 ether);
         uint256 preBalance = address(this).balance;
 
-        aviator.withdrawEth(payable(address(this)), 0.4 ether);
+        spaceship.withdrawEth(payable(address(this)), 0.4 ether);
 
-        assertEq(address(aviator).balance, 0.6 ether);
+        assertEq(address(spaceship).balance, 0.6 ether);
         assertEq(address(this).balance, preBalance + 0.4 ether);
     }
 
     function test_WithdrawETHFailures() public {
         // 1. Insufficient balance
-        vm.expectRevert(AviatorGame.InsufficientBalance.selector);
-        aviator.withdrawEth(payable(address(this)), 1 ether); // Balance 0
+        vm.expectRevert(SpaceshipGame.InsufficientBalance.selector);
+        spaceship.withdrawEth(payable(address(this)), 1 ether); // Balance 0
 
         // 2. Transfer fail (mocking logic requires a contract that rejects ETH?
         //    Calls to EOA always succeed unless out of gas.
         //    Calls to contract fail if no receive/fallback or revert.)
 
-        // Fund aviator first
-        vm.deal(address(aviator), 1 ether);
+        // Fund spaceship first
+        vm.deal(address(spaceship), 1 ether);
 
         // Create a contract that reverts on receive
         RejectETH rejector = new RejectETH();
 
-        vm.expectRevert(AviatorGame.ETHTransferFailed.selector);
-        aviator.withdrawEth(payable(address(rejector)), 0.5 ether);
+        vm.expectRevert(SpaceshipGame.ETHTransferFailed.selector);
+        spaceship.withdrawEth(payable(address(rejector)), 0.5 ether);
     }
 
     // ============ New Comprehensive Tests ============
@@ -342,20 +343,20 @@ contract AviatorGameTest is Test {
         uint256 bet2 = 200e6;
 
         vm.prank(PLAYER);
-        aviator.deposit(bet1);
+        spaceship.deposit(bet1);
 
         vm.prank(PLAYER2);
-        aviator.deposit(bet2);
+        spaceship.deposit(bet2);
 
         // Player 1 places bet
-        aviator.placeBetFor(roundId, PLAYER, bet1);
+        spaceship.placeBetFor(roundId, PLAYER, bet1);
 
         // Player 2 places bet
-        aviator.placeBetFor(roundId, PLAYER2, bet2);
+        spaceship.placeBetFor(roundId, PLAYER2, bet2);
 
         // House balance should reflect both (since balances are now 0)
-        assertEq(usdc.balanceOf(address(aviator)), bet1 + bet2);
-        assertEq(aviator.totalPlayerBalances(), 0);
+        assertEq(usdc.balanceOf(address(spaceship)), bet1 + bet2);
+        assertEq(spaceship.totalPlayerBalances(), 0);
 
         // Wallet Balances updated
         assertEq(usdc.balanceOf(PLAYER), 1000e6 - bet1);
@@ -364,39 +365,39 @@ contract AviatorGameTest is Test {
 
     function test_DepositAndWithdraw() public {
         uint256 amount = 50e6;
-        
+
         vm.prank(PLAYER);
-        aviator.deposit(amount);
-        assertEq(aviator.playerBalances(PLAYER), amount);
-        assertEq(aviator.totalPlayerBalances(), amount);
+        spaceship.deposit(amount);
+        assertEq(spaceship.playerBalances(PLAYER), amount);
+        assertEq(spaceship.totalPlayerBalances(), amount);
         assertEq(usdc.balanceOf(PLAYER), 1000e6 - amount);
 
         vm.prank(PLAYER);
-        aviator.withdraw(amount);
-        assertEq(aviator.playerBalances(PLAYER), 0);
-        assertEq(aviator.totalPlayerBalances(), 0);
+        spaceship.withdraw(amount);
+        assertEq(spaceship.playerBalances(PLAYER), 0);
+        assertEq(spaceship.totalPlayerBalances(), 0);
         assertEq(usdc.balanceOf(PLAYER), 1000e6);
     }
 
     function test_InitializationProtection() public {
         vm.expectRevert(); // Initializable: contract is already initialized
-        aviator.initialize(address(usdc), PLAYER);
+        spaceship.initialize(address(usdc), PLAYER);
     }
 
     function test_OnlyOwnerCanFundHouse() public {
         vm.prank(PLAYER); // Not owner
         vm.expectRevert();
-        aviator.fundHouse(BET_AMOUNT);
+        spaceship.fundHouse(BET_AMOUNT);
     }
 
     function test_OnlyOwnerCanPauseUnpause() public {
         vm.prank(PLAYER);
         vm.expectRevert();
-        aviator.pause();
+        spaceship.pause();
 
         vm.prank(PLAYER);
         vm.expectRevert();
-        aviator.unpause();
+        spaceship.unpause();
     }
 
     function test_OnlyServerOperatorCanCallGameFunctions() public {
@@ -409,15 +410,15 @@ contract AviatorGameTest is Test {
 
         vm.prank(PLAYER);
         vm.expectRevert(
-            abi.encodeWithSelector(AviatorGame.Unauthorized.selector)
+            abi.encodeWithSelector(SpaceshipGame.Unauthorized.selector)
         );
-        aviator.placeBetFor(roundId, PLAYER, BET_AMOUNT);
+        spaceship.placeBetFor(roundId, PLAYER, BET_AMOUNT);
 
         // Try to cash out as non-operator
         vm.prank(PLAYER);
         vm.expectRevert(
-            abi.encodeWithSelector(AviatorGame.Unauthorized.selector)
+            abi.encodeWithSelector(SpaceshipGame.Unauthorized.selector)
         );
-        aviator.cashOutFor(roundId, PLAYER, BET_AMOUNT, 200);
+        spaceship.cashOutFor(roundId, PLAYER, BET_AMOUNT, 200);
     }
 }

@@ -33,7 +33,7 @@ const connectors: CreateConnectorFn[] = isMiniPay
 if (!isMiniPay) {
   connectors.push(
     coinbaseWallet({
-      appName: "Aviator",
+      appName: "Spaceship",
       preference: "all",
     }),
   );
@@ -44,10 +44,11 @@ if (!isMiniPay) {
         projectId:
           process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
         metadata: {
-          name: "Aviator",
-          description: "Aviator - Multiply your fund with fun",
-          url: process.env.NEXT_PUBLIC_URL || "https://aviator-sand.vercel.app",
-          icons: ["https://aviator-sand.vercel.app/logo.png"],
+          name: "Spaceship",
+          description: "Spaceship - Multiply your fund with fun",
+          url:
+            process.env.NEXT_PUBLIC_URL || "https://spaceship-sand.vercel.app",
+          icons: ["https://spaceship-sand.vercel.app/logo.png"],
         },
         showQrModal: true,
       }),
@@ -70,7 +71,7 @@ const wagmiConfig = createConfig({
 });
 
 export function RootProvider({ children }: { children: ReactNode }) {
-   if (isMiniPay) {
+  if (isMiniPay) {
     return (
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>

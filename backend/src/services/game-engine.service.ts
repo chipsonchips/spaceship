@@ -24,7 +24,7 @@ import type { GameEngineServices } from './game/types.js';
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || '';
 
 /**
- * Orchestrates the Aviator round loop, real-time broadcasts, and bet actions.
+ * Orchestrates the Spaceship round loop, real-time broadcasts, and bet actions.
  * Heavy logic lives in `services/game/*` for maintainability and testability.
  */
 export class GameEngine {

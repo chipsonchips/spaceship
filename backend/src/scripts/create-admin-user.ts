@@ -9,7 +9,7 @@ async function createAdminUser() {
         logger.info('Database connected');
 
         const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@aviator.local';
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@spaceship.local';
 
         // Check if admin already exists
         const existingAdmin = await userService.getAllAdmins();

@@ -11,7 +11,9 @@ import {
     PausableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {
+    IERC20Permit
+} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {
     Initializable
 } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -19,7 +21,7 @@ import {
     UUPSUpgradeable
 } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract AviatorGame is
+contract SpaceshipGame is
     Initializable,
     UUPSUpgradeable,
     ReentrancyGuard,
@@ -33,7 +35,7 @@ contract AviatorGame is
     uint256 public constant MIN_BET = 1e5; // 0.04 USDC (6 decimals)
     uint256 public constant MAX_BET = 1000e6; // 1,000 USDC
     uint256 public constant MAX_PAYOUT = 5000e6; // 5,000 USDC max per cashout
-    
+
     // Server operator (trusted for game operations)
     address public serverOperator;
 
@@ -83,7 +85,6 @@ contract AviatorGame is
 
     event HouseFunded(address indexed sender, uint256 amount);
     event HouseWithdrawn(address indexed recipient, uint256 amount);
-
 
     // ============ Errors ============
     error InvalidBetAmount();
@@ -151,7 +152,11 @@ contract AviatorGame is
     function deposit(uint256 amount) external whenNotPaused nonReentrant {
         if (amount == 0) revert InvalidBetAmount();
 
-        bool success = usdcToken.transferFrom(msg.sender, address(this), amount);
+        bool success = usdcToken.transferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
         if (!success) revert TransferFailed();
 
         playerBalances[msg.sender] += amount;
@@ -184,7 +189,11 @@ contract AviatorGame is
             s
         );
 
-        bool success = usdcToken.transferFrom(msg.sender, address(this), amount);
+        bool success = usdcToken.transferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
         if (!success) revert TransferFailed();
 
         playerBalances[msg.sender] += amount;
@@ -242,8 +251,9 @@ contract AviatorGame is
         uint256 multiplier
     ) external nonReentrant whenNotPaused onlyServerOperator {
         if (payout > MAX_PAYOUT) revert InsufficientHouseBalance();
-        
-        uint256 houseBalance = usdcToken.balanceOf(address(this)) - totalPlayerBalances;
+
+        uint256 houseBalance = usdcToken.balanceOf(address(this)) -
+            totalPlayerBalances;
         if (houseBalance < payout) revert InsufficientHouseBalance();
 
         // Credit the payout to the player's balance
@@ -275,11 +285,12 @@ contract AviatorGame is
             amount
         );
         if (!success) revert TransferFailed();
-         emit HouseFunded(msg.sender, amount); 
+        emit HouseFunded(msg.sender, amount);
     }
 
     function withdrawHouseProfits(uint256 amount) external onlyOwner {
-        uint256 houseBalance = usdcToken.balanceOf(address(this)) - totalPlayerBalances;
+        uint256 houseBalance = usdcToken.balanceOf(address(this)) -
+            totalPlayerBalances;
         if (amount > houseBalance) revert InsufficientHouseBalance();
 
         bool success = usdcToken.transfer(owner(), amount);

@@ -9,7 +9,7 @@ export interface ChainConfig {
     chain: Chain;
     /** USDC contract address on this chain */
     usdcAddress: `0x${string}`;
-    /** AviatorGame proxy contract address on this chain */
+    /** SpaceshipGame proxy contract address on this chain */
     gameContractAddress: `0x${string}`;
     /** Human-readable label */
     label: string;

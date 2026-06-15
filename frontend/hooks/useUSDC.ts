@@ -4,7 +4,7 @@ import { parseUnits } from "viem";
 import { useAccount } from "wagmi";
 import { getChainConfig } from "@/lib/chains";
 import ERC20_ABI from "@/abis/usdc.json";
-import AVIATOR_ABI from "@/abis/aviator.json";
+import SPACESHIP_ABI from "@/abis/spaceship.json";
 
 export default function useUSDC() {
   const { data: walletClient } = useWalletClient();
@@ -75,7 +75,7 @@ export default function useUSDC() {
         }),
         publicClient.readContract({
           address: houseAddress,
-          abi: AVIATOR_ABI,
+          abi: SPACESHIP_ABI,
           functionName: "playerBalances",
           args: [address],
         })
@@ -108,7 +108,7 @@ export default function useUSDC() {
           }),
           publicClient.readContract({
             address: houseAddress,
-            abi: AVIATOR_ABI,
+            abi: SPACESHIP_ABI,
             functionName: "playerBalances",
             args: [address],
           })
@@ -170,7 +170,7 @@ export default function useUSDC() {
 
     const hash = await walletClient.writeContract({
       address: houseAddress,
-      abi: AVIATOR_ABI as any,
+      abi: SPACESHIP_ABI as any,
       functionName: "deposit",
       args: [amountInWei],
     });
@@ -192,7 +192,7 @@ export default function useUSDC() {
 
     const hash = await walletClient.writeContract({
       address: houseAddress,
-      abi: AVIATOR_ABI as any,
+      abi: SPACESHIP_ABI as any,
       functionName: "withdraw",
       args: [amountInWei],
     });

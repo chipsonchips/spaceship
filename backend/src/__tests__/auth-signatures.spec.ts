@@ -8,7 +8,7 @@ describe('Auth Signature Cryptographic Verification', () => {
     it('should successfully sign and verify a deterministic login message', async () => {
         const address = wallet.address;
         const timestamp = Date.now();
-        const message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+        const message = `Welcome to Spaceship! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
 
         // Sign the message using the private key
         const signature = await wallet.signMessage(message);
@@ -27,7 +27,7 @@ describe('Auth Signature Cryptographic Verification', () => {
         expect(match).toBeDefined();
         const msgTimestamp = parseInt(match![1], 10);
         expect(msgTimestamp).toBe(timestamp);
-        
+
         // Ensure timestamp is within the 10-minute validity window
         const now = Date.now();
         expect(Math.abs(now - msgTimestamp)).toBeLessThanOrEqual(10 * 60 * 1000);
@@ -36,7 +36,7 @@ describe('Auth Signature Cryptographic Verification', () => {
     it('should fail verification if signature is tampered', async () => {
         const address = wallet.address;
         const timestamp = Date.now();
-        const message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
+        const message = `Welcome to Spaceship! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${timestamp}`;
 
         const signature = await wallet.signMessage(message);
         const tamperedSignature = signature.slice(0, -4) + '0000'; // Alter last few bytes
@@ -48,12 +48,12 @@ describe('Auth Signature Cryptographic Verification', () => {
     it('should reject authentication if timestamp is expired (older than 10 minutes)', () => {
         const address = wallet.address;
         const oldTimestamp = Date.now() - 11 * 60 * 1000; // 11 minutes ago
-        const message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${oldTimestamp}`;
+        const message = `Welcome to Spaceship! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${oldTimestamp}`;
 
         const match = message.match(/Timestamp:\s*(\d+)/);
         expect(match).toBeDefined();
         const msgTimestamp = parseInt(match![1], 10);
-        
+
         const now = Date.now();
         const isExpired = Math.abs(now - msgTimestamp) > 10 * 60 * 1000;
         expect(isExpired).toBe(true);
@@ -62,7 +62,7 @@ describe('Auth Signature Cryptographic Verification', () => {
     it('should reject authentication if wallet address mismatch', () => {
         const address = wallet.address;
         const otherAddress = '0x0000000000000000000000000000000000000000';
-        const message = `Welcome to Aviator! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${Date.now()}`;
+        const message = `Welcome to Spaceship! Sign this message to authenticate.\n\nWallet: ${address}\nTimestamp: ${Date.now()}`;
 
         const addressMatch = message.match(/Wallet:\s*(0x[a-fA-F0-9]{40})/i);
         expect(addressMatch).toBeDefined();

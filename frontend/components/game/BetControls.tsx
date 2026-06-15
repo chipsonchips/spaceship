@@ -9,7 +9,11 @@ import AutoCashout from "./AutoCashout";
 import { usePlayerBet } from "@/hooks/game";
 import * as api from "@/lib/api";
 
-const BetControls: React.FC = () => {
+interface BetControlsProps {
+  onToggleMode?: () => void;
+}
+
+const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
   const { roundData, cashOut, placeBet, optimisticBets, displayMultiplier } =
     useGameContext();
   const {

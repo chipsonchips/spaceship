@@ -5,14 +5,24 @@ set -a
 source contracts/.env
 set +a
 
-INTERVAL=10
+INTERVAL=3
 COUNTER=0
+
+# Gas limit for snapshotRound through proxy
+# Increased from initial estimate due to delegatecall overhead
+GAS_LIMIT="150000"
 
 echo "================================================"
 echo "Starting Celo Snapshot Writer Loop"
-echo "Interval: ${INTERVAL} seconds"
+echo "Interval: ${INTERVAL} seconds (~20 tx/min)"
+echo "Gas Limit: ${GAS_LIMIT} (price fetched dynamically)"
 echo "Press Ctrl+C to stop"
 echo "================================================"
+echo ""
+
+# Fetch starting nonce once, then increment manually to avoid collisions
+NONCE=$(cast nonce "$(cast wallet address --private-key "$PRIVATE_KEY")" --rpc-url "$MAINNET_URL")
+echo "Starting nonce: $NONCE"
 echo ""
 
 while true; do
@@ -27,11 +37,11 @@ while true; do
   TOTAL_PAYOUTS=$((RANDOM % 5000000000 + 500000000))
   NUM_PLAYERS=$((RANDOM % 100 + 1))
 
-  echo "[$TIMESTAMP] Snapshot #$COUNTER"
+  echo "[$TIMESTAMP] Snapshot #$COUNTER (nonce: $NONCE)"
   echo "  Round ID: $ROUND_ID | Players: $NUM_PLAYERS | Bets: $TOTAL_BETS wei"
   
-  # Call the snapshotRound function
-  RESULT=$(cast send "$AVIATOR_PROXY_ADDRESS" \
+  # Call the snapshotRound function with explicit nonce to avoid collisions
+  RESULT=$(cast send "$SPACESHIP_PROXY_ADDRESS" \
     "snapshotRound(uint256,bytes32,bytes32,uint96,uint96,uint32)" \
     "$ROUND_ID" \
     "$SNAPSHOT_HASH" \
@@ -40,14 +50,20 @@ while true; do
     "$TOTAL_PAYOUTS" \
     "$NUM_PLAYERS" \
     --rpc-url "$MAINNET_URL" \
-    --private-key "$PRIVATE_KEY" 2>&1)
+    --private-key "$PRIVATE_KEY" \
+    --gas-limit "$GAS_LIMIT" \
+    --nonce "$NONCE" 2>&1)
   
   if echo "$RESULT" | grep -q "status.*1"; then
     TX_HASH=$(echo "$RESULT" | grep "transactionHash" | head -1 | awk '{print $2}')
     echo "  ✓ Success - TX: ${TX_HASH:0:20}..."
+    NONCE=$((NONCE + 1))
   else
     echo "  ✗ Failed"
     echo "$RESULT"
+    # Re-sync nonce from chain in case we're out of sync
+    NONCE=$(cast nonce "$(cast wallet address --private-key "$PRIVATE_KEY")" --rpc-url "$MAINNET_URL")
+    echo "  Re-synced nonce to: $NONCE"
   fi
   
   echo ""

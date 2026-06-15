@@ -2,29 +2,29 @@
 pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
-import {AviatorGame} from "../src/AviatorGame.sol";
+import {SpaceshipGame} from "../src/SpaceshipGame.sol";
 import {console} from "forge-std/console.sol";
 
 contract UpdateOwnerAndOperatorScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address proxyAddress = vm.envAddress("AVIATOR_PROXY_ADDRESS");
+        address proxyAddress = vm.envAddress("SPACESHIP_PROXY_ADDRESS");
         address newOwnerAndOperator = 0x3E192d109d1dd323375Ac1Ed040f817918E82d63;
 
-        require(proxyAddress != address(0), "AVIATOR_PROXY_ADDRESS not set");
+        require(proxyAddress != address(0), "SPACESHIP_PROXY_ADDRESS not set");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        AviatorGame aviatorGame = AviatorGame(payable(proxyAddress));
+        SpaceshipGame spaceshipGame = SpaceshipGame(payable(proxyAddress));
 
         // 1. Update server operator
         console.log("Updating server operator to:", newOwnerAndOperator);
-        aviatorGame.setServerOperator(newOwnerAndOperator);
+        spaceshipGame.setServerOperator(newOwnerAndOperator);
         console.log("Server operator updated");
 
         // 2. Transfer ownership
         console.log("Transferring ownership to:", newOwnerAndOperator);
-        aviatorGame.transferOwnership(newOwnerAndOperator);
+        spaceshipGame.transferOwnership(newOwnerAndOperator);
         console.log("Ownership transferred");
 
         vm.stopBroadcast();

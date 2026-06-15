@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-oncha
 
 ## Supported Chains
 
-The Aviator game is currently available on:
+The Spaceship game is currently available on:
 
 - **Base** - Fully supported
 - **Celo** - Fully supported
