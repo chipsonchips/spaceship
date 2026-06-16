@@ -5,8 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "npx tsc",
-    "predeploy": "tsx -r ./scripts/force-ipv4.cjs src/scripts/run-migrations.ts",
-    "start": "tsx -r ./scripts/force-ipv4.cjs src/scripts/run-migrations.ts && node -r ./scripts/force-ipv4.cjs dist/index.js",
+    "start": "tsx src/scripts/run-migrations.ts && node dist/index.js",
     "dev": "tsx -r ./scripts/force-ipv4.cjs --watch src/index.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.ts\"",

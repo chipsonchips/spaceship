@@ -1,9 +1,15 @@
 import { DataSource } from 'typeorm';
+import dns from 'node:dns';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { ipv4Lookup, resolveDbConnection } from './db-connection.js';
+
+// Force IPv4 to prevent ENETUNREACH errors on Render with Supabase pooler
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 dotenv.config();
 
