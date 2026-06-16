@@ -1,5 +1,5 @@
 const DEFAULT_ORIGINS = [
-  'https://spaceship-sand.vercel.app',
+  'https://spaceshipchips.netlify.app',
   'http://localhost:3000',
   'https://spaceship.farcast.app',
 ];
