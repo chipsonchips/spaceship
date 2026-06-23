@@ -52,10 +52,11 @@ while true; do
     --rpc-url "$MAINNET_URL" \
     --private-key "$PRIVATE_KEY" \
     --gas-limit "$GAS_LIMIT" \
-    --nonce "$NONCE" 2>&1)
-  
-  if echo "$RESULT" | grep -q "status.*1"; then
-    TX_HASH=$(echo "$RESULT" | grep "transactionHash" | head -1 | awk '{print $2}')
+    --nonce "$NONCE" \
+    --json 2>&1)
+
+  TX_HASH=$(echo "$RESULT" | jq -r '.transactionHash // empty' 2>/dev/null)
+  if [ -n "$TX_HASH" ] && [ "$TX_HASH" != "null" ]; then
     echo "  ✓ Success - TX: ${TX_HASH:0:20}..."
     NONCE=$((NONCE + 1))
   else
