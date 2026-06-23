@@ -7,6 +7,7 @@ import usePlaneAnimation from "@/hooks/usePlaneAnimation";
 import { useSound } from "@/hooks/useSound";
 import ParticleEffect from "./ParticleEffect";
 import FlyingEffects from "./FlyingEffects";
+import SpaceBackground from "./SpaceBackground";
 import Image from "next/image";
 
 const GameBoard: React.FC = () => {
@@ -59,6 +60,7 @@ const GameBoard: React.FC = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-[10]">
+      <SpaceBackground roundData={roundData} multiplier={displayMultiplier} />
       <ParticleEffect
         trigger={crashTrigger}
         x={crashPosition.x}
