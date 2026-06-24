@@ -17,6 +17,7 @@ export interface GameSettings {
   activityFeedEnabled: boolean;
   sessionStatsEnabled: boolean;
   potentialPayoutEnabled: boolean;
+  winCelebrationEnabled: boolean;
   autoHideUI: boolean;
   uiScale: number;
 }
@@ -30,6 +31,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   activityFeedEnabled: true,
   sessionStatsEnabled: true,
   potentialPayoutEnabled: true,
+  winCelebrationEnabled: true,
   autoHideUI: false,
   uiScale: 1,
 };
