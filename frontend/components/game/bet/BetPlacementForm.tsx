@@ -2,6 +2,7 @@
 
 import React from "react";
 import AutoCashout from "../AutoCashout";
+import BetAdjusters from "./BetAdjusters";
 
 interface BetPlacementFormProps {
   betAmount: string;
@@ -13,6 +14,7 @@ interface BetPlacementFormProps {
   freeBetsRemaining: number;
   freeBetMaxAmount: number;
   maxBetAmount: number;
+  gameBalance?: number | null;
   lastBetAmount: string | null;
   isProcessing: boolean;
   canPlaceBet: boolean;
@@ -35,6 +37,7 @@ export const BetPlacementForm: React.FC<BetPlacementFormProps> = ({
   freeBetsRemaining,
   freeBetMaxAmount,
   maxBetAmount,
+  gameBalance,
   lastBetAmount,
   isProcessing,
   canPlaceBet,
@@ -97,6 +100,18 @@ export const BetPlacementForm: React.FC<BetPlacementFormProps> = ({
             })}
           </div>
         </div>
+
+        {/* Smart adjusters - Compact */}
+        <BetAdjusters
+          betAmount={betAmount}
+          onBetAmountChange={onBetAmountChange}
+          maxBetAmount={maxBetAmount}
+          gameBalance={gameBalance ?? null}
+          useFreeBet={useFreeBet}
+          freeBetMaxAmount={freeBetMaxAmount}
+          disabled={isProcessing}
+          compact
+        />
 
         {/* Auto Cashout - Compact */}
         <AutoCashout
@@ -235,6 +250,16 @@ export const BetPlacementForm: React.FC<BetPlacementFormProps> = ({
           );
         })}
       </div>
+
+      <BetAdjusters
+        betAmount={betAmount}
+        onBetAmountChange={onBetAmountChange}
+        maxBetAmount={maxBetAmount}
+        gameBalance={gameBalance ?? null}
+        useFreeBet={useFreeBet}
+        freeBetMaxAmount={freeBetMaxAmount}
+        disabled={isProcessing}
+      />
 
       <AutoCashout
         value={autoCashoutMultiplier}

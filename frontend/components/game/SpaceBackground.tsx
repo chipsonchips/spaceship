@@ -133,7 +133,10 @@ const ScrollLayer: React.FC<{
       className="absolute left-0 top-0 w-full"
       style={{
         height: "200%",
-        animation: `spaceScroll ${duration}s linear infinite`,
+        animationName: "spaceScroll",
+        animationDuration: `${duration}s`,
+        animationTimingFunction: "linear",
+        animationIterationCount: "infinite",
         animationPlayState: playing ? "running" : "paused",
         willChange: "transform",
       }}
@@ -200,7 +203,11 @@ const SpaceBackground: React.FC<SpaceBackgroundProps> = ({
               width: p.size,
               height: p.size,
               transform: "translate(-50%, -50%)",
-              animation: `planetDrift ${p.drift}s ease-in-out ${p.delay}s infinite`,
+              animationName: "planetDrift",
+              animationDuration: `${p.drift}s`,
+              animationTimingFunction: "ease-in-out",
+              animationDelay: `${p.delay}s`,
+              animationIterationCount: "infinite",
               animationPlayState: isFlying ? "running" : "paused",
             }}
           >
@@ -259,7 +266,11 @@ const SpaceBackground: React.FC<SpaceBackgroundProps> = ({
               width: a.size,
               height: a.size,
               transform: "translate(-50%, -50%)",
-              animation: `asteroidSpin ${a.spin / Math.max(1, speed * 0.6)}s linear ${a.delay}s infinite`,
+              animationName: "asteroidSpin",
+              animationDuration: `${a.spin / Math.max(1, speed * 0.6)}s`,
+              animationTimingFunction: "linear",
+              animationDelay: `${a.delay}s`,
+              animationIterationCount: "infinite",
               animationPlayState: isFlying ? "running" : "paused",
             }}
           >
