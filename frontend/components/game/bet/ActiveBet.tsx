@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { PlayerBet } from "@/types/game";
+import { getCashoutUrgency } from "@/lib/cashout";
 
 interface ActiveBetProps {
   bet: PlayerBet;
@@ -23,6 +24,9 @@ export const ActiveBet: React.FC<ActiveBetProps> = ({
   compact = false,
 }) => {
   const potentialPayout = Number(bet.amount) * Number(displayMultiplier);
+  const profit = potentialPayout - Number(bet.amount);
+  const urgency = getCashoutUrgency(displayMultiplier);
+  const isLive = roundPhase === "FLYING" && !bet.cashedOut && !optimisticCashOut;
 
   // Compact mode for dual bet panels
   if (compact) {
@@ -60,19 +64,32 @@ export const ActiveBet: React.FC<ActiveBetProps> = ({
           </div>
         )}
 
-        {roundPhase === "FLYING" && !bet.cashedOut && !optimisticCashOut && (
+        {isLive && (
           <button
             onClick={onCashOut}
             disabled={isCashingOut}
             className="w-full relative overflow-hidden rounded-md font-black font-orbitron uppercase tracking-wider text-xs transition-all disabled:opacity-50 transform active:scale-[0.97]"
+            style={{
+              animation: isCashingOut
+                ? "none"
+                : `cashPulse ${urgency.pulse}s ease-in-out infinite`,
+              boxShadow: `0 0 12px ${urgency.glow}`,
+            }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
-            <div className="relative px-2 py-1.5 flex items-center justify-center text-white shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-              <span className="text-sm mr-1">💰</span>
+            <div
+              className={`absolute inset-0 bg-gradient-to-r ${urgency.gradient} transition-all bg-[length:200%_auto] hover:bg-right`}
+            ></div>
+            <div className="relative px-2 py-1.5 flex items-center justify-center gap-1 text-white">
+              <span className="text-sm">💰</span>
               <span>{isCashingOut ? "..." : "CASH OUT"}</span>
               {!isCashingOut && (
-                <span className="ml-1 text-[10px] font-black">
+                <span className="text-[11px] font-black tabular-nums">
                   {potentialPayout.toFixed(2)}
+                </span>
+              )}
+              {!isCashingOut && profit > 0 && (
+                <span className="text-[9px] font-bold text-white/80 tabular-nums">
+                  (+{profit.toFixed(2)})
                 </span>
               )}
             </div>
@@ -134,15 +151,23 @@ export const ActiveBet: React.FC<ActiveBetProps> = ({
         </div>
       )}
 
-      {roundPhase === "FLYING" && !bet.cashedOut && !optimisticCashOut && (
+      {isLive && (
         <button
           onClick={onCashOut}
           disabled={isCashingOut}
           className="w-full relative group/btn overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-0.5 active:translate-y-0"
+          style={{
+            animation: isCashingOut
+              ? "none"
+              : `cashPulse ${urgency.pulse}s ease-in-out infinite`,
+            boxShadow: `0 0 18px ${urgency.glow}`,
+          }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
+          <div
+            className={`absolute inset-0 bg-gradient-to-r ${urgency.gradient} transition-all bg-[length:200%_auto] hover:bg-right`}
+          ></div>
           <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-150%] group-hover/btn:translate-x-[150%] transition-all duration-700 ease-out z-10"></div>
-          <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex flex-col sm:flex-row items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] z-20 gap-0.5 sm:gap-2">
+          <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex flex-col sm:flex-row items-center justify-center text-white z-20 gap-0.5 sm:gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="text-lg sm:text-xl leading-none group-hover/btn:scale-110 transition-transform">
                 💰
@@ -150,16 +175,18 @@ export const ActiveBet: React.FC<ActiveBetProps> = ({
               <span className="text-base sm:text-lg">
                 {isCashingOut ? "PROCESSING..." : "CASH OUT"}
               </span>
-              <span className="hidden sm:inline-block text-base sm:text-lg">
-                NOW
-              </span>
             </div>
             {!isCashingOut && (
-              <div className="sm:hidden text-2xl font-black drop-shadow-md leading-none mt-0.5">
+              <div className="text-2xl font-black drop-shadow-md leading-none mt-0.5 sm:mt-0 tabular-nums">
                 {potentialPayout.toFixed(2)}{" "}
                 <span className="text-[10px] align-top text-white/80">
                   USDC
                 </span>
+                {profit > 0 && (
+                  <span className="block sm:inline text-[10px] sm:ml-1 font-bold text-white/75">
+                    +{profit.toFixed(2)}
+                  </span>
+                )}
               </div>
             )}
           </div>

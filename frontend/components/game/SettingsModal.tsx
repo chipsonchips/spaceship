@@ -310,6 +310,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
               <div className="flex items-center justify-between">
                 <label className="text-sm text-slate-300 font-courier">
+                  Win Celebration
+                </label>
+                <button
+                  onClick={() => handleToggle("winCelebrationEnabled")}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
+                    localSettings.winCelebrationEnabled
+                      ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                      : "bg-slate-700"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+                      localSettings.winCelebrationEnabled
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300 font-courier">
                   Auto-Hide UI
                 </label>
                 <button

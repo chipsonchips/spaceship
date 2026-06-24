@@ -10,6 +10,7 @@ import ParticleEffect from "@/components/game/ParticleEffect";
 import PotentialPayout from "@/components/game/PotentialPayout";
 import SessionStats from "@/components/game/SessionStats";
 import PlayerActivityFeed from "@/components/game/PlayerActivityFeed";
+import WinCelebration from "@/components/game/WinCelebration";
 import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import ChainWarning from "@/components/common/ChainWarning";
 
@@ -33,6 +34,7 @@ const GameScreen = () => {
         </ErrorBoundary>
         <HistoryBar />
         <UnifiedBetControls />
+        <WinCelebration />
       </div>
     </GameProvider>
   );

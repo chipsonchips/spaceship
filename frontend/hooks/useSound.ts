@@ -12,19 +12,37 @@ export function useSound(options: SoundOptions = {}) {
     useEffect(() => {
         if (typeof window !== 'undefined' && enabled) {
             audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+            // Browsers refuse to start an AudioContext until the user has
+            // interacted with the page. Resume it on the first gesture so the
+            // context is ready (and silent until then) instead of logging an
+            // autoplay warning on every sound we attempt to play.
+            const resume = () => {
+                audioContextRef.current?.resume().catch(() => {});
+            };
+            window.addEventListener('pointerdown', resume);
+            window.addEventListener('keydown', resume);
+
+            return () => {
+                window.removeEventListener('pointerdown', resume);
+                window.removeEventListener('keydown', resume);
+                audioContextRef.current?.close();
+            };
         }
 
-        return () => {
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
-        };
+        return undefined;
     }, [enabled]);
 
     const playBeep = useCallback((frequency: number, duration: number) => {
         if (!enabled || !audioContextRef.current) return;
 
         const ctx = audioContextRef.current;
+        // Skip silently if the context hasn't been unlocked by a user gesture
+        // yet; playing into a suspended context only produces console warnings.
+        if (ctx.state !== 'running') {
+            ctx.resume().catch(() => {});
+            return;
+        }
         const oscillator = ctx.createOscillator();
         const gainNode = ctx.createGain();
 

@@ -9,6 +9,7 @@ import {
   createConfig,
   type CreateConnectorFn,
 } from "wagmi";
+import { createPublicClient } from "viem";
 import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
 import "@coinbase/onchainkit/styles.css";
 import { SUPPORTED_CHAINS, CHAIN_CONFIGS } from "@/lib/chains";
@@ -70,6 +71,17 @@ const wagmiConfig = createConfig({
   transports,
 });
 
+// OnchainKit's Identity components (Avatar/Name) resolve ENS on Ethereum
+// mainnet. Without an explicit client they fall back to the chain's default
+// public RPC (eth.merkle.io), which rate-limits (429) and blocks CORS. Give
+// OnchainKit a reliable mainnet client so identity resolution doesn't fail.
+const defaultPublicClients = {
+  [mainnet.id]: createPublicClient({
+    chain: mainnet,
+    transport: http("https://cloudflare-eth.com"),
+  }),
+};
+
 export function RootProvider({ children }: { children: ReactNode }) {
   if (isMiniPay) {
     return (
@@ -93,6 +105,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
           chain={base}
+          defaultPublicClients={defaultPublicClients}
           config={{
             appearance: {
               mode: "dark",

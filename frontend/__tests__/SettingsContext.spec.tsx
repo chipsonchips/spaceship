@@ -47,6 +47,7 @@ describe("SettingsContext", () => {
       activityFeedEnabled: true,
       sessionStatsEnabled: true,
       potentialPayoutEnabled: true,
+      winCelebrationEnabled: true,
       autoHideUI: false,
       uiScale: 1,
     });

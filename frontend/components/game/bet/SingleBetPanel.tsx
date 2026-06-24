@@ -8,6 +8,9 @@ import { getUserFriendlyErrorMessage } from "@/lib/error-messages";
 import { ActiveBet } from "./ActiveBet";
 import { BetPlacementForm } from "./BetPlacementForm";
 import { useMultiBetTracking } from "@/hooks/useMultiBetTracking";
+import { useBetHotkeys } from "@/hooks/useBetHotkeys";
+import { haptics } from "@/lib/haptics";
+import { emitWin } from "@/lib/celebrate";
 import type { PlayerBet } from "@/types/game";
 
 interface SingleBetPanelProps {
@@ -203,6 +206,7 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
         await refreshBalance();
       }
       if (res?.success) {
+        haptics.place();
         setTxHash(res.txHash || null);
         setLastBetAmount(amountToBet);
         setUseFreeBet(false);
@@ -234,6 +238,10 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
     setOptimisticCashOut(true);
     setIsCashingOut(true);
 
+    // Capture the multiplier at the instant of cashing out for the celebration.
+    const cashoutMultiplier = Number(displayMultiplier);
+    const cashoutAmount = Number(myBet.amount);
+
     try {
       const result = await cashOut(myBet.id);
       if (!result.success) {
@@ -242,6 +250,13 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
         );
         setError(friendlyError);
         setOptimisticCashOut(false);
+      } else {
+        haptics.win();
+        emitWin({
+          payout: cashoutAmount * cashoutMultiplier,
+          amount: cashoutAmount,
+          multiplier: cashoutMultiplier,
+        });
       }
     } catch (err) {
       const friendlyError = getUserFriendlyErrorMessage(err);
@@ -260,6 +275,21 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
     canPlaceBetForPanel &&
     ((useFreeBet && freeBetsRemaining > 0) ||
       (!useFreeBet && gameBalance !== null && gameBalance > 0));
+
+  const canCashOut =
+    roundData?.phase === "FLYING" &&
+    !!myBet &&
+    !myBet.cashedOut &&
+    !optimisticCashOut;
+
+  // Only the primary panel binds global hotkeys to avoid double-firing in dual mode.
+  useBetHotkeys({
+    onPlaceBet: () => handlePlaceBet(),
+    onCashOut: handleCashOut,
+    canPlaceBet: canPlaceBet && !!betValidation.isValid,
+    canCashOut,
+    disabled: isProcessing || isCashingOut || panelId !== 1,
+  });
 
   return (
     <div className="space-y-2 sm:space-y-3">
@@ -289,6 +319,7 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
           freeBetsRemaining={freeBetsRemaining}
           freeBetMaxAmount={freeBetMaxAmount}
           maxBetAmount={maxBetAmount}
+          gameBalance={gameBalance}
           lastBetAmount={lastBetAmount}
           isProcessing={isProcessing}
           canPlaceBet={canPlaceBet}
