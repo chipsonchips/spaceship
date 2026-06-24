@@ -151,13 +151,13 @@ const Nav = () => {
     );
   };
 
-  if (!mounted) return <header className="h-[60px]"></header>;
+  if (!mounted) return null;
 
   return (
     <header
-      className={`relative z-50 transition-all duration-500 ease-out bg-transparent ${
+      className={`absolute top-0 left-0 w-full z-50 pointer-events-none transition-all duration-500 ease-out bg-transparent ${
         shouldHide
-          ? "-translate-y-full opacity-0 absolute w-full"
+          ? "-translate-y-full opacity-0"
           : "translate-y-0 opacity-100 px-3 sm:px-6 py-2.5"
       }`}
     >
@@ -168,6 +168,7 @@ const Nav = () => {
               src="/logo.png"
               alt="Spaceship Logo"
               fill
+              sizes="40px"
               className="object-contain drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]"
             />
           </div>
