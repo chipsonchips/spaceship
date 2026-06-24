@@ -6,7 +6,12 @@ import { useBetValidation } from "@/hooks/useBetValidation";
 import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
 import AutoCashout from "./AutoCashout";
+import BetAdjusters from "./bet/BetAdjusters";
 import { usePlayerBet } from "@/hooks/game";
+import { useBetHotkeys } from "@/hooks/useBetHotkeys";
+import { haptics } from "@/lib/haptics";
+import { emitWin } from "@/lib/celebrate";
+import { getCashoutUrgency } from "@/lib/cashout";
 import * as api from "@/lib/api";
 
 interface BetControlsProps {
@@ -193,6 +198,7 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
         await refreshBalance();
       }
       if (res?.success) {
+        haptics.place();
         setTxHash(res.txHash || null);
         setLastBetAmount(amountToBet);
         setUseFreeBet(false);
@@ -251,12 +257,23 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
     setIsCashingOut(true);
     setCashoutTimer(3); // Show timer for 3 seconds
 
+    // Capture the multiplier at the instant of cashing out for the celebration.
+    const cashoutMultiplier = Number(displayMultiplier);
+    const cashoutAmount = Number(myBet.amount);
+
     try {
       const result = await cashOut(myBet.id);
       if (!result.success) {
         setError(result.error || "Failed to cash out");
         setOptimisticCashOut(false);
         setCashoutTimer(null);
+      } else {
+        haptics.win();
+        emitWin({
+          payout: cashoutAmount * cashoutMultiplier,
+          amount: cashoutAmount,
+          multiplier: cashoutMultiplier,
+        });
       }
     } catch (err) {
       setError((err as Error).message || "Failed to cash out");
@@ -314,6 +331,22 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
     myBet && roundData?.phase === "FLYING"
       ? Number(myBet.amount) * Number(displayMultiplier)
       : 0;
+  const cashoutProfit = potentialPayout - Number(myBet?.amount || 0);
+  const urgency = getCashoutUrgency(displayMultiplier);
+
+  const canCashOut =
+    roundData?.phase === "FLYING" &&
+    !!myBet &&
+    !myBet.cashedOut &&
+    !optimisticCashOut;
+
+  useBetHotkeys({
+    onPlaceBet: () => handlePlaceBet(),
+    onCashOut: handleCashOut,
+    canPlaceBet: canPlaceBet && betValidation.isValid,
+    canCashOut,
+    disabled: isProcessing || isCashingOut,
+  });
 
   return (
     <div className="relative bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 p-2 sm:p-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)] space-y-2 sm:space-y-3 rounded-t-2xl sm:rounded-2xl">
@@ -506,39 +539,47 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
             </div>
           )}
 
-          {roundData?.phase === "FLYING" &&
-            !myBet.cashedOut &&
-            !optimisticCashOut && (
-              <button
-                onClick={handleCashOut}
-                disabled={isCashingOut}
-                className="w-full relative group/btn overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 transition-all bg-[length:200%_auto] hover:bg-right"></div>
-                <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-150%] group-hover/btn:translate-x-[150%] transition-all duration-700 ease-out z-10"></div>
-                <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex flex-col sm:flex-row items-center justify-center text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] z-20 gap-0.5 sm:gap-2">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="text-lg sm:text-xl leading-none group-hover/btn:scale-110 transition-transform">
-                      💰
-                    </span>
-                    <span className="text-base sm:text-lg">
-                      {isCashingOut ? "PROCESSING..." : "CASH OUT"}
-                    </span>
-                    <span className="hidden sm:inline-block text-base sm:text-lg">
-                      NOW
-                    </span>
-                  </div>
-                  {!isCashingOut && (
-                    <div className="sm:hidden text-2xl font-black drop-shadow-md leading-none mt-0.5">
-                      {potentialPayout.toFixed(2)}{" "}
-                      <span className="text-[10px] align-top text-white/80">
-                        USDC
-                      </span>
-                    </div>
-                  )}
+          {canCashOut && (
+            <button
+              onClick={handleCashOut}
+              disabled={isCashingOut}
+              className="w-full relative group/btn overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform hover:-translate-y-0.5 active:translate-y-0"
+              style={{
+                animation: isCashingOut
+                  ? "none"
+                  : `cashPulse ${urgency.pulse}s ease-in-out infinite`,
+                boxShadow: `0 0 18px ${urgency.glow}`,
+              }}
+            >
+              <div
+                className={`absolute inset-0 bg-gradient-to-r ${urgency.gradient} transition-all bg-[length:200%_auto] hover:bg-right`}
+              ></div>
+              <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-150%] group-hover/btn:translate-x-[150%] transition-all duration-700 ease-out z-10"></div>
+              <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex flex-col sm:flex-row items-center justify-center text-white z-20 gap-0.5 sm:gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-lg sm:text-xl leading-none group-hover/btn:scale-110 transition-transform">
+                    💰
+                  </span>
+                  <span className="text-base sm:text-lg">
+                    {isCashingOut ? "PROCESSING..." : "CASH OUT"}
+                  </span>
                 </div>
-              </button>
-            )}
+                {!isCashingOut && (
+                  <div className="text-2xl font-black drop-shadow-md leading-none mt-0.5 sm:mt-0 tabular-nums">
+                    {potentialPayout.toFixed(2)}{" "}
+                    <span className="text-[10px] align-top text-white/80">
+                      USDC
+                    </span>
+                    {cashoutProfit > 0 && (
+                      <span className="block sm:inline text-[10px] sm:ml-1 font-bold text-white/75">
+                        +{cashoutProfit.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </button>
+          )}
         </div>
       )}
 
@@ -652,6 +693,16 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
               );
             })}
           </div>
+
+          <BetAdjusters
+            betAmount={betAmount}
+            onBetAmountChange={setBetAmount}
+            maxBetAmount={maxBetAmount}
+            gameBalance={gameBalance}
+            useFreeBet={useFreeBet}
+            freeBetMaxAmount={freeBetMaxAmount}
+            disabled={isProcessing}
+          />
 
           <AutoCashout
             value={autoCashoutMultiplier}
