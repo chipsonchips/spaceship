@@ -21,7 +21,7 @@ export class GameSettingsService {
                 settings = this.settingsRepo.create({
                     minBetAmount: parseFloat(process.env.MIN_BET_AMOUNT || '0.1'),
                     maxBetAmount: parseFloat(process.env.MAX_BET_AMOUNT || '10'),
-                    bettingDurationMs: parseInt(process.env.BETTING_DURATION_MS || '30000'),
+                    bettingDurationMs: parseInt(process.env.BETTING_DURATION_MS || '10000'),
                     flyingDurationMs: parseInt(process.env.FLYING_DURATION_MS || '20000'),
                     roundRestartDelayMs: parseInt(process.env.ROUND_RESTART_DELAY_MS || '5000'),
                     houseEdge: 0.03,

@@ -94,7 +94,7 @@ export function computeFlyingSecrets(
 
   const flyingDurationMs = Math.min(
     settings.flyingDurationMs,
-    Math.max(2000, targetCrash * 2000),
+    Math.max(2000, targetCrash * 3000),
   );
 
   return {

@@ -3,6 +3,7 @@ import { sanitizeRound } from '../game-utils.js';
 import type { GameStateStore } from './game-state.store.js';
 import type { RoundRepository } from './round.repository.js';
 import type { CachedGameSettings } from './types.js';
+import { GAME_CONSTANTS } from '../../constants.js';
 import { logger } from '../../utils/logger.js';
 
 export class GameBroadcaster {
@@ -79,6 +80,7 @@ export class GameBroadcaster {
       minBetAmount: resolved.minBetAmount,
       maxBetAmount: resolved.maxBetAmount,
       bettingDurationMs: resolved.bettingDurationMs,
+      bettingLockMs: GAME_CONSTANTS.BETTING_LOCK_MS,
       flyingDurationMs: resolved.flyingDurationMs,
       roundRestartDelayMs: resolved.roundRestartDelayMs,
       maxCrashMultiplier: resolved.maxCrashMultiplier,
