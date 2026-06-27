@@ -118,6 +118,7 @@ export const BetPlacementForm: React.FC<BetPlacementFormProps> = ({
           value={autoCashoutMultiplier}
           onChange={onAutoCashoutChange}
           disabled={isProcessing}
+          compact
         />
 
         {/* Place Bet Button - Compact */}

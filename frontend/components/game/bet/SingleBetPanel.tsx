@@ -9,6 +9,7 @@ import { ActiveBet } from "./ActiveBet";
 import { BetPlacementForm } from "./BetPlacementForm";
 import { useMultiBetTracking } from "@/hooks/useMultiBetTracking";
 import { useBetHotkeys } from "@/hooks/useBetHotkeys";
+import { useBettingOpen } from "@/hooks/game";
 import { haptics } from "@/lib/haptics";
 import { emitWin } from "@/lib/celebrate";
 import type { PlayerBet } from "@/types/game";
@@ -74,7 +75,15 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
   const [freeBetsRemaining, setFreeBetsRemaining] = useState<number>(0);
   const [freeBetMaxAmount, setFreeBetMaxAmount] = useState<number>(0.1);
   const [useFreeBet, setUseFreeBet] = useState(false);
-  const [maxBetAmount, setMaxBetAmount] = useState<number>(0.5);
+  // Per-user override (null = no override, fall back to the admin global max).
+  const [userMaxBet, setUserMaxBet] = useState<number | null>(null);
+  // Effective ceiling: admin-configured global max (broadcast on the round)
+  // unless the player has a tighter per-user limit.
+  const globalMaxBet =
+    Number(roundData?.maxBetAmount) ||
+    Number(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT) ||
+    10;
+  const maxBetAmount = userMaxBet ?? globalMaxBet;
   const [lastBetAmount, setLastBetAmount] = useState<string | null>(null);
   const [isCashingOut, setIsCashingOut] = useState(false);
   const [optimisticCashOut, setOptimisticCashOut] = useState(false);
@@ -128,22 +137,12 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
     try {
       if (!walletAddress) return;
       const userData = await api.fetchUserByAddress(walletAddress);
-      const globalMaxBet = Number(
-        roundData?.maxBetAmount ??
-          parseFloat(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"),
-      );
-      if (userData?.user) {
-        setMaxBetAmount(userData.user.maxBetAmount ?? globalMaxBet);
-      } else {
-        setMaxBetAmount(globalMaxBet);
-      }
+      // Only track an explicit per-user override; the global ceiling always
+      // comes from the admin settings broadcast on the round.
+      setUserMaxBet(userData?.user?.maxBetAmount ?? null);
     } catch (err) {
       console.error("Failed to fetch user max bet amount:", err);
-      const globalMaxBet = Number(
-        roundData?.maxBetAmount ??
-          parseFloat(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"),
-      );
-      setMaxBetAmount(globalMaxBet);
+      setUserMaxBet(null);
     }
   };
 
@@ -268,7 +267,8 @@ export const SingleBetPanel: React.FC<SingleBetPanelProps> = ({
   };
 
   const isConnected = mounted && !!walletAddress;
-  const isBettingPhase = roundData?.phase === "BETTING";
+  // Betting closes a couple seconds before takeoff (see useBettingOpen).
+  const isBettingPhase = useBettingOpen(roundData);
   const canPlaceBet =
     isConnected &&
     isBettingPhase &&

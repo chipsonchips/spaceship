@@ -106,7 +106,7 @@ export const DualBetControls: React.FC<DualBetControlsProps> = ({
 
       {/* Both Mobile & Desktop: Vertical Stack (Mobile) / Side-by-Side (Desktop) */}
       <div className="p-2 sm:px-5 sm:pb-5 pt-0">
-        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
           {/* Bet Panel 1 - Compact */}
           <div className="bg-slate-800/40 border border-emerald-600/40 rounded-lg p-2 sm:p-3 lg:p-4 hover:border-emerald-500/60 transition-all relative">
             <div className="flex items-center justify-between mb-2">
