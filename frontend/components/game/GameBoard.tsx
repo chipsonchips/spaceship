@@ -195,7 +195,13 @@ const GameBoard: React.FC = () => {
           >
             {/* Thruster Glow */}
             {roundData.phase === "FLYING" && (
-              <div className="absolute top-[85%] left-1/2 -translate-x-1/2 w-10 h-20 pointer-events-none -z-10">
+              <div
+                className="absolute top-[85%] left-1/2 -translate-x-1/2 pointer-events-none -z-10"
+                style={{
+                  width: "clamp(16px, 5vw, 40px)",
+                  height: "clamp(32px, 10vw, 80px)",
+                }}
+              >
                 <div
                   className="w-full h-full"
                   style={{

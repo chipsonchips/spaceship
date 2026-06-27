@@ -20,7 +20,7 @@ const GameScreen = () => {
       <div className="min-h-screen text-white flex flex-col bg-[#0B0F19] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/30 via-[#0B0F19] to-black relative">
         <Nav />
         <ErrorBoundary>
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-h-[200px]">
             <div className="px-4 pt-4">
               <ChainWarning />
             </div>
