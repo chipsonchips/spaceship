@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { RoundData } from "@/types/game";
 
 interface SpaceBackgroundProps {
@@ -147,11 +147,34 @@ const ScrollLayer: React.FC<{
   </div>
 );
 
+/**
+ * Scales the planets relative to the viewport width so they don't overwhelm
+ * narrow phone screens. At our reference width (768px) planets render at their
+ * full design size; below that they shrink proportionally (clamped so they
+ * never disappear on very small screens or grow oversized on desktops).
+ */
+function usePlanetScale(): number {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const update = () => {
+      const width = window.innerWidth;
+      setScale(Math.max(0.45, Math.min(1, width / 768)));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return scale;
+}
+
 const SpaceBackground: React.FC<SpaceBackgroundProps> = ({
   roundData,
   multiplier,
 }) => {
   const isFlying = roundData?.phase === "FLYING";
+  const planetScale = usePlanetScale();
 
   const farStars = useMemo(() => buildStars(45, 1.4), []);
   const midStars = useMemo(() => buildStars(30, 2.2), []);
@@ -193,15 +216,17 @@ const SpaceBackground: React.FC<SpaceBackgroundProps> = ({
 
       {/* Planets — slow, with subtle drift + glow */}
       <ScrollLayer duration={60 / speed} playing={isFlying}>
-        {planets.map((p) => (
+        {planets.map((p) => {
+          const size = p.size * planetScale;
+          return (
           <div
             key={p.id}
             className="absolute"
             style={{
               left: `${p.left}%`,
               top: `${p.top}%`,
-              width: p.size,
-              height: p.size,
+              width: size,
+              height: size,
               transform: "translate(-50%, -50%)",
               animationName: "planetDrift",
               animationDuration: `${p.drift}s`,
@@ -215,11 +240,11 @@ const SpaceBackground: React.FC<SpaceBackgroundProps> = ({
               <div
                 className="absolute left-1/2 top-1/2"
                 style={{
-                  width: p.size * 1.7,
-                  height: p.size * 0.5,
+                  width: size * 1.7,
+                  height: size * 0.5,
                   transform: "translate(-50%, -50%) rotate(-20deg)",
                   borderRadius: "50%",
-                  border: `${Math.max(2, p.size * 0.04)}px solid rgba(255,255,255,0.12)`,
+                  border: `${Math.max(2, size * 0.04)}px solid rgba(255,255,255,0.12)`,
                   boxShadow: `0 0 12px ${p.glow}`,
                 }}
               />
@@ -228,11 +253,12 @@ const SpaceBackground: React.FC<SpaceBackgroundProps> = ({
               className="absolute inset-0 rounded-full"
               style={{
                 background: p.gradient,
-                boxShadow: `0 0 ${p.size * 0.4}px ${p.glow}, inset -${p.size * 0.12}px -${p.size * 0.12}px ${p.size * 0.3}px rgba(0,0,0,0.55)`,
+                boxShadow: `0 0 ${size * 0.4}px ${p.glow}, inset -${size * 0.12}px -${size * 0.12}px ${size * 0.3}px rgba(0,0,0,0.55)`,
               }}
             />
           </div>
-        ))}
+          );
+        })}
       </ScrollLayer>
 
       {/* Mid starfield */}
