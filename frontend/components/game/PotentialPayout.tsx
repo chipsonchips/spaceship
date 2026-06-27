@@ -25,26 +25,26 @@ const PotentialPayout: React.FC = () => {
   const profit = potentialPayout - Number(myBet.amount || 0);
 
   return (
-    <div className="hidden sm:block fixed bottom-32 right-4 sm:right-6 z-40 pointer-events-none">
-      <div className="bg-gradient-to-b from-emerald-900/40 to-slate-900/60 backdrop-blur-md border border-emerald-500/40 rounded-lg p-3 sm:p-4 shadow-lg min-w-[180px] sm:min-w-[220px]">
-        <div className="text-[10px] sm:text-xs text-emerald-400/80 font-bold font-orbitron uppercase tracking-widest mb-2">
-          Potential Payout
+    <div className="absolute bottom-4 right-2 sm:right-4 z-40 pointer-events-none">
+      <div className="bg-gradient-to-b from-emerald-900/40 to-slate-900/60 backdrop-blur-md border border-emerald-500/40 rounded-lg p-2 sm:p-4 shadow-lg min-w-[130px] sm:min-w-[220px]">
+        <div className="text-[9px] sm:text-xs text-emerald-400/80 font-bold font-orbitron uppercase tracking-widest mb-1 sm:mb-2">
+          Payout
         </div>
-        <div className="text-2xl sm:text-3xl font-black text-emerald-300 font-orbitron mb-1">
+        <div className="text-lg sm:text-3xl font-black text-emerald-300 font-orbitron mb-0.5 sm:mb-1">
           {typeof potentialPayout === "number"
             ? potentialPayout.toFixed(2)
             : "0.00"}{" "}
-          <span className="text-sm text-emerald-400">USDC</span>
+          <span className="text-xs sm:text-sm text-emerald-400">USDC</span>
         </div>
         <div
-          className={`text-xs sm:text-sm font-bold font-courier ${
+          className={`text-[10px] sm:text-sm font-bold font-courier ${
             profit >= 0 ? "text-emerald-400" : "text-red-400"
           }`}
         >
           {profit >= 0 ? "+" : ""}
-          {typeof profit === "number" ? profit.toFixed(2) : "0.00"} USDC
+          {typeof profit === "number" ? profit.toFixed(2) : "0.00"}
         </div>
-        <div className="mt-2 pt-2 border-t border-emerald-500/20 text-[9px] text-emerald-300/70 font-courier">
+        <div className="hidden sm:block mt-2 pt-2 border-t border-emerald-500/20 text-[9px] text-emerald-300/70 font-courier">
           Bet: {Number(myBet.amount || 0).toFixed(2)} ×{" "}
           {typeof displayMultiplier === "number"
             ? displayMultiplier.toFixed(2)
