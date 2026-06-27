@@ -6,12 +6,18 @@ interface AutoCashoutProps {
   value: number | null;
   onChange: (value: number | null) => void;
   disabled?: boolean;
+  /** Lay the multiplier input and quick-select presets out on the same row. */
+  inlinePresets?: boolean;
+  /** Tighter sizing for the narrow dual-bet panels. */
+  compact?: boolean;
 }
 
 const AutoCashout: React.FC<AutoCashoutProps> = ({
   value,
   onChange,
   disabled = false,
+  inlinePresets = false,
+  compact = false,
 }) => {
   const [isEnabled, setIsEnabled] = useState(value !== null);
   const [inputValue, setInputValue] = useState(value?.toString() || "2.0");
@@ -49,36 +55,62 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
   const isValid = !isNaN(multiplier) && multiplier >= 1.01 && multiplier <= 100;
 
   return (
-    <div className={`rounded-lg p-2.5 sm:p-3 border transition-all duration-300 ${
-      isEnabled 
-        ? "bg-slate-800/80 border-emerald-500/30" 
+    <div className={`rounded-lg border transition-all duration-300 ${
+      compact ? "p-2" : "p-2.5 sm:p-3"
+    } ${
+      isEnabled
+        ? "bg-slate-800/80 border-emerald-500/30"
         : "bg-slate-800/40 border-slate-700/50"
     }`}>
-      <div className="flex items-center justify-between mb-2">
-        <label className={`text-xs font-bold font-orbitron tracking-wider transition-colors ${
-          isEnabled ? "text-emerald-400" : "text-slate-400"
-        }`}>
+      <div className={`flex items-center justify-between ${
+        isEnabled ? "mb-2" : compact ? "mb-0" : "mb-2"
+      }`}>
+        <label className={`font-bold font-orbitron transition-colors ${
+          compact
+            ? "text-[10px] tracking-wide whitespace-nowrap"
+            : "text-xs tracking-wider"
+        } ${isEnabled ? "text-emerald-400" : "text-slate-400"}`}>
           AUTO CASHOUT
         </label>
         <button
           onClick={handleToggle}
           disabled={disabled}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 focus:outline-none ${
+          className={`relative inline-flex shrink-0 items-center rounded-full transition-all duration-300 focus:outline-none ${
+            compact ? "h-4 w-7" : "h-5 w-9"
+          } ${
             isEnabled ? "bg-emerald-500" : "bg-slate-600"
           } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
-              isEnabled ? "translate-x-5" : "translate-x-0.5"
+            className={`inline-block transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+              compact ? "h-3 w-3" : "h-4 w-4"
+            } ${
+              isEnabled
+                ? compact
+                  ? "translate-x-3.5"
+                  : "translate-x-5"
+                : "translate-x-0.5"
             }`}
           />
         </button>
       </div>
 
       {isEnabled && (
-        <div className="animate-[fadeIn_0.3s_ease-out]">
-          <div className="mb-2">
-            <div className="relative flex items-center bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+        <div
+          className={`animate-[fadeIn_0.3s_ease-out] ${
+            inlinePresets
+              ? "flex flex-col sm:flex-row sm:items-stretch gap-2"
+              : ""
+          }`}
+        >
+          <div
+            className={
+              inlinePresets ? "flex-1 sm:flex-[1.1]" : compact ? "mb-1.5" : "mb-2"
+            }
+          >
+            <div className={`relative flex items-center h-full bg-slate-900 border border-slate-600 rounded-md focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all ${
+              compact ? "px-1.5 py-1" : "px-2 py-1.5"
+            }`}>
               <input
                 type="number"
                 value={inputValue}
@@ -87,9 +119,11 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
                 min="1.01"
                 max="100"
                 step="0.1"
-                className={`w-full bg-transparent text-white text-base font-bold font-orbitron focus:outline-none ${
-                  disabled ? "opacity-50 cursor-not-allowed" : ""
-                } ${!isValid ? "text-red-400" : ""}`}
+                className={`w-full bg-transparent text-white font-bold font-orbitron focus:outline-none ${
+                  compact ? "text-sm" : "text-base"
+                } ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${
+                  !isValid ? "text-red-400" : ""
+                }`}
               />
               <span className={`font-bold font-orbitron text-xs select-none transition-colors ${
                 isValid ? "text-emerald-500" : "text-red-500"
@@ -99,13 +133,19 @@ const AutoCashout: React.FC<AutoCashoutProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div
+            className={`grid grid-cols-4 ${compact ? "gap-1" : "gap-2"} ${
+              inlinePresets ? "flex-1 sm:flex-[1.4]" : ""
+            }`}
+          >
             {[1.5, 2.0, 3.0, 5.0].map((mult) => (
               <button
                 key={mult}
                 onClick={() => handleQuickSelect(mult)}
                 disabled={disabled}
-                className={`py-1.5 px-1 rounded-md text-[10px] font-bold font-orbitron transition-all ${
+                className={`rounded-md font-bold font-orbitron transition-all ${
+                  compact ? "py-1 px-0.5 text-[9px]" : "py-1.5 px-1 text-[10px]"
+                } ${
                   parseFloat(inputValue) === mult
                     ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-400"
                     : "bg-slate-900/50 border border-slate-700/50 text-slate-400 hover:bg-slate-800"
