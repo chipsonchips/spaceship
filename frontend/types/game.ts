@@ -32,6 +32,7 @@ export interface RoundData {
   maxBetAmount?: number;
   roundRestartDelayMs?: number;
   bettingDurationMs?: number;
+  bettingLockMs?: number;
   flyingDurationMs?: number;
   houseEdge?: number;
   minCrashMultiplier?: number;
