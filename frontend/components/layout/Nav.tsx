@@ -174,7 +174,7 @@ const Nav = () => {
           </div>
           <span className="font-black text-lg sm:text-xl text-white font-orbitron uppercase tracking-widest flex flex-col leading-none hidden sm:block">
             <span>
-              AVIA<span className="text-emerald-500">TOR</span>
+              SPACE<span className="text-emerald-500">SHIP</span>
             </span>
           </span>
         </Link>
