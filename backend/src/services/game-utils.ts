@@ -32,17 +32,20 @@ export function generateCrashMultiplier(
 
 export function calculateCurrentMultiplier(elapsedMs: number, maxCrash = 100.00): number {
   const t = elapsedMs / 1000;
-  return Math.min(1.0 + Math.pow(t, 1.5) / 5, maxCrash);
+  return Math.min(1.0 + Math.pow(t, 1.5) / 8, maxCrash);
 }
+
+// Highest the ship climbs (percent from bottom); keeps it on-screen so it
+// hovers at the top until the crash instead of flying off the top edge.
+export const MAX_PLANE_Y = 88;
 
 export function calculatePlanePosition(elapsedMs: number): { x: number; y: number } {
   const progress = Math.min(elapsedMs / 10000, 1);
   // Fixed horizontal center position
   const x = 50;
-  // Vertical movement: y=0 at bottom, y=100 at top
-  // Start at 0 (bottom) and move to 100 (top)
+  // Vertical movement: y=0 at bottom, y=MAX_PLANE_Y near the top.
   const eased = 1 - Math.pow(1 - progress, 2); // ease-out quad
-  const y = eased * 100;
+  const y = eased * MAX_PLANE_Y;
   return { x, y };
 }
 

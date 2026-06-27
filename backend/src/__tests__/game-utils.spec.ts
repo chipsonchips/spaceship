@@ -5,6 +5,7 @@ import {
   generateCrashMultiplier,
   calculateCurrentMultiplier,
   calculatePlanePosition,
+  MAX_PLANE_Y,
 } from '../services/game-utils.ts';
 
 describe('game-utils', () => {
@@ -97,8 +98,8 @@ describe('game-utils', () => {
 
     it('should return correct multiplier at 1 second', () => {
       const multiplier = calculateCurrentMultiplier(1000);
-      // t = 1, formula: 1.0 + t^1.5 / 5 = 1.0 + 1 / 5 = 1.2
-      expect(multiplier).toBeCloseTo(1.2, 1);
+      // t = 1, formula: 1.0 + t^1.5 / 8 = 1.0 + 1 / 8 = 1.125
+      expect(multiplier).toBeCloseTo(1.125, 2);
     });
   });
 
@@ -126,11 +127,11 @@ describe('game-utils', () => {
       expect(pos3.x).toBe(50);
     });
 
-    it('should start at y=0 and end at y=100 at 10 seconds', () => {
+    it('should start at y=0 and top out near the top at 10 seconds', () => {
       const pos0 = calculatePlanePosition(0);
       const pos10s = calculatePlanePosition(10000);
       expect(pos0.y).toBe(0);
-      expect(pos10s.y).toBe(100);
+      expect(pos10s.y).toBe(MAX_PLANE_Y);
     });
 
     it('should keep y position within valid bounds', () => {

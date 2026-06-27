@@ -8,6 +8,8 @@
 
 export const GAME_CONSTANTS = {
     BETTING_DURATION_MS: Number(process.env.BETTING_DURATION_MS) || 10000,
+    // How long before takeoff betting locks (closes) while still in the BETTING phase.
+    BETTING_LOCK_MS: Number(process.env.BETTING_LOCK_MS) || 2000,
     ROUND_RESTART_DELAY_MS: Number(process.env.ROUND_RESTART_DELAY_MS) || 5000,
     FLYING_DURATION_MS: Number(process.env.FLYING_DURATION_MS) || 60000,
     HOUSE_EDGE: 0.03, // 3% house edge
