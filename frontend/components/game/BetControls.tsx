@@ -7,7 +7,7 @@ import useUSDC from "@/hooks/useUSDC";
 import useChainInfo from "@/hooks/useChainInfo";
 import AutoCashout from "./AutoCashout";
 import BetAdjusters from "./bet/BetAdjusters";
-import { usePlayerBet } from "@/hooks/game";
+import { usePlayerBet, useBettingOpen } from "@/hooks/game";
 import { useBetHotkeys } from "@/hooks/useBetHotkeys";
 import { haptics } from "@/lib/haptics";
 import { emitWin } from "@/lib/celebrate";
@@ -46,7 +46,15 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
     null,
   );
   const [useFreeBet, setUseFreeBet] = useState(false);
-  const [maxBetAmount, setMaxBetAmount] = useState<number>(0.5);
+  // Per-user override (null = no override, fall back to the admin global max).
+  const [userMaxBet, setUserMaxBet] = useState<number | null>(null);
+  // Effective ceiling: admin-configured global max (broadcast on the round)
+  // unless the player has a tighter per-user limit.
+  const globalMaxBet =
+    Number(roundData?.maxBetAmount) ||
+    Number(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT) ||
+    10;
+  const maxBetAmount = userMaxBet ?? globalMaxBet;
 
   const betValidation = useBetValidation(
     betAmount,
@@ -115,26 +123,12 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
     try {
       if (!walletAddress) return;
       const userData = await api.fetchUserByAddress(walletAddress);
-
-      const globalMaxBet = Number(
-        roundData?.maxBetAmount ??
-          parseFloat(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"),
-      );
-
-      if (userData?.user) {
-        // Use user's maxBetAmount if set, otherwise use global default
-        setMaxBetAmount(userData.user.maxBetAmount ?? globalMaxBet);
-      } else {
-        setMaxBetAmount(globalMaxBet);
-      }
+      // Only track an explicit per-user override; the global ceiling always
+      // comes from the admin settings broadcast on the round.
+      setUserMaxBet(userData?.user?.maxBetAmount ?? null);
     } catch (err) {
       console.error("Failed to fetch user max bet amount:", err);
-      // Fallback to global default
-      const globalMaxBet = Number(
-        roundData?.maxBetAmount ??
-          parseFloat(process.env.NEXT_PUBLIC_MAX_BET_AMOUNT || "10"),
-      );
-      setMaxBetAmount(globalMaxBet);
+      setUserMaxBet(null);
     }
   };
 
@@ -319,7 +313,8 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
   }, []);
 
   const isConnected = mounted && !!walletAddress;
-  const isBettingPhase = roundData?.phase === "BETTING";
+  // Betting closes a couple seconds before takeoff (see useBettingOpen).
+  const isBettingPhase = useBettingOpen(roundData);
   const canPlaceBet =
     isConnected &&
     isBettingPhase &&
@@ -349,8 +344,9 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
   });
 
   return (
-    <div className="relative bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 p-2 sm:p-5 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)] space-y-2 sm:space-y-3 rounded-t-2xl sm:rounded-2xl">
+    <div className="relative bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)] rounded-t-2xl sm:rounded-2xl">
       {/* Header Info */}
+      <div className="px-2 sm:px-5 pt-2 sm:pt-5 pb-2">
       <div className="flex items-center justify-between text-[9px] sm:text-xs text-slate-400 font-orbitron tracking-wider">
         <span className="flex items-center gap-1">
           <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)] animate-pulse"></span>
@@ -410,7 +406,18 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
             </div>
           </button>
           {freeBetsRemaining > 0 && (
-            <span className="bg-blue-900/30 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-blue-500/30 text-blue-400 text-[10px] sm:text-xs font-bold flex items-center gap-1">
+            <button
+              onClick={() => {
+                setUseFreeBet(!useFreeBet);
+                setBetAmount(freeBetMaxAmount.toString());
+              }}
+              title={`Use free bet — Max Cover: ${freeBetMaxAmount} USDC`}
+              className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border text-[10px] sm:text-xs font-bold flex items-center gap-1.5 transition-all ${
+                useFreeBet
+                  ? "bg-blue-500/20 border-blue-400 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                  : "bg-blue-900/30 border-blue-500/30 text-blue-400 hover:border-blue-500/60"
+              }`}
+            >
               <span className="text-blue-500 text-[9px] sm:text-[10px]">
                 🎟️
               </span>
@@ -418,14 +425,26 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
               <span className="hidden sm:inline text-[9px] text-blue-500/70">
                 FREE
               </span>
-            </span>
+              <span
+                className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-all duration-300 ${
+                  useFreeBet ? "bg-blue-500" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+                    useFreeBet ? "translate-x-3" : "translate-x-0.5"
+                  }`}
+                />
+              </span>
+            </button>
           )}
         </div>
       </div>
+      </div>
 
-      {/* Funds Manager Dropdown */}
+      {/* Funds Manager Dropdown — absolute above the panel, not inside the scroll area */}
       {isManagingFunds && (
-        <div className="absolute bottom-14 right-2 sm:right-5 w-64 sm:w-72 bg-slate-800 border border-slate-600 rounded-xl p-3 sm:p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute bottom-full right-2 sm:right-5 mb-1 w-64 sm:w-72 bg-slate-800 border border-slate-600 rounded-xl p-3 sm:p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-xs sm:text-sm font-orbitron font-bold text-white tracking-widest flex items-center gap-2">
               <span className="text-emerald-400">⚡</span> MANAGE FUNDS
@@ -487,6 +506,9 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
           </div>
         </div>
       )}
+
+      {/* Scrollable content area — constrained on mobile so the game board keeps space */}
+      <div className="px-2 sm:px-5 pb-2 sm:pb-5 space-y-2 sm:space-y-3 max-h-[42vh] sm:max-h-none overflow-y-auto">
 
       {myBet && (
         <div className="bg-gradient-to-b from-emerald-900/30 to-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 sm:p-4 shadow-inner relative overflow-hidden group">
@@ -585,72 +607,70 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
 
       {canPlaceBet && (
         <div className="space-y-2 sm:space-y-3">
-          {freeBetsRemaining > 0 && (
-            <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-3 flex items-center justify-between">
-              <div>
-                <div className="text-blue-300 font-bold font-orbitron text-xs flex items-center gap-1.5">
-                  <span>🎟️</span> Use Free Bet
-                </div>
-                <div className="text-[10px] text-blue-400/70 font-courier mt-0.5">
-                  Max Cover: {freeBetMaxAmount} USDC
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-stretch gap-1.5 sm:gap-2">
+              <div className="relative group flex-1 sm:flex-[1.1]">
+                <div className="relative flex items-center h-full bg-slate-800/80 border border-slate-600 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden">
+                  <div className="flex items-center justify-center text-emerald-400 mr-2 font-bold text-sm sm:text-base select-none">
+                    $
+                  </div>
+                  <input
+                    type="number"
+                    value={betAmount}
+                    onChange={(e) => setBetAmount(e.target.value)}
+                    step="0.10"
+                    min="0.10"
+                    max={
+                      useFreeBet
+                        ? freeBetMaxAmount.toString()
+                        : Math.min(gameBalance || 0, maxBetAmount).toString()
+                    }
+                    className="w-full bg-transparent text-white text-lg sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
+                    placeholder="0.00"
+                  />
+                  <span className="text-slate-500 text-[10px] sm:text-xs font-bold font-courier ml-2 select-none tracking-wider">
+                    USDC
+                  </span>
+                  {lastBetAmount && (
+                    <button
+                      onClick={() => {
+                        setBetAmount(lastBetAmount);
+                        handlePlaceBet(lastBetAmount);
+                      }}
+                      disabled={isProcessing || !canPlaceBet}
+                      className="ml-2 px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-black font-orbitron uppercase text-[10px] sm:text-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                      title={`Rebet previous amount: ${lastBetAmount} USDC`}
+                    >
+                      REBET
+                    </button>
+                  )}
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setUseFreeBet(!useFreeBet);
-                  setBetAmount(freeBetMaxAmount.toString());
-                }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
-                  useFreeBet
-                    ? "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-                    : "bg-slate-700"
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
-                    useFreeBet ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
-          )}
 
-          <div>
-            <div className="relative group">
-              <div className="relative flex items-center bg-slate-800/80 border border-slate-600 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 flex-1 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden">
-                <div className="flex items-center justify-center text-emerald-400 mr-2 font-bold text-sm sm:text-base select-none">
-                  $
-                </div>
-                <input
-                  type="number"
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(e.target.value)}
-                  step="0.10"
-                  min="0.10"
-                  max={
-                    useFreeBet
-                      ? freeBetMaxAmount.toString()
-                      : Math.min(gameBalance || 0, maxBetAmount).toString()
-                  }
-                  className="w-full bg-transparent text-white text-lg sm:text-2xl font-bold font-orbitron focus:outline-none placeholder-slate-600"
-                  placeholder="0.00"
-                />
-                <span className="text-slate-500 text-[10px] sm:text-xs font-bold font-courier ml-2 select-none tracking-wider">
-                  USDC
-                </span>
-                {lastBetAmount && (
-                  <button
-                    onClick={() => {
-                      setBetAmount(lastBetAmount);
-                      handlePlaceBet(lastBetAmount);
-                    }}
-                    disabled={isProcessing || !canPlaceBet}
-                    className="ml-2 px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-black font-orbitron uppercase text-[10px] sm:text-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-                    title={`Rebet previous amount: ${lastBetAmount} USDC`}
-                  >
-                    REBET
-                  </button>
-                )}
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-2 flex-1 sm:flex-[1.4]">
+                {["0.5", "1", "5", "10"].map((amount) => {
+                  const amountNum = parseFloat(amount);
+                  const isDisabled = useFreeBet
+                    ? amountNum > freeBetMaxAmount
+                    : amountNum > maxBetAmount;
+                  return (
+                    <button
+                      key={amount}
+                      onClick={() => setBetAmount(amount)}
+                      disabled={isDisabled}
+                      className={`relative rounded-md py-1.5 text-xs font-bold font-orbitron transition-all ${
+                        isDisabled
+                          ? "bg-slate-800/30 border border-slate-700/30 text-slate-600 cursor-not-allowed"
+                          : "bg-slate-800/80 border border-slate-600/60 text-emerald-100 hover:border-emerald-500/50 hover:bg-slate-700 focus:outline-none"
+                      }`}
+                    >
+                      <span className="text-[9px] text-emerald-500 absolute top-0.5 left-1 opacity-50">
+                        +
+                      </span>
+                      {amount}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             {!betValidation.isValid && (
@@ -668,32 +688,6 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-            {["0.5", "1", "5", "10"].map((amount) => {
-              const amountNum = parseFloat(amount);
-              const isDisabled = useFreeBet
-                ? amountNum > freeBetMaxAmount
-                : amountNum > maxBetAmount;
-              return (
-                <button
-                  key={amount}
-                  onClick={() => setBetAmount(amount)}
-                  disabled={isDisabled}
-                  className={`relative rounded-md py-1.5 text-xs font-bold font-orbitron transition-all ${
-                    isDisabled
-                      ? "bg-slate-800/30 border border-slate-700/30 text-slate-600 cursor-not-allowed"
-                      : "bg-slate-800/80 border border-slate-600/60 text-emerald-100 hover:border-emerald-500/50 hover:bg-slate-700 focus:outline-none"
-                  }`}
-                >
-                  <span className="text-[9px] text-emerald-500 absolute top-0.5 left-1 opacity-50">
-                    +
-                  </span>
-                  {amount}
-                </button>
-              );
-            })}
-          </div>
-
           <BetAdjusters
             betAmount={betAmount}
             onBetAmountChange={setBetAmount}
@@ -708,6 +702,7 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
             value={autoCashoutMultiplier}
             onChange={setAutoCashoutMultiplier}
             disabled={isProcessing}
+            inlinePresets
           />
 
           <button
@@ -780,6 +775,8 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
           </div>
         </div>
       )}
+
+      </div>
     </div>
   );
 };
