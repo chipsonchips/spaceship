@@ -9,6 +9,7 @@ import { GameStateStore } from './game-state.store.js';
 import { GameBroadcaster } from './game-broadcaster.service.js';
 import type { GameEngineServices } from './types.js';
 import { getCachedGameSettings } from './settings.cache.js';
+import { GAME_CONSTANTS } from '../../constants.js';
 import { logger } from '../../utils/logger.js';
 
 export class BetHandler {
@@ -60,6 +61,15 @@ export class BetHandler {
 
     const round = this.state.currentRound;
     if (!round || round.phase !== 'BETTING') {
+      throw new Error('Betting closed');
+    }
+
+    // Betting locks BETTING_LOCK_MS before takeoff, even though the phase is
+    // still BETTING, so players cannot place bets at the last instant.
+    if (
+      round.flyStartTime != null &&
+      Date.now() >= Number(round.flyStartTime) - GAME_CONSTANTS.BETTING_LOCK_MS
+    ) {
       throw new Error('Betting closed');
     }
 
