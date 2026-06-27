@@ -45,7 +45,7 @@ describe("SettingsContext", () => {
       animationsEnabled: true,
       screenTintEnabled: true,
       activityFeedEnabled: true,
-      sessionStatsEnabled: true,
+      sessionStatsEnabled: false,
       potentialPayoutEnabled: true,
       winCelebrationEnabled: true,
       autoHideUI: false,
