@@ -87,7 +87,7 @@ const PlayerActivityFeed: React.FC = () => {
   const shortAddress = `${activity.address.slice(0, 6)}...${activity.address.slice(-4)}`;
 
   return (
-    <div className="fixed bottom-40 left-4 sm:left-6 z-40 pointer-events-none">
+    <div className="absolute bottom-4 left-4 sm:left-6 z-40 pointer-events-none">
       <div
         className={`animate-in fade-in slide-in-from-left-4 duration-300 bg-slate-900/60 backdrop-blur-md border rounded-lg p-3 sm:p-4 shadow-lg min-w-[200px] sm:min-w-[240px] ${
           activity.type === "cashout"

@@ -43,7 +43,7 @@ const RoundInfo: React.FC = () => {
   };
 
   return (
-    <div className="absolute top-2 left-2 sm:top-4 sm:right-4 sm:left-auto sm:-top-0 bg-slate-900/40 backdrop-blur-md px-2.5 py-2 rounded-lg border border-slate-700/50 shadow-sm min-w-[120px] max-w-[45vw] sm:max-w-[200px] z-30 transition-all hover:bg-slate-900/60 pointer-events-none">
+    <div className="absolute top-16 left-2 sm:top-20 sm:right-4 sm:left-auto bg-slate-900/40 backdrop-blur-md px-2.5 py-2 rounded-lg border border-slate-700/50 shadow-sm min-w-[120px] max-w-[45vw] sm:max-w-[200px] z-30 transition-all hover:bg-slate-900/60 pointer-events-none">
       <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold leading-tight font-orbitron flex items-center justify-between">
         <span>R#{roundData?.roundId || 0}</span>
         {roundData?.phase === "FLYING" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>}
