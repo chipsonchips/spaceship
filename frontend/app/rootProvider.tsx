@@ -15,8 +15,10 @@ import "@coinbase/onchainkit/styles.css";
 import { SUPPORTED_CHAINS, CHAIN_CONFIGS } from "@/lib/chains";
 import { AuthProvider } from "@/context/AuthContext";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { OnboardingProvider } from "@/context/OnboardingContext";
 import UsernamePrompt from "@/components/auth/UsernamePrompt";
 import WalletAuthManager from "@/components/auth/WalletAuthManager";
+import OnboardingManager from "@/components/onboarding/OnboardingManager";
 
 const queryClient = new QueryClient();
 
@@ -89,9 +91,12 @@ export function RootProvider({ children }: { children: ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <SettingsProvider>
             <AuthProvider>
-              <WalletAuthManager />
-              {children}
-              <UsernamePrompt />
+              <OnboardingProvider>
+                <WalletAuthManager />
+                {children}
+                <UsernamePrompt />
+                <OnboardingManager />
+              </OnboardingProvider>
             </AuthProvider>
           </SettingsProvider>
         </QueryClientProvider>
@@ -118,9 +123,12 @@ export function RootProvider({ children }: { children: ReactNode }) {
         >
           <SettingsProvider>
             <AuthProvider>
-              <WalletAuthManager />
-              {children}
-              <UsernamePrompt />
+              <OnboardingProvider>
+                <WalletAuthManager />
+                {children}
+                <UsernamePrompt />
+                <OnboardingManager />
+              </OnboardingProvider>
             </AuthProvider>
           </SettingsProvider>
         </OnchainKitProvider>

@@ -12,6 +12,7 @@ import { useBetHotkeys } from "@/hooks/useBetHotkeys";
 import { haptics } from "@/lib/haptics";
 import { emitWin } from "@/lib/celebrate";
 import { getCashoutUrgency } from "@/lib/cashout";
+import { ONBOARDING_TARGETS } from "@/lib/onboarding";
 import * as api from "@/lib/api";
 
 interface BetControlsProps {
@@ -322,6 +323,10 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
     ((useFreeBet && freeBetsRemaining > 0) ||
       (!useFreeBet && gameBalance !== null && gameBalance > 0));
 
+  // First-time / empty-balance nudge: connected but nothing to bet with.
+  const needsDeposit =
+    isConnected && (gameBalance ?? 0) <= 0 && freeBetsRemaining <= 0;
+
   const potentialPayout =
     myBet && roundData?.phase === "FLYING"
       ? Number(myBet.amount) * Number(displayMultiplier)
@@ -383,9 +388,26 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
             </button>
           )}
           <button
+            data-onboarding={ONBOARDING_TARGETS.fundsButton}
             onClick={() => setIsManagingFunds(!isManagingFunds)}
-            className={`bg-slate-800/80 px-2 sm:px-3 py-1 rounded border transition-colors flex items-center gap-2 sm:gap-3 ${isManagingFunds ? "border-emerald-500" : "border-slate-700/50 hover:border-emerald-500/50"}`}
+            title={
+              needsDeposit
+                ? "Deposit USDC into the game to start playing"
+                : "Manage funds — deposit or withdraw USDC"
+            }
+            className={`relative bg-slate-800/80 px-2 sm:px-3 py-1 rounded border transition-colors flex items-center gap-2 sm:gap-3 ${
+              isManagingFunds
+                ? "border-emerald-500"
+                : needsDeposit
+                  ? "border-emerald-400 ring-2 ring-emerald-400/50 animate-pulse"
+                  : "border-slate-700/50 hover:border-emerald-500/50"
+            }`}
           >
+            {needsDeposit && !isManagingFunds && (
+              <span className="absolute -top-2 -right-1.5 bg-emerald-500 text-slate-950 text-[7px] sm:text-[8px] font-black font-orbitron uppercase tracking-wider px-1.5 py-0.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.6)] whitespace-nowrap">
+                Deposit ▸
+              </span>
+            )}
             <div className="flex flex-col items-end">
               <span className="text-[8px] sm:text-[9px] text-slate-500 font-medium leading-none mb-0.5 tracking-wider">
                 WALLET
@@ -608,7 +630,10 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
       {canPlaceBet && (
         <div className="space-y-2 sm:space-y-3">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-stretch gap-1.5 sm:gap-2">
+            <div
+              data-onboarding={ONBOARDING_TARGETS.betInput}
+              className="flex flex-col sm:flex-row sm:items-stretch gap-1.5 sm:gap-2"
+            >
               <div className="relative group flex-1 sm:flex-[1.1]">
                 <div className="relative flex items-center h-full bg-slate-800/80 border border-slate-600 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden">
                   <div className="flex items-center justify-center text-emerald-400 mr-2 font-bold text-sm sm:text-base select-none">
@@ -706,6 +731,7 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
           />
 
           <button
+            data-onboarding={ONBOARDING_TARGETS.placeBet}
             onClick={() => handlePlaceBet()}
             disabled={!betValidation.isValid || isProcessing || !isBettingPhase}
             className="w-full mt-1 relative group/play overflow-hidden rounded-lg font-black font-orbitron uppercase tracking-widest text-sm sm:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transform active:scale-[0.98]"
@@ -741,16 +767,29 @@ const BetControls: React.FC<BetControlsProps> = ({ onToggleMode }) => {
         </div>
       )}
 
-      {isConnected && !canPlaceBet && roundData?.phase === "BETTING" && (
+      {isConnected && needsDeposit && roundData?.phase === "BETTING" && (
+        <div className="bg-gradient-to-b from-emerald-900/20 to-slate-900/60 border border-emerald-500/30 rounded-lg p-4 text-center space-y-2.5">
+          <div className="text-2xl">💰</div>
+          <div className="text-emerald-300 font-black font-orbitron tracking-widest text-xs uppercase">
+            Deposit USDC to play
+          </div>
+          <p className="text-[10px] text-slate-400 font-inter leading-relaxed">
+            You need USDC in your game balance to bet. Make sure you hold USDC in
+            your wallet, then deposit it into the game.
+          </p>
+          <button
+            onClick={() => setIsManagingFunds(true)}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black font-orbitron uppercase tracking-wider py-2.5 rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+          >
+            + Deposit USDC
+          </button>
+        </div>
+      )}
+
+      {isConnected && !canPlaceBet && !needsDeposit && roundData?.phase === "BETTING" && (
         <div className="bg-slate-800/60 border border-amber-500/30 rounded-lg p-3 text-center">
           <div className="text-amber-400 font-bold font-orbitron tracking-widest text-xs">
-            {gameBalance === 0 && freeBetsRemaining === 0
-              ? "INSUFFICIENT GAME BALANCE"
-              : gameBalance === 0
-                ? "INSUFFICIENT GAME BALANCE"
-                : myBet
-                  ? "BET REGISTERED"
-                  : "BETTING CLOSED"}
+            {myBet ? "BET REGISTERED" : "BETTING CLOSED"}
           </div>
         </div>
       )}
