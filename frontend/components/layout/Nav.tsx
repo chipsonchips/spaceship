@@ -17,13 +17,15 @@ import { useAccount, useConnect, useConnectors } from "wagmi";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { Menu, X, Settings } from "lucide-react";
+import { Menu, X, Settings, HelpCircle } from "lucide-react";
 import { useGameContext } from "@/context/GameContext";
 import ChainSwitcher from "@/components/common/ChainSwitcher";
 import useChainInfo from "@/hooks/useChainInfo";
 import useUSDC from "@/hooks/useUSDC";
 import { useEnvironment } from "@/hooks/useEnvironment";
 import { useUsername } from "@/hooks/useUsername";
+import { useOnboarding } from "@/context/OnboardingContext";
+import { ONBOARDING_TARGETS } from "@/lib/onboarding";
 import SettingsModal from "@/components/game/SettingsModal";
 
 const formatAddress = (addr: string) =>
@@ -42,6 +44,7 @@ const Nav = () => {
   const { connectAsync } = useConnect();
   const connectors = useConnectors();
   const { username } = useUsername(address);
+  const { openWelcome } = useOnboarding();
 
   useEffect(() => {
     setMounted(true);
@@ -199,18 +202,31 @@ const Nav = () => {
           )} */}
           <ChainSwitcher />
           <button
+            onClick={openWelcome}
+            className="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 border border-slate-600/50 hover:border-emerald-500/50 hover:bg-slate-700/50 transition-all text-slate-300 hover:text-emerald-400"
+            title="How to play"
+          >
+            <HelpCircle size={20} />
+          </button>
+          <button
             onClick={() => setIsSettingsOpen(true)}
             className="flex items-center justify-center p-2 rounded-lg bg-slate-800/50 border border-slate-600/50 hover:border-emerald-500/50 hover:bg-slate-700/50 transition-all text-slate-300 hover:text-emerald-400"
             title="Game Settings"
           >
             <Settings size={20} />
           </button>
-          {renderWalletControls()}
+          <span data-onboarding={ONBOARDING_TARGETS.connectWallet}>
+            {renderWalletControls()}
+          </span>
         </div>
 
         {/* Mobile Menu Button */}
         <div className="flex items-center gap-2 md:hidden">
-          {!isConnected && renderWalletControls()}
+          {!isConnected && (
+            <span data-onboarding={ONBOARDING_TARGETS.connectWallet}>
+              {renderWalletControls()}
+            </span>
+          )}
 
           <button
             className="p-1.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
@@ -246,6 +262,17 @@ const Nav = () => {
               </span>
             </div>
           )}
+
+          <button
+            onClick={() => {
+              openWelcome();
+              setIsMenuOpen(false);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-800/60 border border-slate-600/50 hover:border-emerald-500/60 transition-all text-sm font-bold text-emerald-100 font-orbitron uppercase tracking-widest w-full"
+          >
+            <HelpCircle size={18} />
+            How to play
+          </button>
 
           <button
             onClick={() => {
